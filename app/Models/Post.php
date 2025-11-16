@@ -15,6 +15,8 @@ class Post extends Model
     protected $fillable = [
         'source_id',
         'uri',
+        'external_title',
+        'internal_title',
         'summary',
         'relevancy_score',
         'is_read',

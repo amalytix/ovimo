@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 
 interface Tag {
     id: number;
@@ -22,6 +25,10 @@ interface Source {
     tags: Tag[];
 }
 
+interface Filters {
+    tag_ids?: number[];
+}
+
 interface Props {
     sources: {
         data: Source[];
@@ -29,18 +36,26 @@ interface Props {
         meta: object;
     };
     tags: Tag[];
+    filters?: Filters;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Sources', href: '/sources' },
 ];
 
+// Initialize selected tags from URL filters
+const selectedTagIds = ref<number[]>(props.filters?.tag_ids || []);
+
 const deleteSource = (id: number) => {
     if (confirm('Are you sure you want to delete this source?')) {
         router.delete(`/sources/${id}`);
     }
+};
+
+const checkSource = (id: number) => {
+    router.post(`/sources/${id}/check`, {}, { preserveScroll: true });
 };
 
 const formatInterval = (interval: string) => {
@@ -54,6 +69,37 @@ const formatInterval = (interval: string) => {
     };
     return map[interval] || interval;
 };
+
+const toggleTagFilter = (tagId: number, checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+        if (!selectedTagIds.value.includes(tagId)) {
+            selectedTagIds.value.push(tagId);
+        }
+    } else {
+        selectedTagIds.value = selectedTagIds.value.filter((id) => id !== tagId);
+    }
+};
+
+const applyFilters = () => {
+    router.get(
+        '/sources',
+        {
+            tag_ids: selectedTagIds.value.length > 0 ? selectedTagIds.value : undefined,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
+};
+
+const clearFilters = () => {
+    selectedTagIds.value = [];
+    router.get('/sources', {}, { preserveState: true, preserveScroll: true });
+};
+
+// Watch for filter changes and apply them
+watch(selectedTagIds, applyFilters, { deep: true });
 </script>
 
 <template>
@@ -69,6 +115,35 @@ const formatInterval = (interval: string) => {
                 >
                     Add Source
                 </Link>
+            </div>
+
+            <!-- Tag Filters -->
+            <div v-if="tags.length > 0" class="mb-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-3 flex items-center justify-between">
+                    <Label class="text-sm font-medium">Filter by Tags</Label>
+                    <button
+                        v-if="selectedTagIds.length > 0"
+                        @click="clearFilters"
+                        class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                        Clear filters
+                    </button>
+                </div>
+                <div class="flex flex-wrap gap-4">
+                    <div v-for="tag in tags" :key="tag.id" class="flex items-center gap-2">
+                        <Checkbox
+                            :id="`filter-tag-${tag.id}`"
+                            :default-value="selectedTagIds.includes(tag.id)"
+                            @update:model-value="toggleTagFilter(tag.id, $event)"
+                        />
+                        <Label :for="`filter-tag-${tag.id}`" class="cursor-pointer text-sm font-normal">
+                            {{ tag.name }}
+                        </Label>
+                    </div>
+                </div>
+                <div v-if="selectedTagIds.length > 0" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Showing sources with any of the selected tags
+                </div>
             </div>
 
             <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
@@ -130,9 +205,15 @@ const formatInterval = (interval: string) => {
                                 </Link>
                                 <button
                                     @click="deleteSource(source.id)"
-                                    class="text-red-600 hover:text-red-900 dark:text-red-400"
+                                    class="mr-3 text-red-600 hover:text-red-900 dark:text-red-400"
                                 >
                                     Delete
+                                </button>
+                                <button
+                                    @click="checkSource(source.id)"
+                                    class="text-green-600 hover:text-green-900 dark:text-green-400"
+                                >
+                                    Check now
                                 </button>
                             </td>
                         </tr>

@@ -17,7 +17,18 @@ class SourceFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'internal_name' => fake()->words(3, true),
+            'type' => fake()->randomElement(['RSS', 'XML_SITEMAP']),
+            'url' => fake()->url(),
+            'monitoring_interval' => fake()->randomElement([
+                'EVERY_10_MIN', 'EVERY_30_MIN', 'HOURLY',
+                'EVERY_6_HOURS', 'DAILY', 'WEEKLY',
+            ]),
+            'is_active' => true,
+            'should_notify' => true,
+            'auto_summarize' => true,
+            'last_checked_at' => null,
+            'next_check_at' => now(),
         ];
     }
 }

@@ -28,8 +28,8 @@ class UpdateSourceRequest extends FormRequest
             'is_active' => ['boolean'],
             'should_notify' => ['boolean'],
             'auto_summarize' => ['boolean'],
-            'tag_ids' => ['array'],
-            'tag_ids.*' => ['exists:tags,id'],
+            'tags' => ['array'],
+            'tags.*' => ['string', 'max:50'],
         ];
     }
 }

@@ -10,11 +10,14 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "fivefilters/readability.php": "^3.3",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/fortify": "^1.30",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "laravel/wayfinder": "^0.1.9"
+        "laravel/wayfinder": "^0.1.9",
+        "league/html-to-markdown": "^5.1",
+        "openai-php/client": "^0.18.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

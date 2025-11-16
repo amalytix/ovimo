@@ -17,7 +17,9 @@ class PromptFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'internal_name' => fake()->words(3, true),
+            'channel' => fake()->randomElement(['BLOG_POST', 'LINKEDIN_POST', 'YOUTUBE_SCRIPT']),
+            'prompt_text' => fake()->paragraphs(3, true),
         ];
     }
 }

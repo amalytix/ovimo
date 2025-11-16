@@ -1,6 +1,12 @@
 <?php
 
+use App\Http\Controllers\ContentPieceController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\PromptController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SourceController;
+use App\Http\Controllers\UsageController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -17,6 +23,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     Route::resource('sources', SourceController::class);
+    Route::post('sources/{source}/check', [SourceController::class, 'check'])->name('sources.check');
+    Route::resource('prompts', PromptController::class)->except(['show']);
+    Route::resource('content-pieces', ContentPieceController::class)->except(['show']);
+    Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])->name('content-pieces.generate');
+    Route::patch('content-pieces/{content_piece}/status', [ContentPieceController::class, 'updateStatus'])->name('content-pieces.update-status');
+
+    Route::resource('webhooks', WebhookController::class)->except(['show']);
+
+    Route::get('usage', [UsageController::class, 'index'])->name('usage.index');
+
+    Route::get('team-settings', [SettingsController::class, 'index'])->name('team-settings.index');
+    Route::put('team-settings', [SettingsController::class, 'update'])->name('team-settings.update');
+
+    Route::get('posts', [PostController::class, 'index'])->name('posts.index');
+    Route::patch('posts/{post}/toggle-read', [PostController::class, 'toggleRead'])->name('posts.toggle-read');
+    Route::patch('posts/{post}/toggle-hidden', [PostController::class, 'toggleHidden'])->name('posts.toggle-hidden');
+    Route::patch('posts/{post}/status', [PostController::class, 'updateStatus'])->name('posts.update-status');
+    Route::post('posts/bulk-toggle-read', [PostController::class, 'bulkToggleRead'])->name('posts.bulk-toggle-read');
+    Route::post('posts/bulk-hide', [PostController::class, 'bulkHide'])->name('posts.bulk-hide');
+    Route::post('posts/bulk-delete', [PostController::class, 'bulkDelete'])->name('posts.bulk-delete');
 });
 
 require __DIR__.'/settings.php';

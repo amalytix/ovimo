@@ -45,3 +45,14 @@ function something()
 {
     // ..
 }
+
+function createUserWithTeam(): array
+{
+    $user = \App\Models\User::factory()->create();
+    $team = \App\Models\Team::factory()->create(['owner_id' => $user->id]);
+    $user->current_team_id = $team->id;
+    $user->save();
+    $team->users()->attach($user->id, ['role' => 'owner']);
+
+    return [$user, $team];
+}

@@ -40,6 +40,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ## Frontend Bundling
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+- Please always run "npm run build" yourself after changes to the frontend assets.
 
 ## Replies
 - Be concise in your explanations - focus on what's important rather than explaining obvious details.
@@ -392,6 +393,7 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 - Vue components must have a single root element.
 - Use `router.visit()` or `<Link>` for navigation instead of traditional links.
+- **IMPORTANT: Reka UI components (Checkbox, Select, etc.) use `modelValue`/`update:modelValue`, NOT `checked`/`update:checked`.** See `docs/ui-components.md` for complete patterns and examples.
 
 <code-snippet name="Inertia Client Navigation" lang="vue">
 
