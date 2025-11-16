@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 interface Webhook {
     id: number;
@@ -39,6 +40,18 @@ const form = useForm({
 
 const submit = () => {
     form.put(`/webhooks/${props.webhook.id}`);
+};
+
+const testProcessing = ref(false);
+
+const sendTestWebhook = () => {
+    testProcessing.value = true;
+    router.post(`/webhooks/${props.webhook.id}/test`, {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            testProcessing.value = false;
+        },
+    });
 };
 </script>
 
@@ -100,6 +113,18 @@ const submit = () => {
                     </Button>
                 </div>
             </form>
+
+            <div class="mt-8 max-w-2xl border-t border-gray-200 pt-8 dark:border-gray-700">
+                <h2 class="text-lg font-medium">Test Webhook</h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Send a test payload to verify your webhook is configured correctly. The test will be sent via the queue.
+                </p>
+                <div class="mt-4">
+                    <Button variant="outline" :disabled="testProcessing" @click="sendTestWebhook">
+                        {{ testProcessing ? 'Sending...' : 'Send Test Webhook' }}
+                    </Button>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>

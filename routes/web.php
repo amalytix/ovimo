@@ -30,6 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('content-pieces/{content_piece}/status', [ContentPieceController::class, 'updateStatus'])->name('content-pieces.update-status');
 
     Route::resource('webhooks', WebhookController::class)->except(['show']);
+    Route::post('webhooks/{webhook}/test', [WebhookController::class, 'test'])->name('webhooks.test');
 
     Route::get('usage', [UsageController::class, 'index'])->name('usage.index');
 

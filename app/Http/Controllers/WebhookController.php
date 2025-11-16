@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreWebhookRequest;
 use App\Http\Requests\UpdateWebhookRequest;
+use App\Jobs\SendWebhookNotification;
 use App\Models\Webhook;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -82,6 +83,33 @@ class WebhookController extends Controller
 
         return redirect()->route('webhooks.index')
             ->with('success', 'Webhook deleted successfully.');
+    }
+
+    public function test(Webhook $webhook): RedirectResponse
+    {
+        $this->authorizeTeam($webhook);
+
+        $testPayload = [
+            'event' => $webhook->event,
+            'timestamp' => now()->toIso8601String(),
+            'data' => [
+                'test' => true,
+                'webhook_id' => $webhook->id,
+                'webhook_name' => $webhook->name,
+                'source_id' => 1,
+                'source_name' => 'Example Source',
+                'post_id' => 123,
+                'post_uri' => 'https://example.com/article/test-post',
+                'post_external_title' => 'Example Post Title for Testing',
+                'post_summary' => 'This is a sample summary of the post content that would normally be generated from the actual article.',
+                'post_relevancy_score' => 85,
+                'post_created_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        SendWebhookNotification::dispatch($webhook, $testPayload);
+
+        return back()->with('success', 'Test webhook has been queued.');
     }
 
     private function authorizeTeam(Webhook $webhook): void
