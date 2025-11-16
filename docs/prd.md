@@ -166,6 +166,7 @@ Ovimo provides an end-to-end workflow:
 |-------|------|----------|-------------|
 | uri | string | Yes | Unique identifier (URL) |
 | summary | text | No | AI-generated summary |
+| relevancy_score | integer | No | AI-assigned relevancy score (1-10), user-overridable |
 | source_id | foreign key | Yes | Parent source |
 | is_read | boolean | Yes | Read/unread status (default: false) |
 | is_hidden | boolean | Yes | Hidden status (default: false) |
@@ -173,7 +174,8 @@ Ovimo provides an end-to-end workflow:
 | found_at | timestamp | Yes | When first discovered |
 
 #### FR-POST-002: Post List View
-- **Columns:** Checkbox, Source Name, Tags, URI (linked), Found At, Summary (clamped), Status, Actions
+
+- **Columns:** Checkbox, Source Name, Tags, URI (linked), Found At, Summary (clamped), Relevancy Score, Status, Actions
 - **Styling:** Unread posts in bold
 - **Default Sort:** Newest first
 
@@ -182,6 +184,7 @@ Ovimo provides an end-to-end workflow:
 - By tag(s)
 - By keyword (matches URI or summary)
 - By read/unread status
+- By relevancy score range (e.g., 7-10 for high relevancy)
 - Toggle to show hidden posts
 
 #### FR-POST-004: Bulk Actions
@@ -274,7 +277,29 @@ Ovimo provides an end-to-end workflow:
 - Team can enable/disable all notifications
 - Per-source notify flag respected
 
-### 4.7 Token Usage & Limits
+### 4.7 Relevancy Scoring
+
+#### FR-RELEVANCY-001: Team Relevancy Prompt
+
+- Each team can define a relevancy prompt in settings
+- Prompt describes what content the team is interested in
+- Prompt describes what content the team is NOT interested in
+- Used during AI summarization to score post relevance
+
+#### FR-RELEVANCY-002: Scoring Process
+
+- When AI summarizes a new post, it also scores relevancy
+- Score is 1-10 (1 = not relevant, 10 = highly relevant)
+- Uses OpenAI structured output (JSON schema)
+- Response includes both `summary` and `relevancy_score`
+
+#### FR-RELEVANCY-003: Score Storage & Override
+
+- Relevancy score stored on each post
+- Users can manually override the AI-assigned score
+- Score used for filtering and prioritization
+
+### 4.8 Token Usage & Limits
 
 #### FR-TOKEN-001: Usage Tracking
 - Log input + output tokens per request
@@ -309,7 +334,7 @@ Ovimo provides an end-to-end workflow:
 | Frontend Framework | Vue.js | 3.x |
 | SPA Bridge | Inertia.js | 2.x |
 | Styling | Tailwind CSS | 4.x |
-| Database | MySQL/PostgreSQL | 8.x/15.x |
+| Database | MariaDB | 10.x/11.x |
 | Queue Driver | Redis/Database | - |
 | Testing | Pest | 4.x |
 | Code Formatting | Laravel Pint | 1.x |
@@ -383,6 +408,39 @@ class SourceMonitorService
 }
 ```
 
+#### PostSummarizationService
+
+```php
+class PostSummarizationService
+{
+    public function summarizeAndScore(Post $post, Team $team): array;
+    public function buildSummarizationPrompt(string $content, string $relevancyPrompt): string;
+    public function callOpenAIWithStructuredOutput(string $prompt): array;
+    // Returns: ['summary' => string, 'relevancy_score' => int (1-10)]
+}
+```
+
+**Structured Output Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "A concise summary of the post content"
+    },
+    "relevancy_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Relevancy score based on team's interests (1=not relevant, 10=highly relevant)"
+    }
+  },
+  "required": ["summary", "relevancy_score"]
+}
+```
+
 #### ContentGeneratorService
 ```php
 class ContentGeneratorService
@@ -442,6 +500,7 @@ Schema::table('teams', function (Blueprint $table) {
     $table->string('webhook_url')->nullable();
     $table->integer('post_auto_hide_days')->nullable();
     $table->bigInteger('monthly_token_limit')->default(10000000);
+    $table->text('relevancy_prompt')->nullable(); // Describes what content is relevant to the team
 });
 ```
 
@@ -495,16 +554,19 @@ Schema::create('source_tag', function (Blueprint $table) {
 Schema::create('posts', function (Blueprint $table) {
     $table->id();
     $table->foreignId('source_id')->constrained()->cascadeOnDelete();
-    $table->string('uri', 2048)->unique();
+    $table->string('uri', 2048);
     $table->text('summary')->nullable();
+    $table->unsignedTinyInteger('relevancy_score')->nullable(); // 1-10, AI-assigned, user-overridable
     $table->boolean('is_read')->default(false);
     $table->boolean('is_hidden')->default(false);
     $table->enum('status', ['NOT_RELEVANT', 'CREATE_CONTENT'])->default('NOT_RELEVANT');
     $table->timestamp('found_at');
     $table->timestamps();
 
+    $table->unique(['source_id', 'uri']); // URI unique per source (per team via source)
     $table->index(['source_id', 'is_hidden', 'found_at']);
     $table->index(['source_id', 'is_read']);
+    $table->index(['source_id', 'relevancy_score']);
 });
 ```
 
@@ -615,6 +677,8 @@ Route::get('posts', [PostController::class, 'index'])->name('posts.index');
 Route::patch('posts/{post}/read', [PostController::class, 'toggleRead'])->name('posts.read');
 Route::patch('posts/{post}/hide', [PostController::class, 'toggleHide'])->name('posts.hide');
 Route::patch('posts/{post}/status', [PostController::class, 'toggleStatus'])->name('posts.status');
+Route::patch('posts/{post}/relevancy', [PostController::class, 'updateRelevancy'])->name('posts.relevancy');
+Route::patch('posts/{post}/summary', [PostController::class, 'updateSummary'])->name('posts.summary');
 Route::post('posts/bulk', [PostController::class, 'bulk'])->name('posts.bulk');
 
 // Content
@@ -744,6 +808,7 @@ Default landing: Posts page
 - Source multi-select
 - Tag multi-select
 - Keyword search input
+- Relevancy score range slider (1-10)
 - Read/Unread toggle
 - Show Hidden toggle
 
@@ -754,8 +819,9 @@ Default landing: Posts page
 4. Post URI (external link icon)
 5. Found At (relative time)
 6. Summary (3-line clamp, expand on click)
-7. Status (dropdown/badge)
-8. Actions (icon buttons)
+7. Relevancy Score (1-10 badge with color gradient, editable)
+8. Status (dropdown/badge)
+9. Actions (icon buttons)
 
 **Bulk Actions Toolbar:**
 - Appears when items selected
@@ -822,6 +888,7 @@ Default landing: Posts page
 - Notifications enabled toggle
 - Webhook URL input (with test button)
 - Auto-hide posts after X days (number input)
+- Relevancy prompt textarea (describes what content the team is interested in and not interested in)
 
 ### 8.7 Token Usage Dashboard
 
@@ -845,6 +912,12 @@ Default landing: Posts page
 - FINAL: green
 - NOT_RELEVANT: gray
 - CREATE_CONTENT: blue
+
+**Relevancy Score Colors:**
+
+- 1-3: red (low relevancy)
+- 4-6: yellow (medium relevancy)
+- 7-10: green (high relevancy)
 
 **Dark Mode:** Support required (follow existing patterns)
 
@@ -1113,8 +1186,8 @@ APP_KEY=
 APP_DEBUG=false
 APP_URL=https://ovimo.example.com
 
-# Database
-DB_CONNECTION=mysql
+# Database (MariaDB)
+DB_CONNECTION=mariadb
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=ovimo
@@ -1140,7 +1213,7 @@ DEFAULT_TEAM_TOKEN_LIMIT=10000000
 
 - [ ] Set APP_ENV=production
 - [ ] Set APP_DEBUG=false
-- [ ] Configure proper database
+- [ ] Configure MariaDB database (10.x or 11.x)
 - [ ] Set up Redis for queues
 - [ ] Configure queue workers (Supervisor)
 - [ ] Set up SSL certificate
@@ -1409,7 +1482,7 @@ Freely defiend by users.
 6. **Server Resources:** Adequate server resources for:
    - At least 4 queue workers
    - Redis for queue management
-   - Database for thousands of posts
+   - MariaDB database for thousands of posts
 
 7. **OpenAI Availability:** OpenAI API is available and stable (no fallback provider in MVP).
 
