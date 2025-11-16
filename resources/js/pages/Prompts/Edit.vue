@@ -80,8 +80,9 @@ const submit = () => {
                     ></textarea>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         Use placeholders like
-                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;post_summary&#125;&#125;</code> or
-                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;context&#125;&#125;</code> that will be replaced
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;context&#125;&#125;</code> or
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;language&#125;&#125;</code> or
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;channel&#125;&#125;</code> that will be replaced
                         during content generation.
                     </p>
                     <InputError :message="form.errors.prompt_text" />

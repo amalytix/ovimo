@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'rss' => [
+        'max_entries' => env('RSS_MAX_ENTRIES', 10),
+    ],
+
 ];

@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -18,11 +19,21 @@ interface ContentPiece {
     created_at: string;
 }
 
+interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
 interface Props {
     contentPieces: {
         data: ContentPiece[];
-        links: object;
-        meta: object;
+        links: PaginationLink[];
+        meta?: {
+            from?: number;
+            to?: number;
+            total?: number;
+        };
     };
     filters: {
         status?: string;
@@ -36,16 +47,16 @@ const props = defineProps<Props>();
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Content Pieces', href: '/content-pieces' }];
 
 const search = ref(props.filters.search || '');
-const status = ref(props.filters.status || '');
-const channel = ref(props.filters.channel || '');
+const status = ref(props.filters.status || 'all');
+const channel = ref(props.filters.channel || 'all');
 
 const applyFilters = () => {
     router.get(
         '/content-pieces',
         {
             search: search.value || undefined,
-            status: status.value || undefined,
-            channel: channel.value || undefined,
+            status: status.value === 'all' ? undefined : status.value,
+            channel: channel.value === 'all' ? undefined : channel.value,
         },
         { preserveState: true, replace: true },
     );
@@ -122,7 +133,7 @@ const formatLanguage = (language: string) => {
                             <SelectValue placeholder="All statuses" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">All statuses</SelectItem>
+                            <SelectItem value="all">All statuses</SelectItem>
                             <SelectItem value="NOT_STARTED">Not Started</SelectItem>
                             <SelectItem value="DRAFT">Draft</SelectItem>
                             <SelectItem value="FINAL">Final</SelectItem>
@@ -136,7 +147,7 @@ const formatLanguage = (language: string) => {
                             <SelectValue placeholder="All channels" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">All channels</SelectItem>
+                            <SelectItem value="all">All channels</SelectItem>
                             <SelectItem value="BLOG_POST">Blog Post</SelectItem>
                             <SelectItem value="LINKEDIN_POST">LinkedIn Post</SelectItem>
                             <SelectItem value="YOUTUBE_SCRIPT">YouTube Script</SelectItem>
@@ -212,6 +223,13 @@ const formatLanguage = (language: string) => {
                     </tbody>
                 </table>
             </div>
+
+            <Pagination
+                :links="contentPieces.links"
+                :from="contentPieces.meta?.from"
+                :to="contentPieces.meta?.to"
+                :total="contentPieces.meta?.total"
+            />
         </div>
     </AppLayout>
 </template>

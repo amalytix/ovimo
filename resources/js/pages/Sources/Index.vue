@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { toast } from 'vue3-toastify';
 
 interface Tag {
     id: number;
@@ -55,7 +57,16 @@ const deleteSource = (id: number) => {
 };
 
 const checkSource = (id: number) => {
-    router.post(`/sources/${id}/check`, {}, { preserveScroll: true });
+    router.post(
+        `/sources/${id}/check`,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Source check has been queued.');
+            },
+        },
+    );
 };
 
 const formatInterval = (interval: string) => {
@@ -225,6 +236,13 @@ watch(selectedTagIds, applyFilters, { deep: true });
                     </tbody>
                 </table>
             </div>
+
+            <Pagination
+                :links="sources.links"
+                :from="sources.meta?.from"
+                :to="sources.meta?.to"
+                :total="sources.meta?.total"
+            />
         </div>
     </AppLayout>
 </template>

@@ -79,7 +79,7 @@ class OpenAIService
     {
         $messages = [
             ['role' => 'system', 'content' => 'You are a professional content writer. Generate high-quality content based on the provided context and instructions.'],
-            ['role' => 'user', 'content' => "Context:\n{$context}\n\nInstructions:\n{$prompt}"],
+            ['role' => 'user', 'content' => "{$prompt}"],
         ];
 
         Log::debug('OpenAI API Request - generateContent', [

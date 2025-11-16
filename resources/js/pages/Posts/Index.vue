@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
@@ -36,11 +37,21 @@ interface Post {
     };
 }
 
+interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
 interface Props {
     posts: {
         data: Post[];
-        links: object;
-        meta: object;
+        links: PaginationLink[];
+        meta?: {
+            from?: number;
+            to?: number;
+            total?: number;
+        };
     };
     sources: Source[];
     tags: Tag[];
@@ -325,6 +336,8 @@ watch(
                     </tbody>
                 </table>
             </div>
+
+            <Pagination :links="posts.links" :from="posts.meta?.from" :to="posts.meta?.to" :total="posts.meta?.total" />
         </div>
     </AppLayout>
 </template>

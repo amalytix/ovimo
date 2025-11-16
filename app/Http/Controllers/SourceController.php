@@ -77,8 +77,18 @@ class SourceController extends Controller
             $this->syncTagsByName($source, $request->tags);
         }
 
+        // Auto-trigger check if source is active
+        if ($source->is_active) {
+            MonitorSource::dispatch($source);
+        }
+
+        $message = 'Source created successfully.';
+        if ($source->is_active) {
+            $message .= ' Initial check has been queued.';
+        }
+
         return redirect()->route('sources.index')
-            ->with('success', 'Source created successfully.');
+            ->with('success', $message);
     }
 
     public function show(Source $source): Response

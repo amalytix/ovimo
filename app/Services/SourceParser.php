@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use XMLReader;
 
 class SourceParser
 {
@@ -11,60 +12,117 @@ class SourceParser
      *
      * @return array<int, array{uri: string, title?: string}>
      */
-    public function parse(string $url, string $type): array
+    public function parse(string $url, string $type, ?int $maxEntries = null): array
     {
-        $response = Http::timeout(30)->get($url);
-
-        if (! $response->successful()) {
-            throw new \RuntimeException("Failed to fetch URL: {$url}");
-        }
-
-        $content = $response->body();
+        $maxEntries = $maxEntries ?? config('services.rss.max_entries', 10);
 
         return match ($type) {
-            'RSS' => $this->parseRss($content),
-            'XML_SITEMAP' => $this->parseXmlSitemap($content),
+            'RSS' => $this->parseRssStreaming($url, $maxEntries),
+            'XML_SITEMAP' => $this->parseXmlSitemap($url, $maxEntries),
             default => throw new \InvalidArgumentException("Unknown source type: {$type}"),
         };
     }
 
     /**
+     * Parse RSS/Atom feed using streaming XMLReader for memory efficiency.
+     *
      * @return array<int, array{uri: string, title?: string}>
      */
-    private function parseRss(string $content): array
+    private function parseRssStreaming(string $url, int $maxEntries): array
     {
-        $xml = @simplexml_load_string($content);
+        $tempFile = $this->downloadToTempFile($url);
 
-        if ($xml === false) {
-            throw new \RuntimeException('Failed to parse RSS feed');
+        try {
+            $reader = new XMLReader;
+
+            if (! $reader->open($tempFile)) {
+                throw new \RuntimeException('Failed to open RSS feed for streaming');
+            }
+
+            $feedType = $this->detectFeedType($reader);
+            $reader->close();
+
+            // Reopen the file to parse from the beginning
+            if (! $reader->open($tempFile)) {
+                throw new \RuntimeException('Failed to reopen RSS feed for parsing');
+            }
+
+            if ($feedType === 'rss') {
+                $items = $this->parseRssItems($reader, $maxEntries);
+            } elseif ($feedType === 'atom') {
+                $items = $this->parseAtomEntries($reader, $maxEntries);
+            } else {
+                $items = [];
+            }
+
+            $reader->close();
+
+            return $items;
+        } finally {
+            @unlink($tempFile);
+        }
+    }
+
+    /**
+     * Download content to a temporary file for streaming.
+     */
+    private function downloadToTempFile(string $url): string
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'rss_');
+
+        $response = Http::timeout(30)->sink($tempFile)->get($url);
+
+        if (! $response->successful()) {
+            @unlink($tempFile);
+            throw new \RuntimeException("Failed to fetch URL: {$url}");
         }
 
-        $items = [];
+        return $tempFile;
+    }
 
-        // Handle both RSS 2.0 and Atom feeds
-        if (isset($xml->channel->item)) {
-            // RSS 2.0
-            foreach ($xml->channel->item as $item) {
-                $link = (string) $item->link;
-                if (! empty($link)) {
-                    $items[] = [
-                        'uri' => $link,
-                        'title' => (string) ($item->title ?? ''),
-                    ];
+    /**
+     * Detect if feed is RSS or Atom format.
+     */
+    private function detectFeedType(XMLReader $reader): string
+    {
+        while ($reader->read()) {
+            if ($reader->nodeType === XMLReader::ELEMENT) {
+                if ($reader->name === 'rss' || $reader->name === 'channel') {
+                    return 'rss';
+                }
+                if ($reader->name === 'feed') {
+                    return 'atom';
                 }
             }
-        } elseif (isset($xml->entry)) {
-            // Atom feed
-            foreach ($xml->entry as $entry) {
-                $link = '';
-                if (isset($entry->link)) {
-                    $link = (string) $entry->link['href'];
-                }
-                if (! empty($link)) {
-                    $items[] = [
-                        'uri' => $link,
-                        'title' => (string) ($entry->title ?? ''),
-                    ];
+        }
+
+        throw new \RuntimeException('Unable to detect feed type');
+    }
+
+    /**
+     * Parse RSS 2.0 items using streaming reader.
+     *
+     * @return array<int, array{uri: string, title: string}>
+     */
+    private function parseRssItems(XMLReader $reader, int $maxEntries): array
+    {
+        $items = [];
+        $count = 0;
+
+        while ($count < $maxEntries && $reader->read()) {
+            if ($reader->nodeType === XMLReader::ELEMENT && $reader->name === 'item') {
+                $itemXml = $reader->readOuterXml();
+                $item = @simplexml_load_string($itemXml);
+
+                if ($item !== false) {
+                    $link = (string) $item->link;
+                    if (! empty($link)) {
+                        $items[] = [
+                            'uri' => $link,
+                            'title' => (string) ($item->title ?? ''),
+                        ];
+                        $count++;
+                    }
                 }
             }
         }
@@ -73,36 +131,74 @@ class SourceParser
     }
 
     /**
-     * @return array<int, array{uri: string}>
+     * Parse Atom entries using streaming reader.
+     *
+     * @return array<int, array{uri: string, title: string}>
      */
-    private function parseXmlSitemap(string $content): array
+    private function parseAtomEntries(XMLReader $reader, int $maxEntries): array
     {
-        $xml = @simplexml_load_string($content);
-
-        if ($xml === false) {
-            throw new \RuntimeException('Failed to parse XML sitemap');
-        }
-
         $items = [];
+        $count = 0;
 
-        // Register namespace if present
-        $namespaces = $xml->getNamespaces(true);
-        if (isset($namespaces[''])) {
-            $xml->registerXPathNamespace('sm', $namespaces['']);
-            $urls = $xml->xpath('//sm:url/sm:loc');
-        } else {
-            $urls = $xml->xpath('//url/loc') ?: $xml->xpath('//loc');
-        }
+        while ($count < $maxEntries && $reader->read()) {
+            if ($reader->nodeType === XMLReader::ELEMENT && $reader->name === 'entry') {
+                $entryXml = $reader->readOuterXml();
+                $entry = @simplexml_load_string($entryXml);
 
-        if ($urls) {
-            foreach ($urls as $url) {
-                $uri = (string) $url;
-                if (! empty($uri)) {
-                    $items[] = ['uri' => $uri];
+                if ($entry !== false) {
+                    $link = '';
+                    if (isset($entry->link)) {
+                        $link = (string) $entry->link['href'];
+                    }
+                    if (! empty($link)) {
+                        $items[] = [
+                            'uri' => $link,
+                            'title' => (string) ($entry->title ?? ''),
+                        ];
+                        $count++;
+                    }
                 }
             }
         }
 
         return $items;
+    }
+
+    /**
+     * Parse XML sitemap with streaming support.
+     *
+     * @return array<int, array{uri: string}>
+     */
+    private function parseXmlSitemap(string $url, int $maxEntries): array
+    {
+        $tempFile = $this->downloadToTempFile($url);
+
+        try {
+            $items = [];
+            $reader = new XMLReader;
+
+            if (! $reader->open($tempFile)) {
+                throw new \RuntimeException('Failed to open XML sitemap for streaming');
+            }
+
+            $count = 0;
+
+            while ($reader->read() && $count < $maxEntries) {
+                if ($reader->nodeType === XMLReader::ELEMENT && $reader->localName === 'loc') {
+                    $reader->read(); // Move to text content
+                    $uri = trim($reader->value);
+                    if (! empty($uri)) {
+                        $items[] = ['uri' => $uri];
+                        $count++;
+                    }
+                }
+            }
+
+            $reader->close();
+
+            return $items;
+        } finally {
+            @unlink($tempFile);
+        }
     }
 }

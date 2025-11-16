@@ -43,6 +43,8 @@ test('authenticated users can view create source form', function () {
 });
 
 test('authenticated users can create a source', function () {
+    Queue::fake();
+
     [$user, $team] = createUserWithTeam();
 
     $response = $this->actingAs($user)->post('/sources', [
@@ -64,6 +66,30 @@ test('authenticated users can create a source', function () {
         'url' => 'https://example.com/feed.xml',
         'monitoring_interval' => 'HOURLY',
     ]);
+
+    // Verify that MonitorSource job was dispatched for active source
+    Queue::assertPushed(MonitorSource::class);
+});
+
+test('creating inactive source does not dispatch check job', function () {
+    Queue::fake();
+
+    [$user, $team] = createUserWithTeam();
+
+    $response = $this->actingAs($user)->post('/sources', [
+        'internal_name' => 'Inactive Source',
+        'type' => 'RSS',
+        'url' => 'https://example.com/feed.xml',
+        'monitoring_interval' => 'HOURLY',
+        'is_active' => false,
+        'should_notify' => true,
+        'auto_summarize' => false,
+    ]);
+
+    $response->assertRedirect('/sources');
+
+    // Verify that MonitorSource job was NOT dispatched for inactive source
+    Queue::assertNotPushed(MonitorSource::class);
 });
 
 test('source creation validates required fields', function () {

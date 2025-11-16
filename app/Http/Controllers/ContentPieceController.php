@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateContentPieceRequest;
 use App\Models\ContentPiece;
 use App\Models\Prompt;
 use App\Services\OpenAIService;
+use App\Services\WebContentExtractor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -197,13 +198,18 @@ class ContentPieceController extends Controller
     private function generateContentForPiece(ContentPiece $contentPiece, OpenAIService $openAI): RedirectResponse
     {
         // Build context from linked posts
+        $extractor = new WebContentExtractor;
         $context = '';
+        $articleCounter = 1;
         foreach ($contentPiece->posts as $post) {
-            $context .= "Post: {$post->uri}\nSummary: {$post->summary}\n\n";
+            $title = $post->external_title ?? $post->internal_title ?? "Article {$articleCounter}";
+            $fullContent = $extractor->extractArticleAsMarkdown($post->uri);
+            $context .= "### {$title}\n\nURL: {$post->uri}\nSummary: {$post->summary}\nFull Content:\n{$fullContent}\n\n";
+            $articleCounter++;
         }
 
         if ($contentPiece->briefing_text) {
-            $context .= "Additional briefing: {$contentPiece->briefing_text}\n\n";
+            $context .= "## Additional briefing\n\n{$contentPiece->briefing_text}\n\n";
         }
 
         $context .= "Target channel: {$contentPiece->channel}\n";
