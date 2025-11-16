@@ -2,7 +2,9 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Team;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -30,10 +32,25 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => $input['password'],
-        ]);
+        return DB::transaction(function () use ($input) {
+            $user = User::create([
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => $input['password'],
+                'monthly_token_limit' => config('openai.default_user_token_limit'),
+            ]);
+
+            $team = Team::create([
+                'name' => 'Personal',
+                'owner_id' => $user->id,
+                'monthly_token_limit' => config('openai.default_team_token_limit'),
+            ]);
+
+            $team->users()->attach($user->id, ['role' => 'admin']);
+
+            $user->update(['current_team_id' => $team->id]);
+
+            return $user;
+        });
     }
 }
