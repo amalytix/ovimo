@@ -1,4 +1,13 @@
 <laravel-boost-guidelines>
+
+## Architecture Documentation
+
+**For comprehensive application architecture documentation, see [docs/architecture.md](docs/architecture.md).**
+
+This includes domain model relationships, backend/frontend structure, database schema, and key patterns.
+
+---
+
 === foundation rules ===
 
 # Laravel Boost Guidelines
