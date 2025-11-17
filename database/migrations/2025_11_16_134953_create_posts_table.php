@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('source_id')->constrained()->cascadeOnDelete();
             $table->string('uri', 2048);
+            $table->char('uri_hash', 64); // SHA-256 hash for indexing
             $table->text('summary')->nullable();
             $table->unsignedTinyInteger('relevancy_score')->nullable();
             $table->boolean('is_read')->default(false);
@@ -23,7 +24,7 @@ return new class extends Migration
             $table->timestamp('found_at');
             $table->timestamps();
 
-            $table->unique(['source_id', 'uri']);
+            $table->unique(['source_id', 'uri_hash']);
             $table->index(['source_id', 'is_hidden', 'found_at']);
             $table->index(['source_id', 'is_read']);
             $table->index(['source_id', 'relevancy_score']);

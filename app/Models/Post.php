@@ -25,6 +25,15 @@ class Post extends Model
         'found_at',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Post $post) {
+            if ($post->isDirty('uri')) {
+                $post->uri_hash = hash('sha256', $post->uri);
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
