@@ -168,6 +168,11 @@ const bulkDelete = () => {
     router.post('/posts/bulk-delete', { post_ids: selectedPosts.value }, { preserveScroll: true, onSuccess: () => (selectedPosts.value = []) });
 };
 
+const hideNotRelevant = () => {
+    if (!confirm('Are you sure you want to hide all posts with status "Not Relevant"? This action cannot be undone.')) return;
+    router.post('/posts/hide-not-relevant', {}, { preserveScroll: true });
+};
+
 const createContentPiece = () => {
     if (selectedPosts.value.length === 0) return;
     const params = new URLSearchParams();
@@ -257,6 +262,7 @@ watch(
                 <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkMarkAsRead">Mark as Read</Button>
                 <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkMarkAsUnread">Mark as Unread</Button>
                 <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkHide">Hide</Button>
+                <Button size="sm" variant="outline" @click="hideNotRelevant">Hide not relevant</Button>
                 <Button size="sm" variant="destructive" :disabled="selectedPosts.length === 0" @click="bulkDelete">Delete</Button>
             </div>
 

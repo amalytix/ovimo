@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ContentPieceController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PromptController;
 use App\Http\Controllers\SettingsController;
@@ -18,9 +19,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('sources', SourceController::class);
     Route::post('sources/{source}/check', [SourceController::class, 'check'])->name('sources.check');
@@ -46,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('posts/bulk-toggle-read', [PostController::class, 'bulkToggleRead'])->name('posts.bulk-toggle-read');
     Route::post('posts/bulk-hide', [PostController::class, 'bulkHide'])->name('posts.bulk-hide');
     Route::post('posts/bulk-delete', [PostController::class, 'bulkDelete'])->name('posts.bulk-delete');
+    Route::post('posts/hide-not-relevant', [PostController::class, 'hideNotRelevant'])->name('posts.hide-not-relevant');
 });
 
 require __DIR__.'/settings.php';

@@ -85,7 +85,7 @@ class PostController extends Controller
 
         return Inertia::render('Posts/Index', [
             'posts' => $posts,
-            'sources' => Source::where('team_id', $teamId)->get(['id', 'internal_name']),
+            'sources' => Source::where('team_id', $teamId)->orderBy('internal_name')->get(['id', 'internal_name']),
             'tags' => Tag::where('team_id', $teamId)->get(['id', 'name']),
             'filters' => [
                 'source_id' => $request->source_id,
@@ -175,6 +175,18 @@ class PostController extends Controller
         Post::whereIn('id', $request->post_ids)
             ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
             ->delete();
+
+        return back();
+    }
+
+    public function hideNotRelevant(): RedirectResponse
+    {
+        $teamId = auth()->user()->current_team_id;
+
+        Post::whereHas('source', fn ($q) => $q->where('team_id', $teamId))
+            ->where('status', 'NOT_RELEVANT')
+            ->where('is_hidden', false)
+            ->update(['is_hidden' => true]);
 
         return back();
     }
