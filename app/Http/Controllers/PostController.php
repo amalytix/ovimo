@@ -62,8 +62,24 @@ class PostController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Sorting
+        $sortBy = $request->get('sort_by', 'found_at');
+        $sortDirection = $request->get('sort_direction', 'desc');
+
+        // Validate sort direction
+        $sortDirection = in_array($sortDirection, ['asc', 'desc']) ? $sortDirection : 'desc';
+
+        // Apply sorting
+        match ($sortBy) {
+            'source' => $query->join('sources', 'posts.source_id', '=', 'sources.id')
+                ->orderBy('sources.internal_name', $sortDirection)
+                ->select('posts.*'),
+            'relevancy' => $query->orderBy('relevancy_score', $sortDirection),
+            'status' => $query->orderBy('status', $sortDirection),
+            default => $query->orderBy('found_at', $sortDirection),
+        };
+
         $posts = $query
-            ->orderByDesc('found_at')
             ->paginate(25)
             ->withQueryString()
             ->through(fn (Post $post) => [
@@ -95,6 +111,8 @@ class PostController extends Controller
                 'is_read' => $request->is_read,
                 'show_hidden' => $request->show_hidden,
                 'status' => $request->status,
+                'sort_by' => $sortBy,
+                'sort_direction' => $sortDirection,
             ],
         ]);
     }

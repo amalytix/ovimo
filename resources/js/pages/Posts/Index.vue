@@ -63,6 +63,8 @@ interface Props {
         is_read: string | null;
         show_hidden: boolean | null;
         status: string | null;
+        sort_by: string;
+        sort_direction: string;
     };
 }
 
@@ -116,8 +118,27 @@ const clearFilters = () => {
         is_read: null,
         show_hidden: null,
         status: null,
+        sort_by: 'found_at',
+        sort_direction: 'desc',
     };
     applyFilters();
+};
+
+const sortBy = (column: string) => {
+    if (localFilters.value.sort_by === column) {
+        // Toggle direction if same column
+        localFilters.value.sort_direction = localFilters.value.sort_direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        // New column, default to desc for found_at and relevancy, asc for others
+        localFilters.value.sort_by = column;
+        localFilters.value.sort_direction = column === 'found_at' || column === 'relevancy' ? 'desc' : 'asc';
+    }
+    applyFilters();
+};
+
+const getSortIcon = (column: string) => {
+    if (localFilters.value.sort_by !== column) return '';
+    return localFilters.value.sort_direction === 'asc' ? '↑' : '↓';
 };
 
 // Watch for filter changes and auto-apply with debounce
@@ -274,12 +295,32 @@ watch(
                             <th class="px-4 py-3">
                                 <Checkbox :model-value="allSelected" @update:model-value="(checked: boolean) => toggleSelectAll(checked)" />
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Source</th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('source')"
+                            >
+                                Source {{ getSortIcon('source') }}
+                            </th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Title</th>
                             <th class="px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Summary</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Relevancy</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Found</th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('relevancy')"
+                            >
+                                Relevancy {{ getSortIcon('relevancy') }}
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('status')"
+                            >
+                                Status {{ getSortIcon('status') }}
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('found_at')"
+                            >
+                                Found {{ getSortIcon('found_at') }}
+                            </th>
                             <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
                         </tr>
                     </thead>
