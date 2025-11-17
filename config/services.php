@@ -39,4 +39,8 @@ return [
         'max_entries' => env('RSS_MAX_ENTRIES', 10),
     ],
 
+    'xml' => [
+        'max_entries' => env('XML_MAX_ENTRIES', 500),
+    ],
+
 ];

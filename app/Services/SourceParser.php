@@ -14,11 +14,9 @@ class SourceParser
      */
     public function parse(string $url, string $type, ?int $maxEntries = null): array
     {
-        $maxEntries = $maxEntries ?? config('services.rss.max_entries', 10);
-
         return match ($type) {
-            'RSS' => $this->parseRssStreaming($url, $maxEntries),
-            'XML_SITEMAP' => $this->parseXmlSitemap($url, $maxEntries),
+            'RSS' => $this->parseRssStreaming($url, $maxEntries ?? config('services.rss.max_entries', 10)),
+            'XML_SITEMAP' => $this->parseXmlSitemap($url, $maxEntries ?? config('services.xml.max_entries', 500)),
             default => throw new \InvalidArgumentException("Unknown source type: {$type}"),
         };
     }
