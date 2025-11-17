@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { analyzeWebpage, testExtraction } from '@/actions/App/Http/Controllers/SourceController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
+import axios from 'axios';
 import { ref } from 'vue';
 
 interface Tag {
@@ -17,6 +19,11 @@ interface Tag {
 
 interface Props {
     tags: Tag[];
+}
+
+interface ExtractedPost {
+    title: string;
+    link: string;
 }
 
 const props = defineProps<Props>();
@@ -30,6 +37,9 @@ const form = useForm({
     internal_name: '',
     type: 'RSS',
     url: '',
+    css_selector_title: '',
+    css_selector_link: '',
+    keywords: '',
     monitoring_interval: 'DAILY',
     is_active: true,
     should_notify: false,
@@ -38,14 +48,73 @@ const form = useForm({
 });
 
 const newTagInput = ref('');
+const isAnalyzing = ref(false);
+const isTesting = ref(false);
+const extractedPosts = ref<ExtractedPost[]>([]);
+const analyzeError = ref('');
+const testError = ref('');
 
 const submit = () => {
     form.post('/sources');
 };
 
+const analyzePageStructure = async () => {
+    if (!form.url) {
+        analyzeError.value = 'Please enter a URL first';
+        return;
+    }
+
+    isAnalyzing.value = true;
+    analyzeError.value = '';
+
+    try {
+        const response = await axios.post(analyzeWebpage.url(), { url: form.url });
+        form.css_selector_title = response.data.css_selector_title;
+        form.css_selector_link = response.data.css_selector_link;
+    } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response?.data?.message) {
+            analyzeError.value = error.response.data.message;
+        } else {
+            analyzeError.value = 'Failed to analyze page structure';
+        }
+    } finally {
+        isAnalyzing.value = false;
+    }
+};
+
+const testExtractionNow = async () => {
+    if (!form.url || !form.css_selector_title || !form.css_selector_link) {
+        testError.value = 'URL and CSS selectors are required';
+        return;
+    }
+
+    isTesting.value = true;
+    testError.value = '';
+    extractedPosts.value = [];
+
+    try {
+        const response = await axios.post(testExtraction.url(), {
+            url: form.url,
+            css_selector_title: form.css_selector_title,
+            css_selector_link: form.css_selector_link,
+            keywords: form.keywords,
+        });
+        extractedPosts.value = response.data.posts;
+    } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response?.data?.message) {
+            testError.value = error.response.data.message;
+        } else {
+            testError.value = 'Failed to extract posts';
+        }
+    } finally {
+        isTesting.value = false;
+    }
+};
+
 const sourceTypes = [
     { value: 'RSS', label: 'RSS Feed' },
     { value: 'XML_SITEMAP', label: 'XML Sitemap' },
+    { value: 'WEBSITE', label: 'Website (Other)' },
 ];
 
 const intervals = [
@@ -124,6 +193,94 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                     <Input id="url" v-model="form.url" type="url" required placeholder="https://example.com/feed" />
                     <InputError :message="form.errors.url" />
                 </div>
+
+                <!-- Website-specific fields -->
+                <template v-if="form.type === 'WEBSITE'">
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+                        <h3 class="mb-4 font-medium">Website Extraction Settings</h3>
+
+                        <div class="mb-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                :disabled="isAnalyzing || !form.url"
+                                @click="analyzePageStructure"
+                            >
+                                {{ isAnalyzing ? 'Analyzing...' : 'Analyze Page' }}
+                            </Button>
+                            <p class="mt-1 text-xs text-gray-500">Uses AI to detect post structure and suggest CSS selectors</p>
+                            <p v-if="analyzeError" class="mt-1 text-sm text-red-600">{{ analyzeError }}</p>
+                        </div>
+
+                        <div class="grid gap-4">
+                            <div class="grid gap-2">
+                                <Label for="css_selector_title">CSS Selector for Title</Label>
+                                <Input
+                                    id="css_selector_title"
+                                    v-model="form.css_selector_title"
+                                    type="text"
+                                    placeholder=".post-title a"
+                                />
+                                <InputError :message="form.errors.css_selector_title" />
+                            </div>
+
+                            <div class="grid gap-2">
+                                <Label for="css_selector_link">CSS Selector for Link</Label>
+                                <Input
+                                    id="css_selector_link"
+                                    v-model="form.css_selector_link"
+                                    type="text"
+                                    placeholder=".post-title a"
+                                />
+                                <InputError :message="form.errors.css_selector_link" />
+                            </div>
+
+                            <div class="grid gap-2">
+                                <Label for="keywords">Keywords (optional)</Label>
+                                <Input
+                                    id="keywords"
+                                    v-model="form.keywords"
+                                    type="text"
+                                    placeholder="Amazon, Vendor Central, Seller Central"
+                                />
+                                <p class="text-xs text-gray-500">Comma-separated keywords to filter posts. Only posts containing these keywords will be monitored.</p>
+                                <InputError :message="form.errors.keywords" />
+                            </div>
+
+                            <div>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    :disabled="isTesting || !form.css_selector_title || !form.css_selector_link"
+                                    @click="testExtractionNow"
+                                >
+                                    {{ isTesting ? 'Testing...' : 'Test Extraction' }}
+                                </Button>
+                                <p v-if="testError" class="mt-1 text-sm text-red-600">{{ testError }}</p>
+                            </div>
+
+                            <div v-if="extractedPosts.length > 0" class="mt-2">
+                                <Label class="mb-2 block">Preview (first {{ extractedPosts.length }} posts):</Label>
+                                <div class="space-y-2">
+                                    <div
+                                        v-for="(post, index) in extractedPosts"
+                                        :key="index"
+                                        class="rounded border border-gray-200 bg-white p-3 dark:border-gray-600 dark:bg-gray-700"
+                                    >
+                                        <div class="font-medium">{{ post.title }}</div>
+                                        <a
+                                            :href="post.link"
+                                            target="_blank"
+                                            class="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                                        >
+                                            {{ post.link }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
 
                 <div class="grid gap-2">
                     <Label for="monitoring_interval">Monitoring Interval</Label>

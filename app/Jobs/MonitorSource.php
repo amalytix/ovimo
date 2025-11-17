@@ -28,7 +28,7 @@ class MonitorSource implements ShouldQueue
         }
 
         try {
-            $items = $parser->parse($this->source->url, $this->source->type);
+            $items = $parser->parse($this->source->url, $this->source->type, null, $this->source);
 
             $newPostsCount = 0;
 

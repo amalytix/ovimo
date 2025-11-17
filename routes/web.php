@@ -24,6 +24,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('sources', SourceController::class);
     Route::post('sources/{source}/check', [SourceController::class, 'check'])->name('sources.check');
+    Route::post('sources/analyze-webpage', [SourceController::class, 'analyzeWebpage'])->name('sources.analyze-webpage');
+    Route::post('sources/test-extraction', [SourceController::class, 'testExtraction'])->name('sources.test-extraction');
     Route::resource('prompts', PromptController::class)->except(['show']);
     Route::resource('content-pieces', ContentPieceController::class)->except(['show']);
     Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])->name('content-pieces.generate');

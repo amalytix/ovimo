@@ -19,8 +19,11 @@ class UpdateSourceRequest extends FormRequest
     {
         return [
             'internal_name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::in(['RSS', 'XML_SITEMAP'])],
+            'type' => ['required', Rule::in(['RSS', 'XML_SITEMAP', 'WEBSITE'])],
             'url' => ['required', 'url', 'max:2048'],
+            'css_selector_title' => ['nullable', 'required_if:type,WEBSITE', 'string', 'max:500'],
+            'css_selector_link' => ['nullable', 'required_if:type,WEBSITE', 'string', 'max:500'],
+            'keywords' => ['nullable', 'string', 'max:1000'],
             'monitoring_interval' => ['required', Rule::in([
                 'EVERY_10_MIN', 'EVERY_30_MIN', 'HOURLY',
                 'EVERY_6_HOURS', 'DAILY', 'WEEKLY',

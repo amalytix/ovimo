@@ -24,7 +24,7 @@ class OpenAIService
     {
         $relevancyPrompt = $team->relevancy_prompt ?? 'You are a news analyst. Rate the relevancy of content for a business news monitoring system.';
 
-        $systemPrompt = <<<PROMPT
+        $prompt = <<<PROMPT
         {$relevancyPrompt}
 
         For the given URL, provide:
@@ -38,37 +38,97 @@ class OpenAIService
             "summary": "Your summary here",
             "relevancy_score": 75
         }
+
+        Analyze this URL: {$uri}
         PROMPT;
 
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-            ['role' => 'user', 'content' => "Analyze this URL: {$uri}"],
-        ];
+        $model = 'gpt-5-mini';
 
         Log::debug('OpenAI API Request - summarizePost', [
-            'model' => config('openai.model', 'gpt-4o'),
-            'messages' => $messages,
-            'max_tokens' => 500,
+            'model' => $model,
+            'input' => $prompt,
         ]);
 
-        $response = $this->client->chat()->create([
-            'model' => config('openai.model', 'gpt-4o'),
-            'messages' => $messages,
-            'response_format' => ['type' => 'json_object'],
-            'max_tokens' => 500,
+        $response = $this->client->responses()->create([
+            'model' => $model,
+            'input' => $prompt,
+            'text' => [
+                'format' => ['type' => 'json_object'],
+            ],
         ]);
 
-        $content = $response->choices[0]->message->content;
+        $content = $response->outputText;
         $data = json_decode($content, true);
 
         return [
             'summary' => $data['summary'] ?? 'Unable to generate summary',
             'relevancy_score' => min(100, max(0, (int) ($data['relevancy_score'] ?? 50))),
             'internal_title' => $data['title'] ?? 'Untitled',
-            'input_tokens' => $response->usage->promptTokens,
-            'output_tokens' => $response->usage->completionTokens,
+            'input_tokens' => $response->usage->inputTokens,
+            'output_tokens' => $response->usage->outputTokens,
             'total_tokens' => $response->usage->totalTokens,
-            'model' => config('openai.model', 'gpt-4o'),
+            'model' => $model,
+        ];
+    }
+
+    /**
+     * Analyze a webpage HTML to suggest CSS selectors for extracting post titles and links.
+     *
+     * @return array{css_selector_title: string, css_selector_link: string, input_tokens: int, output_tokens: int, total_tokens: int, model: string}
+     */
+    public function analyzeWebpage(string $html): array
+    {
+        $prompt = <<<PROMPT
+        You are an expert web scraper. Analyze the following HTML and identify CSS selectors that can extract article/post titles and their corresponding links.
+
+        The page contains a list of articles or posts. Your task is to:
+        1. Identify the repeating pattern for each article/post item
+        2. Provide a CSS selector for the title text
+        3. Provide a CSS selector for the link URL (href attribute)
+
+        Important:
+        - The selectors should match ALL posts on the page, not just one
+        - For the link selector, target the <a> element so we can extract the href attribute
+        - Use specific, reliable selectors that won't break easily
+
+        Respond in JSON format only:
+        {
+            "css_selector_title": "selector for title text",
+            "css_selector_link": "selector for link element"
+        }
+
+        HTML to analyze:
+        {$html}
+        PROMPT;
+
+        $model = 'gpt-5.1';
+
+        Log::debug('OpenAI API Request - analyzeWebpage', [
+            'model' => $model,
+            'html_length' => strlen($html),
+        ]);
+
+        $response = $this->client->responses()->create([
+            'model' => $model,
+            'input' => $prompt,
+            'reasoning' => [
+                'effort' => 'low',
+            ],
+            'text' => [
+                'format' => ['type' => 'json_object'],
+            ],
+        ]);
+
+        $content = $response->outputText;
+        $data = json_decode($content, true);
+
+        return [
+            'css_selector_title' => $data['css_selector_title'] ?? '',
+            'css_selector_link' => $data['css_selector_link'] ?? '',
+            'input_tokens' => $response->usage->inputTokens,
+            'output_tokens' => $response->usage->outputTokens,
+            'total_tokens' => $response->usage->totalTokens,
+            'model' => $model,
         ];
     }
 

@@ -7,7 +7,11 @@ use App\Http\Requests\UpdateSourceRequest;
 use App\Jobs\MonitorSource;
 use App\Models\Source;
 use App\Models\Tag;
+use App\Services\OpenAIService;
+use App\Services\WebsiteParserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -68,9 +72,21 @@ class SourceController extends Controller
 
     public function store(StoreSourceRequest $request): RedirectResponse
     {
+        $data = $request->safe()->except('tags');
+
+        // Normalize keywords: trim and lowercase
+        if (isset($data['keywords']) && $data['keywords']) {
+            $keywords = array_map(
+                fn ($keyword) => strtolower(trim($keyword)),
+                explode(',', $data['keywords'])
+            );
+            $keywords = array_filter($keywords, fn ($keyword) => $keyword !== '');
+            $data['keywords'] = implode(',', $keywords);
+        }
+
         $source = Source::create([
             'team_id' => auth()->user()->current_team_id,
-            ...$request->safe()->except('tags'),
+            ...$data,
         ]);
 
         if ($request->has('tags')) {
@@ -126,6 +142,9 @@ class SourceController extends Controller
                 'internal_name' => $source->internal_name,
                 'type' => $source->type,
                 'url' => $source->url,
+                'css_selector_title' => $source->css_selector_title,
+                'css_selector_link' => $source->css_selector_link,
+                'keywords' => $source->keywords,
                 'monitoring_interval' => $source->monitoring_interval,
                 'is_active' => $source->is_active,
                 'should_notify' => $source->should_notify,
@@ -140,7 +159,19 @@ class SourceController extends Controller
     {
         $this->authorizeTeam($source);
 
-        $source->update($request->safe()->except('tags'));
+        $data = $request->safe()->except('tags');
+
+        // Normalize keywords: trim and lowercase
+        if (isset($data['keywords']) && $data['keywords']) {
+            $keywords = array_map(
+                fn ($keyword) => strtolower(trim($keyword)),
+                explode(',', $data['keywords'])
+            );
+            $keywords = array_filter($keywords, fn ($keyword) => $keyword !== '');
+            $data['keywords'] = implode(',', $keywords);
+        }
+
+        $source->update($data);
 
         if ($request->has('tags')) {
             $this->syncTagsByName($source, $request->tags);
@@ -170,6 +201,63 @@ class SourceController extends Controller
 
         return redirect()->route('sources.index')
             ->with('success', 'Source check has been queued.');
+    }
+
+    public function analyzeWebpage(Request $request, OpenAIService $openAIService, WebsiteParserService $parserService): JsonResponse
+    {
+        $request->validate([
+            'url' => ['required', 'url', 'max:2048'],
+        ]);
+
+        $url = $request->input('url');
+
+        $html = $parserService->fetchHtml($url);
+
+        // Truncate HTML if too large (to avoid token limits)
+        $maxHtmlLength = 50000;
+        if (strlen($html) > $maxHtmlLength) {
+            $html = substr($html, 0, $maxHtmlLength);
+        }
+
+        $result = $openAIService->analyzeWebpage($html);
+
+        // Track token usage
+        $openAIService->trackUsage(
+            $result['input_tokens'],
+            $result['output_tokens'],
+            $result['total_tokens'],
+            $result['model'],
+            auth()->user(),
+            auth()->user()->currentTeam,
+            'analyze_webpage'
+        );
+
+        return response()->json([
+            'css_selector_title' => $result['css_selector_title'],
+            'css_selector_link' => $result['css_selector_link'],
+        ]);
+    }
+
+    public function testExtraction(Request $request, WebsiteParserService $parserService): JsonResponse
+    {
+        $request->validate([
+            'url' => ['required', 'url', 'max:2048'],
+            'css_selector_title' => ['required', 'string', 'max:500'],
+            'css_selector_link' => ['required', 'string', 'max:500'],
+            'keywords' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $posts = $parserService->parse(
+            $request->input('url'),
+            $request->input('css_selector_title'),
+            $request->input('css_selector_link'),
+            $request->input('keywords'),
+            5 // Return first 5 posts
+        );
+
+        return response()->json([
+            'posts' => $posts,
+        ]);
     }
 
     private function authorizeTeam(Source $source): void

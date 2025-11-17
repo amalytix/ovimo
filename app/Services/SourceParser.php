@@ -2,23 +2,62 @@
 
 namespace App\Services;
 
+use App\Models\Source;
 use Illuminate\Support\Facades\Http;
 use XMLReader;
 
 class SourceParser
 {
+    private WebsiteParserService $websiteParser;
+
+    public function __construct(?WebsiteParserService $websiteParser = null)
+    {
+        $this->websiteParser = $websiteParser ?? new WebsiteParserService;
+    }
+
     /**
      * Parse a source URL and return found items.
      *
      * @return array<int, array{uri: string, title?: string}>
      */
-    public function parse(string $url, string $type, ?int $maxEntries = null): array
+    public function parse(string $url, string $type, ?int $maxEntries = null, ?Source $source = null): array
     {
         return match ($type) {
             'RSS' => $this->parseRssStreaming($url, $maxEntries ?? config('services.rss.max_entries', 10)),
             'XML_SITEMAP' => $this->parseXmlSitemap($url, $maxEntries ?? config('services.xml.max_entries', 500)),
+            'WEBSITE' => $this->parseWebsite($source, $maxEntries ?? config('services.website.max_entries', 100)),
             default => throw new \InvalidArgumentException("Unknown source type: {$type}"),
         };
+    }
+
+    /**
+     * Parse a website using CSS selectors.
+     *
+     * @return array<int, array{uri: string, title: string}>
+     */
+    private function parseWebsite(?Source $source, int $maxEntries): array
+    {
+        if (! $source) {
+            throw new \InvalidArgumentException('Source model is required for WEBSITE type');
+        }
+
+        if (! $source->css_selector_title || ! $source->css_selector_link) {
+            throw new \InvalidArgumentException('CSS selectors are required for WEBSITE type');
+        }
+
+        $posts = $this->websiteParser->parse(
+            $source->url,
+            $source->css_selector_title,
+            $source->css_selector_link,
+            $source->keywords,
+            $maxEntries
+        );
+
+        // Transform to match expected format
+        return array_map(fn ($post) => [
+            'uri' => $post['link'],
+            'title' => $post['title'],
+        ], $posts);
     }
 
     /**
