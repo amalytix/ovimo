@@ -21,7 +21,7 @@ class ContentPieceController extends Controller
 
         $query = ContentPiece::query()
             ->where('team_id', $teamId)
-            ->with('prompt:id,name');
+            ->with('prompt:id,internal_name');
 
         // Filter by status
         if ($request->filled('status')) {
@@ -52,7 +52,7 @@ class ContentPieceController extends Controller
                 'channel' => $piece->channel,
                 'target_language' => $piece->target_language,
                 'status' => $piece->status,
-                'prompt_name' => $piece->prompt?->name,
+                'prompt_name' => $piece->prompt?->internal_name,
                 'created_at' => $piece->created_at->diffForHumans(),
             ]);
 

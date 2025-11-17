@@ -14,7 +14,12 @@ class OpenAIService
 
     public function __construct()
     {
-        $this->client = OpenAI::client(config('openai.api_key'));
+        $this->client = OpenAI::factory()
+            ->withApiKey(config('openai.api_key'))
+            ->withHttpClient(new \GuzzleHttp\Client([
+                'timeout' => config('openai.request_timeout', 300),
+            ]))
+            ->make();
     }
 
     /**
@@ -137,6 +142,9 @@ class OpenAIService
      */
     public function generateContent(string $prompt, string $context): array
     {
+        // Extend PHP execution time for long-running AI requests
+        set_time_limit(config('openai.request_timeout', 300));
+
         $model = config('openai.model', 'gpt-5.1');
 
         Log::debug('OpenAI API Request - generateContent', [
