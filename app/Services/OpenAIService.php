@@ -137,29 +137,28 @@ class OpenAIService
      */
     public function generateContent(string $prompt, string $context): array
     {
-        $messages = [
-            ['role' => 'system', 'content' => 'You are a professional content writer. Generate high-quality content based on the provided context and instructions.'],
-            ['role' => 'user', 'content' => "{$prompt}"],
-        ];
+        $model = config('openai.model', 'gpt-5.1');
 
         Log::debug('OpenAI API Request - generateContent', [
-            'model' => config('openai.model', 'gpt-5.1'),
-            'messages' => $messages,
-            'max_tokens' => 2000,
+            'model' => $model,
+            'input' => $prompt,
         ]);
 
-        $response = $this->client->chat()->create([
-            'model' => config('openai.model', 'gpt-5.1'),
-            'messages' => $messages,
-            'max_tokens' => 2000,
+        $response = $this->client->responses()->create([
+            'model' => $model,
+            'instructions' => 'You are a professional content writer. Generate high-quality content based on the provided context and instructions.',
+            'input' => $prompt,
+            'reasoning' => [
+                'effort' => 'low',
+            ],
         ]);
 
         return [
-            'content' => $response->choices[0]->message->content,
-            'input_tokens' => $response->usage->promptTokens,
-            'output_tokens' => $response->usage->completionTokens,
+            'content' => $response->outputText,
+            'input_tokens' => $response->usage->inputTokens,
+            'output_tokens' => $response->usage->outputTokens,
             'total_tokens' => $response->usage->totalTokens,
-            'model' => config('openai.model', 'gpt-5.1'),
+            'model' => $model,
         ];
     }
 
