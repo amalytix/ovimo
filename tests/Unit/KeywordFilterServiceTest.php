@@ -3,6 +3,8 @@
 use App\Models\Team;
 use App\Services\KeywordFilterService;
 
+uses(Tests\TestCase::class);
+
 beforeEach(function () {
     $this->service = new KeywordFilterService;
 });
@@ -83,6 +85,7 @@ describe('containsAnyKeyword', function () {
 describe('shouldIncludePost', function () {
     it('includes post when no keywords are set', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => null,
             'negative_keywords' => null,
         ]);
@@ -94,6 +97,7 @@ describe('shouldIncludePost', function () {
 
     it('includes post when title contains positive keyword', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => "climate\nrenewable",
             'negative_keywords' => null,
         ]);
@@ -105,6 +109,7 @@ describe('shouldIncludePost', function () {
 
     it('excludes post when title does not contain any positive keyword', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => "climate\nrenewable",
             'negative_keywords' => null,
         ]);
@@ -116,6 +121,7 @@ describe('shouldIncludePost', function () {
 
     it('excludes post when title contains negative keyword', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => null,
             'negative_keywords' => "sponsored\nadvertisement",
         ]);
@@ -127,6 +133,7 @@ describe('shouldIncludePost', function () {
 
     it('includes post when title does not contain any negative keyword', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => null,
             'negative_keywords' => "sponsored\nadvertisement",
         ]);
@@ -138,6 +145,7 @@ describe('shouldIncludePost', function () {
 
     it('negative keywords take priority over positive keywords', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => "climate\nnews",
             'negative_keywords' => 'sponsored',
         ]);
@@ -150,6 +158,7 @@ describe('shouldIncludePost', function () {
 
     it('includes post matching positive when not matching negative', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => 'climate',
             'negative_keywords' => 'sponsored',
         ]);
@@ -163,6 +172,7 @@ describe('shouldIncludePost', function () {
 describe('filterPosts', function () {
     it('returns all posts when no keywords are set', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => null,
             'negative_keywords' => null,
         ]);
@@ -179,6 +189,7 @@ describe('filterPosts', function () {
 
     it('filters posts by positive keywords', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => 'climate',
             'negative_keywords' => null,
         ]);
@@ -198,6 +209,7 @@ describe('filterPosts', function () {
 
     it('filters out posts with negative keywords', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => null,
             'negative_keywords' => 'sponsored',
         ]);
@@ -219,6 +231,7 @@ describe('filterPosts', function () {
 describe('filterSourceItems', function () {
     it('returns all items when no keywords are set', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => null,
             'negative_keywords' => null,
         ]);
@@ -235,6 +248,7 @@ describe('filterSourceItems', function () {
 
     it('filters RSS items by title', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => 'climate',
             'negative_keywords' => null,
         ]);
@@ -252,6 +266,7 @@ describe('filterSourceItems', function () {
 
     it('preserves titles fetched for items without titles', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => 'climate',
             'negative_keywords' => null,
         ]);
@@ -273,6 +288,7 @@ describe('filterSourceItems', function () {
 
     it('excludes items with negative keywords', function () {
         $team = Team::factory()->make([
+            'owner_id' => 1,
             'positive_keywords' => null,
             'negative_keywords' => 'sponsored',
         ]);
