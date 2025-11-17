@@ -251,3 +251,94 @@ test('guests cannot trigger source check', function () {
     $this->post("/sources/{$source->id}/check")
         ->assertRedirect('/login');
 });
+
+test('authenticated users can create source with bypass keyword filter', function () {
+    Queue::fake();
+
+    [$user, $team] = createUserWithTeam();
+
+    $response = $this->actingAs($user)->post('/sources', [
+        'internal_name' => 'Bypass Source',
+        'type' => 'RSS',
+        'url' => 'https://example.com/feed.xml',
+        'monitoring_interval' => 'DAILY',
+        'is_active' => true,
+        'should_notify' => false,
+        'auto_summarize' => false,
+        'bypass_keyword_filter' => true,
+    ]);
+
+    $response->assertRedirect('/sources');
+
+    $this->assertDatabaseHas('sources', [
+        'team_id' => $team->id,
+        'internal_name' => 'Bypass Source',
+        'bypass_keyword_filter' => true,
+    ]);
+});
+
+test('source bypass keyword filter defaults to false', function () {
+    Queue::fake();
+
+    [$user, $team] = createUserWithTeam();
+
+    $response = $this->actingAs($user)->post('/sources', [
+        'internal_name' => 'Default Source',
+        'type' => 'RSS',
+        'url' => 'https://example.com/feed.xml',
+        'monitoring_interval' => 'DAILY',
+        'is_active' => true,
+        'should_notify' => false,
+        'auto_summarize' => false,
+    ]);
+
+    $response->assertRedirect('/sources');
+
+    $this->assertDatabaseHas('sources', [
+        'team_id' => $team->id,
+        'internal_name' => 'Default Source',
+        'bypass_keyword_filter' => false,
+    ]);
+});
+
+test('authenticated users can update source bypass keyword filter', function () {
+    [$user, $team] = createUserWithTeam();
+    $source = Source::factory()->create([
+        'team_id' => $team->id,
+        'bypass_keyword_filter' => false,
+    ]);
+
+    $response = $this->actingAs($user)->put("/sources/{$source->id}", [
+        'internal_name' => $source->internal_name,
+        'type' => $source->type,
+        'url' => $source->url,
+        'monitoring_interval' => $source->monitoring_interval,
+        'is_active' => $source->is_active,
+        'should_notify' => $source->should_notify,
+        'auto_summarize' => $source->auto_summarize,
+        'bypass_keyword_filter' => true,
+    ]);
+
+    $response->assertRedirect('/sources');
+
+    $this->assertDatabaseHas('sources', [
+        'id' => $source->id,
+        'bypass_keyword_filter' => true,
+    ]);
+});
+
+test('edit source form includes bypass keyword filter field', function () {
+    [$user, $team] = createUserWithTeam();
+    $source = Source::factory()->create([
+        'team_id' => $team->id,
+        'bypass_keyword_filter' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get("/sources/{$source->id}/edit")
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Sources/Edit')
+            ->where('source.bypass_keyword_filter', true)
+        );
+});

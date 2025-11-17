@@ -21,6 +21,8 @@ class Team extends Model
         'post_auto_hide_days',
         'monthly_token_limit',
         'relevancy_prompt',
+        'positive_keywords',
+        'negative_keywords',
     ];
 
     protected function casts(): array

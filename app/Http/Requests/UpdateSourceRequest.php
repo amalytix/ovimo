@@ -31,6 +31,7 @@ class UpdateSourceRequest extends FormRequest
             'is_active' => ['boolean'],
             'should_notify' => ['boolean'],
             'auto_summarize' => ['boolean'],
+            'bypass_keyword_filter' => ['boolean'],
             'tags' => ['array'],
             'tags.*' => ['string', 'max:50'],
         ];

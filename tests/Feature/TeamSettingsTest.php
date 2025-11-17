@@ -118,3 +118,59 @@ test('team settings validates post_auto_hide_days range', function () {
 
     $response->assertSessionHasErrors(['post_auto_hide_days']);
 });
+
+test('team owner can update keyword filtering settings', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $response = $this->actingAs($user)->put('/team-settings', [
+        'name' => 'Team Name',
+        'notifications_enabled' => true,
+        'positive_keywords' => "climate\nrenewable\nsustainability",
+        'negative_keywords' => "sponsored\nadvertisement",
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('teams', [
+        'id' => $team->id,
+        'positive_keywords' => "climate\nrenewable\nsustainability",
+        'negative_keywords' => "sponsored\nadvertisement",
+    ]);
+});
+
+test('team settings includes keyword fields in response', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $team->update([
+        'positive_keywords' => "climate\nrenewable",
+        'negative_keywords' => 'sponsored',
+    ]);
+
+    $this->actingAs($user)
+        ->get('/team-settings')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('settings/Index')
+            ->where('team.positive_keywords', "climate\nrenewable")
+            ->where('team.negative_keywords', 'sponsored')
+        );
+});
+
+test('team settings accepts null keyword fields', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $response = $this->actingAs($user)->put('/team-settings', [
+        'name' => 'Team Name',
+        'notifications_enabled' => true,
+        'positive_keywords' => null,
+        'negative_keywords' => null,
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('teams', [
+        'id' => $team->id,
+        'positive_keywords' => null,
+        'negative_keywords' => null,
+    ]);
+});

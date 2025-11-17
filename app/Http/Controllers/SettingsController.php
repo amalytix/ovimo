@@ -23,6 +23,8 @@ class SettingsController extends Controller
                 'post_auto_hide_days' => $team->post_auto_hide_days,
                 'monthly_token_limit' => $team->monthly_token_limit,
                 'relevancy_prompt' => $team->relevancy_prompt,
+                'positive_keywords' => $team->positive_keywords,
+                'negative_keywords' => $team->negative_keywords,
             ],
         ]);
     }

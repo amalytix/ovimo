@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Source;
+use App\Services\KeywordFilterService;
 use App\Services\SourceParser;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +22,7 @@ class MonitorSource implements ShouldQueue
         public Source $source
     ) {}
 
-    public function handle(SourceParser $parser): void
+    public function handle(SourceParser $parser, KeywordFilterService $keywordFilter): void
     {
         if (! $this->source->is_active) {
             return;
@@ -29,6 +30,12 @@ class MonitorSource implements ShouldQueue
 
         try {
             $items = $parser->parse($this->source->url, $this->source->type, null, $this->source);
+
+            // Apply team-level keyword filtering (unless bypassed for this source)
+            if (! $this->source->bypass_keyword_filter) {
+                $team = $this->source->team;
+                $items = $keywordFilter->filterSourceItems($items, $team);
+            }
 
             $newPostsCount = 0;
 

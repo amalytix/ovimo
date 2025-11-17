@@ -26,6 +26,7 @@ class Source extends Model
         'is_active',
         'should_notify',
         'auto_summarize',
+        'bypass_keyword_filter',
         'last_checked_at',
         'next_check_at',
     ];
@@ -36,6 +37,7 @@ class Source extends Model
             'is_active' => 'boolean',
             'should_notify' => 'boolean',
             'auto_summarize' => 'boolean',
+            'bypass_keyword_filter' => 'boolean',
             'last_checked_at' => 'datetime',
             'next_check_at' => 'datetime',
         ];

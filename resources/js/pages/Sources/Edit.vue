@@ -29,6 +29,7 @@ interface Source {
     is_active: boolean;
     should_notify: boolean;
     auto_summarize: boolean;
+    bypass_keyword_filter: boolean;
     tags: string[];
 }
 
@@ -60,6 +61,7 @@ const form = useForm({
     is_active: props.source.is_active,
     should_notify: props.source.should_notify,
     auto_summarize: props.source.auto_summarize,
+    bypass_keyword_filter: props.source.bypass_keyword_filter,
     tags: props.source.tags,
 });
 
@@ -328,6 +330,18 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                         <Checkbox id="auto_summarize" :default-value="form.auto_summarize" @update:model-value="form.auto_summarize = $event" />
                         <Label for="auto_summarize" class="font-normal">Auto-summarize new posts with AI</Label>
                     </div>
+
+                    <div class="flex items-center gap-2">
+                        <Checkbox
+                            id="bypass_keyword_filter"
+                            :default-value="form.bypass_keyword_filter"
+                            @update:model-value="form.bypass_keyword_filter = $event"
+                        />
+                        <Label for="bypass_keyword_filter" class="font-normal">Bypass team keyword filters</Label>
+                    </div>
+                    <p class="ml-6 -mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        When enabled, all posts from this source will be analyzed regardless of team positive/negative keyword settings.
+                    </p>
                 </div>
 
                 <div class="grid gap-2">

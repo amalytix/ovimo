@@ -16,6 +16,8 @@ interface Team {
     post_auto_hide_days: number | null;
     monthly_token_limit: number | null;
     relevancy_prompt: string | null;
+    positive_keywords: string | null;
+    negative_keywords: string | null;
 }
 
 interface Props {
@@ -33,6 +35,8 @@ const form = useForm({
     post_auto_hide_days: props.team.post_auto_hide_days,
     monthly_token_limit: props.team.monthly_token_limit,
     relevancy_prompt: props.team.relevancy_prompt || '',
+    positive_keywords: props.team.positive_keywords || '',
+    negative_keywords: props.team.negative_keywords || '',
 });
 
 const submit = () => {
@@ -106,6 +110,44 @@ const submit = () => {
                             Maximum tokens allowed per month. Leave empty for unlimited.
                         </p>
                         <InputError :message="form.errors.monthly_token_limit" />
+                    </div>
+                </div>
+
+                <!-- Keyword Filtering -->
+                <div class="space-y-6">
+                    <h2 class="text-lg font-medium">Keyword Filtering</h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Filter posts during source parsing based on keywords found in their titles.
+                    </p>
+
+                    <div class="space-y-2">
+                        <Label for="positive_keywords">Positive Keywords (Include)</Label>
+                        <textarea
+                            id="positive_keywords"
+                            v-model="form.positive_keywords"
+                            rows="6"
+                            class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="climate&#10;renewable&#10;sustainability"
+                        ></textarea>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Enter one keyword per line. When set, only posts containing at least one of these keywords will be included.
+                        </p>
+                        <InputError :message="form.errors.positive_keywords" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="negative_keywords">Negative Keywords (Exclude)</Label>
+                        <textarea
+                            id="negative_keywords"
+                            v-model="form.negative_keywords"
+                            rows="6"
+                            class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="sponsored&#10;advertisement&#10;promotion"
+                        ></textarea>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Enter one keyword per line. Posts containing any of these keywords will be excluded. Negative keywords take priority over positive keywords.
+                        </p>
+                        <InputError :message="form.errors.negative_keywords" />
                     </div>
                 </div>
 

@@ -167,6 +167,7 @@ class SourceController extends Controller
                 'is_active' => $source->is_active,
                 'should_notify' => $source->should_notify,
                 'auto_summarize' => $source->auto_summarize,
+                'bypass_keyword_filter' => $source->bypass_keyword_filter,
                 'tags' => $source->tags->pluck('name')->toArray(),
             ],
             'tags' => Tag::where('team_id', $teamId)->get(['id', 'name']),
