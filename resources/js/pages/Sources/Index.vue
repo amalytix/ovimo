@@ -29,6 +29,8 @@ interface Source {
 
 interface Filters {
     tag_ids?: number[];
+    sort_by?: string;
+    sort_direction?: string;
 }
 
 interface Props {
@@ -49,6 +51,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // Initialize selected tags from URL filters
 const selectedTagIds = ref<number[]>(props.filters?.tag_ids || []);
+
+// Initialize sorting from URL filters
+const currentSortBy = ref(props.filters?.sort_by || 'internal_name');
+const currentSortDirection = ref(props.filters?.sort_direction || 'asc');
 
 const deleteSource = (id: number) => {
     if (confirm('Are you sure you want to delete this source?')) {
@@ -96,6 +102,8 @@ const applyFilters = () => {
         '/sources',
         {
             tag_ids: selectedTagIds.value.length > 0 ? selectedTagIds.value : undefined,
+            sort_by: currentSortBy.value,
+            sort_direction: currentSortDirection.value,
         },
         {
             preserveState: true,
@@ -106,7 +114,26 @@ const applyFilters = () => {
 
 const clearFilters = () => {
     selectedTagIds.value = [];
+    currentSortBy.value = 'internal_name';
+    currentSortDirection.value = 'asc';
     router.get('/sources', {}, { preserveState: true, preserveScroll: true });
+};
+
+const sortBy = (column: string) => {
+    if (currentSortBy.value === column) {
+        // Toggle direction if same column
+        currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        // New column, default to desc for posts_count and last_checked_at, asc for others
+        currentSortBy.value = column;
+        currentSortDirection.value = column === 'posts_count' || column === 'last_checked_at' ? 'desc' : 'asc';
+    }
+    applyFilters();
+};
+
+const getSortIcon = (column: string) => {
+    if (currentSortBy.value !== column) return '';
+    return currentSortDirection.value === 'asc' ? '↑' : '↓';
 };
 
 // Watch for filter changes and apply them
@@ -161,13 +188,38 @@ watch(selectedTagIds, applyFilters, { deep: true });
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Type</th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('internal_name')"
+                            >
+                                Name {{ getSortIcon('internal_name') }}
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('type')"
+                            >
+                                Type {{ getSortIcon('type') }}
+                            </th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Tags</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Interval</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Posts</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Last Checked</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('posts_count')"
+                            >
+                                Posts {{ getSortIcon('posts_count') }}
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('last_checked_at')"
+                            >
+                                Last Checked {{ getSortIcon('last_checked_at') }}
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('is_active')"
+                            >
+                                Status {{ getSortIcon('is_active') }}
+                            </th>
                             <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
                         </tr>
                     </thead>

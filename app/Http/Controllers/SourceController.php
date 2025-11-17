@@ -17,10 +17,10 @@ use Inertia\Response;
 
 class SourceController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $teamId = auth()->user()->current_team_id;
-        $tagIds = request()->input('tag_ids', []);
+        $tagIds = $request->input('tag_ids', []);
 
         $query = Source::query()
             ->where('team_id', $teamId)
@@ -34,10 +34,26 @@ class SourceController extends Controller
             });
         }
 
+        // Sorting
+        $sortBy = $request->get('sort_by', 'internal_name');
+        $sortDirection = $request->get('sort_direction', 'asc');
+
+        // Validate sort direction
+        $sortDirection = in_array($sortDirection, ['asc', 'desc']) ? $sortDirection : 'asc';
+
+        // Apply sorting
+        match ($sortBy) {
+            'type' => $query->orderBy('type', $sortDirection),
+            'posts_count' => $query->orderBy('posts_count', $sortDirection),
+            'last_checked_at' => $query->orderByRaw("last_checked_at IS NULL, last_checked_at {$sortDirection}"),
+            'is_active' => $query->orderBy('is_active', $sortDirection),
+            default => $query->orderBy('internal_name', $sortDirection),
+        };
+
         return Inertia::render('Sources/Index', [
             'sources' => $query
-                ->orderBy('internal_name')
                 ->paginate(15)
+                ->withQueryString()
                 ->through(fn (Source $source) => [
                     'id' => $source->id,
                     'internal_name' => $source->internal_name,
@@ -57,6 +73,8 @@ class SourceController extends Controller
             'tags' => Tag::where('team_id', $teamId)->get(['id', 'name']),
             'filters' => [
                 'tag_ids' => array_map('intval', (array) $tagIds),
+                'sort_by' => $sortBy,
+                'sort_direction' => $sortDirection,
             ],
         ]);
     }
