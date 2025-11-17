@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             SourceSeeder::class,
             PostSeeder::class,
+            WebhookSeeder::class,
         ]);
     }
 }
