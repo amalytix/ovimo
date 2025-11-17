@@ -224,7 +224,7 @@ class SourceParser
                 if ($reader->nodeType === XMLReader::ELEMENT && $reader->localName === 'loc') {
                     $reader->read(); // Move to text content
                     $uri = trim($reader->value);
-                    if (! empty($uri)) {
+                    if (! empty($uri) && ! $this->isImageUrl($uri)) {
                         $items[] = ['uri' => $uri];
                         $count++;
                     }
@@ -237,5 +237,22 @@ class SourceParser
         } finally {
             @unlink($tempFile);
         }
+    }
+
+    /**
+     * Check if a URL points to an image file.
+     */
+    private function isImageUrl(string $url): bool
+    {
+        $imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff', '.tif'];
+        $lowercaseUrl = strtolower($url);
+
+        foreach ($imageExtensions as $extension) {
+            if (str_ends_with($lowercaseUrl, $extension)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

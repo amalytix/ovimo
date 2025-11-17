@@ -143,13 +143,13 @@ class OpenAIService
         ];
 
         Log::debug('OpenAI API Request - generateContent', [
-            'model' => config('openai.model', 'gpt-4o'),
+            'model' => config('openai.model', 'gpt-5.1'),
             'messages' => $messages,
             'max_tokens' => 2000,
         ]);
 
         $response = $this->client->chat()->create([
-            'model' => config('openai.model', 'gpt-4o'),
+            'model' => config('openai.model', 'gpt-5.1'),
             'messages' => $messages,
             'max_tokens' => 2000,
         ]);
@@ -159,7 +159,7 @@ class OpenAIService
             'input_tokens' => $response->usage->promptTokens,
             'output_tokens' => $response->usage->completionTokens,
             'total_tokens' => $response->usage->totalTokens,
-            'model' => config('openai.model', 'gpt-4o'),
+            'model' => config('openai.model', 'gpt-5.1'),
         ];
     }
 

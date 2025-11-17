@@ -194,11 +194,11 @@ watch(
 
             <!-- Filters -->
             <div class="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
-                <div class="min-w-40 flex-1">
+                <div class="min-w-32 flex-1">
                     <Input id="search" v-model="localFilters.search" type="text" placeholder="Search..." class="h-9" @keyup.enter="applyFilters" />
                 </div>
 
-                <div class="w-36">
+                <div class="w-60">
                     <Select v-model="localFilters.source_id">
                         <SelectTrigger id="source" class="h-9">
                             <SelectValue placeholder="All sources" />
@@ -229,7 +229,7 @@ watch(
                     </Select>
                 </div>
 
-                <div class="w-36">
+                <div class="w-60">
                     <Select v-model="localFilters.status">
                         <SelectTrigger id="status" class="h-9">
                             <SelectValue placeholder="Status" />

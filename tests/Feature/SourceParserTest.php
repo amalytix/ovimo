@@ -93,6 +93,32 @@ it('limits XML sitemap entries', function () {
     expect($items)->toHaveCount(15);
 });
 
+it('filters out image URLs from XML sitemap', function () {
+    Http::fake([
+        'https://example.com/sitemap.xml' => Http::response(createXmlSitemapWithImages(), 200),
+    ]);
+
+    $parser = new SourceParser;
+    $items = $parser->parse('https://example.com/sitemap.xml', 'XML_SITEMAP', 100);
+
+    // Should only return non-image URLs
+    expect($items)->toHaveCount(3);
+
+    // Verify no image URLs are included
+    $uris = array_column($items, 'uri');
+    expect($uris)->not->toContain('https://example.com/images/photo.jpg');
+    expect($uris)->not->toContain('https://example.com/images/banner.jpeg');
+    expect($uris)->not->toContain('https://example.com/images/logo.png');
+    expect($uris)->not->toContain('https://example.com/images/icon.gif');
+    expect($uris)->not->toContain('https://example.com/images/graphic.webp');
+    expect($uris)->not->toContain('https://example.com/images/vector.svg');
+
+    // Verify correct URLs are included
+    expect($uris)->toContain('https://example.com/page-1');
+    expect($uris)->toContain('https://example.com/page-2');
+    expect($uris)->toContain('https://example.com/page-3');
+});
+
 it('throws exception for failed HTTP request', function () {
     Http::fake([
         'https://example.com/feed.xml' => Http::response('Not Found', 404),
@@ -297,6 +323,54 @@ function createXmlSitemap(int $urlCount): string
     <?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
         {$urls}
+    </urlset>
+    XML;
+}
+
+/**
+ * Helper function to create an XML sitemap with image URLs mixed in.
+ */
+function createXmlSitemapWithImages(): string
+{
+    return <<<'XML'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        <url>
+            <loc>https://example.com/page-1</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/images/photo.jpg</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/images/banner.jpeg</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/page-2</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/images/logo.png</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/images/icon.gif</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/page-3</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/images/graphic.webp</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
+        <url>
+            <loc>https://example.com/images/vector.svg</loc>
+            <lastmod>2024-01-01T12:00:00Z</lastmod>
+        </url>
     </urlset>
     XML;
 }
