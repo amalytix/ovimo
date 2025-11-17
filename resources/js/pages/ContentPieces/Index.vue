@@ -185,7 +185,9 @@ const formatLanguage = (language: string) => {
                     <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
                         <tr v-for="piece in contentPieces.data" :key="piece.id">
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                                {{ piece.internal_name }}
+                                <Link :href="`/content-pieces/${piece.id}/edit`" class="hover:text-blue-600 dark:hover:text-blue-400">
+                                    {{ piece.internal_name }}
+                                </Link>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 <span class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700">

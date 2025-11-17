@@ -86,7 +86,9 @@ const formatEvent = (event: string) => {
                     <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
                         <tr v-for="webhook in webhooks.data" :key="webhook.id">
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                                {{ webhook.name }}
+                                <Link :href="`/webhooks/${webhook.id}/edit`" class="hover:text-blue-600 dark:hover:text-blue-400">
+                                    {{ webhook.name }}
+                                </Link>
                             </td>
                             <td class="max-w-xs truncate px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 {{ webhook.url }}
