@@ -51,7 +51,7 @@ class WebhookController extends Controller
 
     public function edit(Webhook $webhook): Response
     {
-        $this->authorizeTeam($webhook);
+        $this->authorize('view', $webhook);
 
         return Inertia::render('Webhooks/Edit', [
             'webhook' => [
@@ -67,7 +67,7 @@ class WebhookController extends Controller
 
     public function update(UpdateWebhookRequest $request, Webhook $webhook): RedirectResponse
     {
-        $this->authorizeTeam($webhook);
+        $this->authorize('update', $webhook);
 
         $webhook->update($request->validated());
 
@@ -77,7 +77,7 @@ class WebhookController extends Controller
 
     public function destroy(Webhook $webhook): RedirectResponse
     {
-        $this->authorizeTeam($webhook);
+        $this->authorize('delete', $webhook);
 
         $webhook->delete();
 
@@ -87,7 +87,7 @@ class WebhookController extends Controller
 
     public function test(Webhook $webhook): RedirectResponse
     {
-        $this->authorizeTeam($webhook);
+        $this->authorize('test', $webhook);
 
         $testPayload = [
             'event' => $webhook->event,
@@ -110,12 +110,5 @@ class WebhookController extends Controller
         SendWebhookNotification::dispatch($webhook, $testPayload);
 
         return back()->with('success', 'Test webhook has been queued.');
-    }
-
-    private function authorizeTeam(Webhook $webhook): void
-    {
-        if ($webhook->team_id !== auth()->user()->current_team_id) {
-            abort(403);
-        }
     }
 }

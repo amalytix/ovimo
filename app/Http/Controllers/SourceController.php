@@ -127,7 +127,7 @@ class SourceController extends Controller
 
     public function show(Source $source): Response
     {
-        $this->authorizeTeam($source);
+        $this->authorize('view', $source);
 
         return Inertia::render('Sources/Show', [
             'source' => [
@@ -150,7 +150,7 @@ class SourceController extends Controller
 
     public function edit(Source $source): Response
     {
-        $this->authorizeTeam($source);
+        $this->authorize('update', $source);
 
         $teamId = auth()->user()->current_team_id;
 
@@ -176,7 +176,7 @@ class SourceController extends Controller
 
     public function update(UpdateSourceRequest $request, Source $source): RedirectResponse
     {
-        $this->authorizeTeam($source);
+        $this->authorize('update', $source);
 
         $data = $request->safe()->except('tags');
 
@@ -204,7 +204,7 @@ class SourceController extends Controller
 
     public function destroy(Source $source): RedirectResponse
     {
-        $this->authorizeTeam($source);
+        $this->authorize('delete', $source);
 
         $source->delete();
 
@@ -214,7 +214,7 @@ class SourceController extends Controller
 
     public function check(Source $source): RedirectResponse
     {
-        $this->authorizeTeam($source);
+        $this->authorize('check', $source);
 
         MonitorSource::dispatch($source);
 
@@ -277,13 +277,6 @@ class SourceController extends Controller
         return response()->json([
             'posts' => $posts,
         ]);
-    }
-
-    private function authorizeTeam(Source $source): void
-    {
-        if ($source->team_id !== auth()->user()->current_team_id) {
-            abort(403);
-        }
     }
 
     private function syncTagsByName(Source $source, array $tagNames): void

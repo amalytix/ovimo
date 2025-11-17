@@ -49,7 +49,7 @@ class PromptController extends Controller
 
     public function edit(Prompt $prompt): Response
     {
-        $this->authorizeTeam($prompt);
+        $this->authorize('view', $prompt);
 
         return Inertia::render('Prompts/Edit', [
             'prompt' => [
@@ -63,7 +63,7 @@ class PromptController extends Controller
 
     public function update(UpdatePromptRequest $request, Prompt $prompt): RedirectResponse
     {
-        $this->authorizeTeam($prompt);
+        $this->authorize('update', $prompt);
 
         $prompt->update($request->validated());
 
@@ -73,18 +73,11 @@ class PromptController extends Controller
 
     public function destroy(Prompt $prompt): RedirectResponse
     {
-        $this->authorizeTeam($prompt);
+        $this->authorize('delete', $prompt);
 
         $prompt->delete();
 
         return redirect()->route('prompts.index')
             ->with('success', 'Prompt deleted successfully.');
-    }
-
-    private function authorizeTeam(Prompt $prompt): void
-    {
-        if ($prompt->team_id !== auth()->user()->current_team_id) {
-            abort(403);
-        }
     }
 }

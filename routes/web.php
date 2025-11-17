@@ -18,16 +18,20 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('sources', SourceController::class);
     Route::post('sources/{source}/check', [SourceController::class, 'check'])->name('sources.check');
-    Route::post('sources/analyze-webpage', [SourceController::class, 'analyzeWebpage'])->name('sources.analyze-webpage');
+    Route::post('sources/analyze-webpage', [SourceController::class, 'analyzeWebpage'])
+        ->middleware('token.limit')
+        ->name('sources.analyze-webpage');
     Route::post('sources/test-extraction', [SourceController::class, 'testExtraction'])->name('sources.test-extraction');
     Route::resource('prompts', PromptController::class)->except(['show']);
     Route::resource('content-pieces', ContentPieceController::class)->except(['show']);
-    Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])->name('content-pieces.generate');
+    Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])
+        ->middleware('token.limit')
+        ->name('content-pieces.generate');
     Route::patch('content-pieces/{content_piece}/status', [ContentPieceController::class, 'updateStatus'])->name('content-pieces.update-status');
 
     Route::resource('webhooks', WebhookController::class)->except(['show']);

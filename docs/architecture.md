@@ -51,12 +51,14 @@ app/
 ├── Http/
 │   ├── Controllers/          # Inertia page controllers
 │   │   └── Settings/         # User settings controllers
+│   ├── Middleware/           # Custom middleware (team validation, token limits)
 │   └── Requests/             # Form validation requests
 ├── Jobs/                     # Queue jobs
 │   ├── MonitorSource.php     # Fetches new posts from sources
 │   ├── SummarizePost.php     # AI summarization
 │   └── SendWebhookNotification.php
 ├── Models/                   # Eloquent models
+├── Policies/                 # Authorization policies (SourcePolicy, PostPolicy, etc.)
 ├── Providers/                # Service providers (App, Fortify)
 └── Services/                 # Business logic
     ├── OpenAIService.php     # AI integration
@@ -235,15 +237,76 @@ defineProps<{
 - **Team roles**: Stored in `team_user.role` pivot field
 - **Team scoping**: Most queries filter by `auth()->user()->currentTeam`
 
+### Authorization Policies
+
+All team-scoped models use Laravel Policies for authorization:
+
+| Policy | Model | Custom Methods |
+|--------|-------|----------------|
+| `SourcePolicy` | Source | `check` (trigger monitoring) |
+| `PostPolicy` | Post | Standard CRUD |
+| `ContentPiecePolicy` | ContentPiece | `generate` (AI content generation) |
+| `PromptPolicy` | Prompt | Standard CRUD |
+| `WebhookPolicy` | Webhook | `test` (send test webhook) |
+
+**Usage in Controllers**:
+```php
+// Base Controller includes AuthorizesRequests trait
+$this->authorize('view', $source);
+$this->authorize('update', $contentPiece);
+$this->authorize('generate', $contentPiece); // Custom method
+```
+
+**Policy Pattern** (checks team ownership):
+```php
+public function view(User $user, Source $source): bool
+{
+    return $source->team_id === $user->current_team_id;
+}
+```
+
+### Middleware Stack
+
+Custom middleware registered in `bootstrap/app.php`:
+
+| Alias | Middleware | Purpose |
+|-------|-----------|---------|
+| `team.valid` | `EnsureValidTeamMembership` | Verifies user belongs to current team, auto-corrects invalid selection |
+| `token.limit` | `EnsureTokenLimitNotExceeded` | Enforces monthly AI token limits before operations |
+
+**Route Protection**:
+```php
+// All authenticated routes require valid team membership
+Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
+    // AI operations additionally check token limits
+    Route::post('sources/analyze-webpage', ...)
+        ->middleware('token.limit');
+    Route::post('content-pieces/{content_piece}/generate', ...)
+        ->middleware('token.limit');
+});
+```
+
+**Team Membership Middleware** (`EnsureValidTeamMembership`):
+- Validates user belongs to `current_team_id` (via pivot or ownership)
+- Auto-switches to first valid team if invalid
+- Returns 403 if user has no teams at all
+
+**Token Limit Middleware** (`EnsureTokenLimitNotExceeded`):
+- Checks monthly token usage against `team.monthly_token_limit`
+- Returns 429 with usage statistics if exceeded
+- Zero limit means unlimited (no restriction)
+
 ## Key Patterns for Agents
 
 ### Creating New Features
 
 1. **Model**: `php artisan make:model --all` (includes migration, factory, seeder)
-2. **Controller**: Resource controller pattern with Form Requests
-3. **Form Request**: Validation + custom messages in dedicated request class
-4. **Vue Page**: Place in `resources/js/Pages/`, use layout wrapper
-5. **Routes**: Add to `routes/web.php`, use Wayfinder for type-safe frontend imports
+2. **Policy**: `php artisan make:policy ModelPolicy --model=Model` for authorization
+3. **Controller**: Resource controller pattern with Form Requests and `$this->authorize()` calls
+4. **Form Request**: Validation + custom messages in dedicated request class
+5. **Vue Page**: Place in `resources/js/Pages/`, use layout wrapper
+6. **Routes**: Add to `routes/web.php`, use Wayfinder for type-safe frontend imports
+7. **Tests**: Create feature tests covering CRUD + authorization + validation
 
 ### Multi-Tenancy
 
@@ -266,6 +329,8 @@ Use `OpenAIService` for all AI operations, which automatically:
 - Feature tests for HTTP endpoints
 - Factories for all models
 - Run: `php artisan test --filter=TestName`
+- **Test coverage includes**: CRUD operations, authorization (policies), validation, team isolation, middleware behavior
+- **Test patterns**: Guest access denied, team scoping enforced, authorization forbidden for other teams, validation errors returned
 
 ## Configuration Files
 

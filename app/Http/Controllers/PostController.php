@@ -119,7 +119,7 @@ class PostController extends Controller
 
     public function toggleRead(Post $post): RedirectResponse
     {
-        $this->authorizePost($post);
+        $this->authorize('update', $post);
 
         $post->update(['is_read' => ! $post->is_read]);
 
@@ -128,7 +128,7 @@ class PostController extends Controller
 
     public function toggleHidden(Post $post): RedirectResponse
     {
-        $this->authorizePost($post);
+        $this->authorize('update', $post);
 
         $post->update(['is_hidden' => ! $post->is_hidden]);
 
@@ -137,7 +137,7 @@ class PostController extends Controller
 
     public function updateStatus(Request $request, Post $post): RedirectResponse
     {
-        $this->authorizePost($post);
+        $this->authorize('update', $post);
 
         $request->validate([
             'status' => ['required', 'in:NOT_RELEVANT,CREATE_CONTENT'],
@@ -207,12 +207,5 @@ class PostController extends Controller
             ->update(['is_hidden' => true]);
 
         return back();
-    }
-
-    private function authorizePost(Post $post): void
-    {
-        if ($post->source->team_id !== auth()->user()->current_team_id) {
-            abort(403);
-        }
     }
 }

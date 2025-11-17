@@ -133,7 +133,7 @@ class ContentPieceController extends Controller
 
     public function edit(ContentPiece $contentPiece): Response
     {
-        $this->authorizeTeam($contentPiece);
+        $this->authorize('view', $contentPiece);
 
         $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary']);
 
@@ -171,7 +171,7 @@ class ContentPieceController extends Controller
 
     public function update(UpdateContentPieceRequest $request, ContentPiece $contentPiece): RedirectResponse
     {
-        $this->authorizeTeam($contentPiece);
+        $this->authorize('update', $contentPiece);
 
         $contentPiece->update($request->validated());
 
@@ -186,7 +186,7 @@ class ContentPieceController extends Controller
 
     public function generate(Request $request, ContentPiece $contentPiece, OpenAIService $openAI): RedirectResponse
     {
-        $this->authorizeTeam($contentPiece);
+        $this->authorize('generate', $contentPiece);
 
         if (! $contentPiece->prompt) {
             return back()->with('error', 'Please select a prompt template first.');
@@ -251,7 +251,7 @@ class ContentPieceController extends Controller
 
     public function updateStatus(Request $request, ContentPiece $contentPiece): RedirectResponse
     {
-        $this->authorizeTeam($contentPiece);
+        $this->authorize('update', $contentPiece);
 
         $request->validate([
             'status' => ['required', 'in:NOT_STARTED,DRAFT,FINAL'],
@@ -264,19 +264,12 @@ class ContentPieceController extends Controller
 
     public function destroy(ContentPiece $contentPiece): RedirectResponse
     {
-        $this->authorizeTeam($contentPiece);
+        $this->authorize('delete', $contentPiece);
 
         $contentPiece->posts()->detach();
         $contentPiece->delete();
 
         return redirect()->route('content-pieces.index')
             ->with('success', 'Content piece deleted successfully.');
-    }
-
-    private function authorizeTeam(ContentPiece $contentPiece): void
-    {
-        if ($contentPiece->team_id !== auth()->user()->current_team_id) {
-            abort(403);
-        }
     }
 }

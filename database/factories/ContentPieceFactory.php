@@ -17,7 +17,12 @@ class ContentPieceFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'internal_name' => fake()->words(3, true),
+            'briefing_text' => fake()->paragraphs(2, true),
+            'channel' => fake()->randomElement(['BLOG_POST', 'LINKEDIN_POST', 'YOUTUBE_SCRIPT']),
+            'target_language' => fake()->randomElement(['ENGLISH', 'GERMAN']),
+            'status' => fake()->randomElement(['NOT_STARTED', 'DRAFT', 'FINAL']),
+            'full_text' => null,
         ];
     }
 }

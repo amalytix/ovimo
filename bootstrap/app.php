@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureTokenLimitNotExceeded;
+use App\Http\Middleware\EnsureValidTeamMembership;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -20,6 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        $middleware->alias([
+            'token.limit' => EnsureTokenLimitNotExceeded::class,
+            'team.valid' => EnsureValidTeamMembership::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,6 +19,7 @@ class TeamFactory extends Factory
     {
         return [
             'name' => fake()->company(),
+            'owner_id' => User::factory(),
             'notifications_enabled' => true,
             'webhook_url' => null,
             'post_auto_hide_days' => null,
