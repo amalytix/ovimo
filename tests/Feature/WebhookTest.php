@@ -204,3 +204,73 @@ test('users cannot test webhooks from other teams', function () {
 
     Queue::assertNotPushed(SendWebhookNotification::class);
 });
+
+test('webhook notification includes posts array with title and url', function () {
+    Queue::fake();
+
+    [$user, $team] = createUserWithTeam();
+
+    // Create a source with notifications enabled
+    $source = \App\Models\Source::factory()->create([
+        'team_id' => $team->id,
+        'should_notify' => true,
+        'is_active' => true,
+        'type' => 'RSS',
+        'url' => 'https://example.com/feed.xml',
+    ]);
+
+    // Create a webhook for NEW_POSTS event
+    $webhook = Webhook::factory()->create([
+        'team_id' => $team->id,
+        'event' => 'NEW_POSTS',
+        'is_active' => true,
+    ]);
+
+    // Mock the parser to return some items
+    $parser = Mockery::mock(\App\Services\SourceParser::class);
+    $parser->shouldReceive('parse')
+        ->andReturn([
+            [
+                'uri' => 'https://example.com/post1',
+                'title' => 'First Post Title',
+            ],
+            [
+                'uri' => 'https://example.com/post2',
+                'title' => 'Second Post Title',
+            ],
+        ]);
+
+    $keywordFilter = Mockery::mock(\App\Services\KeywordFilterService::class);
+    $keywordFilter->shouldReceive('filterSourceItems')
+        ->andReturnUsing(fn ($items) => $items);
+
+    // Dispatch the MonitorSource job
+    $job = new \App\Jobs\MonitorSource($source);
+    $job->handle($parser, $keywordFilter);
+
+    // Assert webhook notification was dispatched
+    Queue::assertPushed(SendWebhookNotification::class, function ($job) use ($webhook) {
+        $payload = $job->payload;
+
+        // Verify event and basic structure
+        expect($payload['event'])->toBe('NEW_POSTS');
+        expect($payload['data']['new_posts_count'])->toBe(2);
+
+        // Verify posts array exists and has correct structure
+        expect($payload['data'])->toHaveKey('posts');
+        expect($payload['data']['posts'])->toBeArray();
+        expect($payload['data']['posts'])->toHaveCount(2);
+
+        // Verify first post
+        expect($payload['data']['posts'][0])->toHaveKey('title');
+        expect($payload['data']['posts'][0])->toHaveKey('url');
+        expect($payload['data']['posts'][0]['title'])->toBe('First Post Title');
+        expect($payload['data']['posts'][0]['url'])->toBe('https://example.com/post1');
+
+        // Verify second post
+        expect($payload['data']['posts'][1]['title'])->toBe('Second Post Title');
+        expect($payload['data']['posts'][1]['url'])->toBe('https://example.com/post2');
+
+        return $job->webhook->id === $webhook->id;
+    });
+});

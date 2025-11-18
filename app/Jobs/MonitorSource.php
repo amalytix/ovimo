@@ -37,6 +37,7 @@ class MonitorSource implements ShouldQueue
             }
 
             $newPostsCount = 0;
+            $newPosts = [];
 
             foreach ($items as $item) {
                 $post = $this->source->posts()->firstOrCreate(
@@ -55,6 +56,12 @@ class MonitorSource implements ShouldQueue
 
                 if ($post->wasRecentlyCreated) {
                     $newPostsCount++;
+
+                    // Collect new post data for webhook notification
+                    $newPosts[] = [
+                        'title' => $post->external_title,
+                        'url' => $post->uri,
+                    ];
 
                     // Queue summarization if enabled
                     if ($this->source->auto_summarize) {
@@ -80,6 +87,7 @@ class MonitorSource implements ShouldQueue
                         'source_id' => $this->source->id,
                         'source_name' => $this->source->internal_name,
                         'new_posts_count' => $newPostsCount,
+                        'posts' => $newPosts,
                     ]
                 );
             }
