@@ -21,6 +21,9 @@ class ContentPiece extends Model
         'target_language',
         'status',
         'full_text',
+        'generation_status',
+        'generation_error',
+        'generation_error_occurred_at',
     ];
 
     public function team(): BelongsTo

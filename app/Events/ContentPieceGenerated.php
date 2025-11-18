@@ -6,14 +6,12 @@ use App\Models\ContentPiece;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Throwable;
 
-class ContentPieceGenerationFailed implements ShouldQueue
+class ContentPieceGenerated implements ShouldQueue
 {
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public ContentPiece $contentPiece,
-        public Throwable $exception
+        public ContentPiece $contentPiece
     ) {}
 }

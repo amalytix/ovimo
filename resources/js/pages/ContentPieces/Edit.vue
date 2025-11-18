@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { ref, onUnmounted, watch } from 'vue';
+import { status } from '@/routes/content-pieces';
 
 interface Prompt {
     id: number;
@@ -58,7 +59,78 @@ const form = useForm({
     post_ids: props.contentPiece.posts.map((p) => p.id),
 });
 
-const isGenerating = ref(false);
+// Polling state
+const page = usePage();
+const isPolling = ref(false);
+const generationStatus = ref<string | null>(null);
+const generatedContent = ref<string | null>(null);
+const generationError = ref<string | null>(null);
+const showSuccessMessage = ref(false);
+let pollingInterval: number | null = null;
+let successTimeout: number | null = null;
+
+// Watch for polling metadata from session flash
+watch(
+    () => page.props.polling,
+    (polling: any) => {
+        if (polling && polling.content_piece_id) {
+            startPolling(polling.content_piece_id);
+        }
+    },
+    { immediate: true }
+);
+
+const startPolling = (contentPieceId: number) => {
+    isPolling.value = true;
+    generationStatus.value = 'QUEUED';
+    generatedContent.value = null;
+    generationError.value = null;
+    showSuccessMessage.value = false;
+
+    pollingInterval = window.setInterval(async () => {
+        try {
+            const response = await fetch(status.url(contentPieceId));
+            const data = await response.json();
+
+            generationStatus.value = data.generation_status;
+
+            // Stop polling on completion or failure
+            if (data.generation_status === 'COMPLETED') {
+                stopPolling();
+                generatedContent.value = data.full_text;
+                form.full_text = data.full_text || '';
+                showSuccessMessage.value = true;
+
+                // Auto-hide success message after 5 seconds
+                successTimeout = window.setTimeout(() => {
+                    showSuccessMessage.value = false;
+                }, 5000);
+            } else if (data.generation_status === 'FAILED') {
+                stopPolling();
+                generationError.value = data.error || 'Generation failed. Please try again.';
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 3000); // Poll every 3 seconds
+};
+
+const stopPolling = () => {
+    isPolling.value = false;
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
+};
+
+// Cleanup on unmount
+onUnmounted(() => {
+    stopPolling();
+    if (successTimeout) {
+        clearTimeout(successTimeout);
+        successTimeout = null;
+    }
+});
 
 const togglePost = (postId: number, checked: boolean) => {
     if (checked) {
@@ -81,21 +153,9 @@ const submitAndClose = () => {
 };
 
 const generateContent = () => {
-    isGenerating.value = true;
-    router.post(
-        `/content-pieces/${props.contentPiece.id}/generate`,
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Update form with new content from refreshed props
-                form.full_text = props.contentPiece.full_text || '';
-            },
-            onFinish: () => {
-                isGenerating.value = false;
-            },
-        },
-    );
+    router.post(`/content-pieces/${props.contentPiece.id}/generate`, {}, {
+        preserveScroll: true,
+    });
 };
 
 const updateStatus = (status: string) => {
@@ -140,6 +200,24 @@ props.contentPiece.posts.forEach((post) => {
                     <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Update your content piece and generate AI content.</p>
                 </div>
                 <div class="flex items-center gap-4">
+                    <!-- Polling and success status -->
+                    <Transition
+                        mode="out-in"
+                        enter-active-class="transition-opacity duration-300"
+                        enter-from-class="opacity-0"
+                        enter-to-class="opacity-100"
+                        leave-active-class="transition-opacity duration-300"
+                        leave-from-class="opacity-100"
+                        leave-to-class="opacity-0"
+                    >
+                        <div v-if="isPolling" key="polling" class="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                            <div class="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent dark:border-blue-400"></div>
+                            <span class="text-sm font-medium">{{ generationStatus === 'QUEUED' ? 'Queued...' : 'Generating...' }}</span>
+                        </div>
+                        <div v-else-if="showSuccessMessage" key="success" class="flex items-center gap-2 text-green-600 dark:text-green-400">
+                            <span class="text-sm font-medium">✓ Generated</span>
+                        </div>
+                    </Transition>
                     <span :class="getStatusColor(contentPiece.status)" class="rounded-full px-3 py-1 text-sm font-medium">
                         {{ formatStatus(contentPiece.status) }}
                     </span>
@@ -154,6 +232,12 @@ props.contentPiece.posts.forEach((post) => {
                         </SelectContent>
                     </Select>
                 </div>
+            </div>
+
+            <!-- Error message -->
+            <div v-if="generationError" class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+                <p class="mb-1 font-medium text-red-900 dark:text-red-100">Generation failed</p>
+                <p class="text-sm text-red-700 dark:text-red-300">{{ generationError }}</p>
             </div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -250,15 +334,15 @@ props.contentPiece.posts.forEach((post) => {
                             <Button type="button" variant="outline" :disabled="form.processing" @click="submitAndClose">
                                 {{ form.processing ? 'Saving...' : 'Save and Close' }}
                             </Button>
-                            <Button type="button" variant="secondary" :disabled="isGenerating || !form.prompt_id" @click="generateContent">
-                                {{ isGenerating ? 'Generating...' : 'Generate Content' }}
+                            <Button type="button" variant="secondary" :disabled="isPolling || !form.prompt_id" @click="generateContent">
+                                {{ isPolling ? 'Generating...' : 'Generate Content' }}
                             </Button>
                         </div>
                     </form>
                 </div>
 
                 <!-- Right Column: Generated Content -->
-                <div class="space-y-4">
+                <div class="space-y-2">
                     <div class="flex items-center justify-between">
                         <Label>Generated Content</Label>
                         <span v-if="form.full_text" class="text-xs text-gray-500"> {{ form.full_text.length }} characters </span>

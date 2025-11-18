@@ -51,6 +51,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
             ],
+            'polling' => $request->session()->get('polling'),
         ];
     }
 }

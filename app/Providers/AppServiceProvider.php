@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
 use App\Events\OpenAIRequestFailed;
 use App\Events\PasswordChanged;
@@ -55,6 +56,7 @@ class AppServiceProvider extends ServiceProvider
 
             // Error/Warning events
             SourceMonitoringFailed::class,
+            ContentPieceGenerated::class,
             ContentPieceGenerationFailed::class,
             OpenAIRequestFailed::class,
             WebhookDeliveryFailed::class,

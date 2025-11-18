@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])
         ->middleware('token.limit')
         ->name('content-pieces.generate');
+    Route::get('content-pieces/{content_piece}/status', [ContentPieceController::class, 'status'])->name('content-pieces.status');
     Route::patch('content-pieces/{content_piece}/status', [ContentPieceController::class, 'updateStatus'])->name('content-pieces.update-status');
 
     Route::resource('webhooks', WebhookController::class)->except(['show']);

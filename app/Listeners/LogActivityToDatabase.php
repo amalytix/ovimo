@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
 use App\Events\OpenAIRequestFailed;
 use App\Events\PasswordChanged;
@@ -134,16 +135,31 @@ class LogActivityToDatabase implements ShouldQueue
                 ],
             ],
 
+            $event instanceof ContentPieceGenerated => [
+                'team_id' => $event->contentPiece->team_id,
+                'user_id' => null,
+                'event_type' => 'content_piece.generated',
+                'level' => 'info',
+                'description' => "Content piece '{$event->contentPiece->internal_name}' generated successfully",
+                'metadata' => [
+                    'content_piece_id' => $event->contentPiece->id,
+                    'prompt_id' => $event->contentPiece->prompt_id,
+                    'channel' => $event->contentPiece->channel,
+                    'language' => $event->contentPiece->target_language,
+                ],
+            ],
+
             $event instanceof ContentPieceGenerationFailed => [
-                'team_id' => $event->team->id,
-                'user_id' => $event->user->id,
+                'team_id' => $event->contentPiece->team_id,
+                'user_id' => null,
                 'event_type' => 'content_piece.generation_failed',
                 'level' => 'error',
-                'description' => "Failed to generate content piece: {$event->errorMessage}",
-                'metadata' => array_merge(
-                    ['exception' => $event->errorMessage],
-                    $event->metadata
-                ),
+                'description' => "Content piece '{$event->contentPiece->internal_name}' generation failed",
+                'metadata' => [
+                    'content_piece_id' => $event->contentPiece->id,
+                    'error_message' => $event->exception->getMessage(),
+                    'error_type' => get_class($event->exception),
+                ],
             ],
 
             $event instanceof OpenAIRequestFailed => [

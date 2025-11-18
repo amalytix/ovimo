@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreContentPieceRequest;
 use App\Http\Requests\UpdateContentPieceRequest;
+use App\Jobs\GenerateContentPiece;
 use App\Models\ContentPiece;
 use App\Models\Prompt;
-use App\Services\OpenAIService;
-use App\Services\WebContentExtractor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -76,7 +77,7 @@ class ContentPieceController extends Controller
             ->whereNotNull('summary')
             ->orderByDesc('found_at')
             ->take(100)
-            ->get(['id', 'uri', 'summary']);
+            ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
 
         // Pre-selected post IDs from query params
         $preselectedPostIds = $request->input('post_ids', []);
@@ -92,8 +93,17 @@ class ContentPieceController extends Controller
                 $missingPosts = \App\Models\Post::query()
                     ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
                     ->whereIn('id', $missingPostIds)
-                    ->get(['id', 'uri', 'summary']);
+                    ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
                 $availablePosts = $availablePosts->merge($missingPosts);
+            }
+        }
+
+        // Get the first selected post's title for pre-populating the name
+        $firstPostTitle = null;
+        if (! empty($preselectedPostIds)) {
+            $firstPost = $availablePosts->firstWhere('id', $preselectedPostIds[0]);
+            if ($firstPost) {
+                $firstPostTitle = $firstPost->external_title ?? $firstPost->internal_title ?? $firstPost->uri;
             }
         }
 
@@ -101,10 +111,11 @@ class ContentPieceController extends Controller
             'prompts' => $prompts,
             'availablePosts' => $availablePosts,
             'preselectedPostIds' => $preselectedPostIds,
+            'initialTitle' => $firstPostTitle,
         ]);
     }
 
-    public function store(StoreContentPieceRequest $request, OpenAIService $openAI): RedirectResponse
+    public function store(StoreContentPieceRequest $request): RedirectResponse
     {
         $teamId = auth()->user()->current_team_id;
 
@@ -124,7 +135,7 @@ class ContentPieceController extends Controller
         if ($request->boolean('generate_content') && $contentPiece->prompt_id) {
             $contentPiece->load('prompt', 'posts');
 
-            return $this->generateContentForPiece($contentPiece, $openAI);
+            return $this->generateContentForPiece($contentPiece);
         }
 
         return redirect()->route('content-pieces.edit', $contentPiece)
@@ -184,7 +195,7 @@ class ContentPieceController extends Controller
             ->with('success', 'Content piece updated successfully.');
     }
 
-    public function generate(Request $request, ContentPiece $contentPiece, OpenAIService $openAI): RedirectResponse
+    public function generate(Request $request, ContentPiece $contentPiece): RedirectResponse
     {
         $this->authorize('generate', $contentPiece);
 
@@ -192,61 +203,33 @@ class ContentPieceController extends Controller
             return back()->with('error', 'Please select a prompt template first.');
         }
 
-        return $this->generateContentForPiece($contentPiece, $openAI);
+        return $this->generateContentForPiece($contentPiece);
     }
 
-    private function generateContentForPiece(ContentPiece $contentPiece, OpenAIService $openAI): RedirectResponse
+    private function generateContentForPiece(ContentPiece $contentPiece): RedirectResponse
     {
-        // Build context from linked posts
-        $extractor = new WebContentExtractor;
-        $context = '';
-        $articleCounter = 1;
-        foreach ($contentPiece->posts as $post) {
-            $title = $post->external_title ?? $post->internal_title ?? "Article {$articleCounter}";
-            $fullContent = $extractor->extractArticleAsMarkdown($post->uri);
-            $context .= "### {$title}\n\nURL: {$post->uri}\nSummary: {$post->summary}\nFull Content:\n{$fullContent}\n\n";
-            $articleCounter++;
-        }
+        // Use database transaction with pessimistic locking for concurrency protection
+        return DB::transaction(function () use ($contentPiece) {
+            $locked = ContentPiece::lockForUpdate()->find($contentPiece->id);
 
-        if ($contentPiece->briefing_text) {
-            $context .= "## Additional briefing\n\n{$contentPiece->briefing_text}\n\n";
-        }
+            // Check if generation is already in progress
+            if (in_array($locked->generation_status, ['QUEUED', 'PROCESSING'])) {
+                return back()->with('error', 'Generation already in progress. Please wait for it to complete.');
+            }
 
-        $context .= "Target channel: {$contentPiece->channel}\n";
-        $context .= "Target language: {$contentPiece->target_language}\n";
+            // Update status and dispatch job
+            $locked->update(['generation_status' => 'QUEUED']);
+            GenerateContentPiece::dispatch($locked);
 
-        // Replace placeholders in prompt
-        $promptText = $contentPiece->prompt->prompt_text;
-        $promptText = str_replace('{{context}}', $context, $promptText);
-        $promptText = str_replace('{{channel}}', $contentPiece->channel, $promptText);
-        $promptText = str_replace('{{language}}', $contentPiece->target_language, $promptText);
-
-        try {
-            $result = $openAI->generateContent($promptText, '');
-
-            $contentPiece->update([
-                'full_text' => $result['content'],
-                'status' => 'DRAFT',
+            // Return with polling metadata
+            return back()->with([
+                'success' => 'Content generation started. This may take 1-3 minutes.',
+                'polling' => [
+                    'content_piece_id' => $locked->id,
+                    'status' => 'QUEUED',
+                ],
             ]);
-
-            // Track usage
-            $team = $contentPiece->team;
-            $openAI->trackUsage(
-                $result['input_tokens'],
-                $result['output_tokens'],
-                $result['total_tokens'],
-                $result['model'],
-                auth()->user(),
-                $team,
-                'content_generation'
-            );
-
-            return redirect()->route('content-pieces.edit', $contentPiece)
-                ->with('success', "Content generated successfully. Used {$result['total_tokens']} tokens.");
-        } catch (\Exception $e) {
-            return redirect()->route('content-pieces.edit', $contentPiece)
-                ->with('error', 'Failed to generate content: '.$e->getMessage());
-        }
+        });
     }
 
     public function updateStatus(Request $request, ContentPiece $contentPiece): RedirectResponse
@@ -260,6 +243,19 @@ class ContentPieceController extends Controller
         $contentPiece->update(['status' => $request->status]);
 
         return back()->with('success', 'Status updated successfully.');
+    }
+
+    public function status(ContentPiece $contentPiece): JsonResponse
+    {
+        $this->authorize('view', $contentPiece);
+
+        return response()->json([
+            'generation_status' => $contentPiece->generation_status,
+            'full_text' => $contentPiece->full_text,
+            'status' => $contentPiece->status,
+            'error' => $contentPiece->generation_error,
+            'error_occurred_at' => $contentPiece->generation_error_occurred_at,
+        ]);
     }
 
     public function destroy(ContentPiece $contentPiece): RedirectResponse
