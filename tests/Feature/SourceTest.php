@@ -342,3 +342,96 @@ test('edit source form includes bypass keyword filter field', function () {
             ->where('source.bypass_keyword_filter', true)
         );
 });
+
+test('changing monitoring interval recalculates next_check_at', function () {
+    [$user, $team] = createUserWithTeam();
+
+    // Create a source with DAILY interval and next_check_at set to tomorrow
+    $source = Source::factory()->create([
+        'team_id' => $team->id,
+        'monitoring_interval' => 'DAILY',
+        'next_check_at' => now()->addDay(),
+    ]);
+
+    $originalNextCheckAt = $source->next_check_at;
+
+    // Change the interval to EVERY_30_MIN
+    $this->actingAs($user)->put("/sources/{$source->id}", [
+        'internal_name' => $source->internal_name,
+        'type' => $source->type,
+        'url' => $source->url,
+        'monitoring_interval' => 'EVERY_30_MIN',
+        'is_active' => $source->is_active,
+        'should_notify' => $source->should_notify,
+        'auto_summarize' => $source->auto_summarize,
+    ]);
+
+    $source->refresh();
+
+    // next_check_at should now be approximately 30 minutes from now, not tomorrow
+    expect($source->next_check_at)
+        ->not->toEqual($originalNextCheckAt)
+        ->toBeBetween(now()->addMinutes(29), now()->addMinutes(31));
+});
+
+test('not changing monitoring interval preserves next_check_at', function () {
+    [$user, $team] = createUserWithTeam();
+
+    // Create a source with specific next_check_at
+    $nextCheckAt = now()->addHours(3);
+    $source = Source::factory()->create([
+        'team_id' => $team->id,
+        'monitoring_interval' => 'HOURLY',
+        'next_check_at' => $nextCheckAt,
+    ]);
+
+    // Update other fields but keep the same monitoring_interval
+    $this->actingAs($user)->put("/sources/{$source->id}", [
+        'internal_name' => 'Updated Name',
+        'type' => $source->type,
+        'url' => $source->url,
+        'monitoring_interval' => 'HOURLY', // Same interval
+        'is_active' => $source->is_active,
+        'should_notify' => $source->should_notify,
+        'auto_summarize' => $source->auto_summarize,
+    ]);
+
+    $source->refresh();
+
+    // next_check_at should remain unchanged
+    expect($source->next_check_at->timestamp)->toEqual($nextCheckAt->timestamp);
+});
+
+test('calculateNextCheckTime method works correctly', function () {
+    $source = Source::factory()->make();
+
+    // Test EVERY_10_MIN
+    $source->monitoring_interval = 'EVERY_10_MIN';
+    $nextCheck = $source->calculateNextCheckTime();
+    expect($nextCheck)->toBeBetween(now()->addMinutes(9), now()->addMinutes(11));
+
+    // Test EVERY_30_MIN
+    $source->monitoring_interval = 'EVERY_30_MIN';
+    $nextCheck = $source->calculateNextCheckTime();
+    expect($nextCheck)->toBeBetween(now()->addMinutes(29), now()->addMinutes(31));
+
+    // Test HOURLY
+    $source->monitoring_interval = 'HOURLY';
+    $nextCheck = $source->calculateNextCheckTime();
+    expect($nextCheck)->toBeBetween(now()->addMinutes(59), now()->addMinutes(61));
+
+    // Test EVERY_6_HOURS
+    $source->monitoring_interval = 'EVERY_6_HOURS';
+    $nextCheck = $source->calculateNextCheckTime();
+    expect($nextCheck)->toBeBetween(now()->addHours(5)->addMinutes(59), now()->addHours(6)->addMinutes(1));
+
+    // Test DAILY
+    $source->monitoring_interval = 'DAILY';
+    $nextCheck = $source->calculateNextCheckTime();
+    expect($nextCheck)->toBeBetween(now()->addDay()->subMinute(), now()->addDay()->addMinute());
+
+    // Test WEEKLY
+    $source->monitoring_interval = 'WEEKLY';
+    $nextCheck = $source->calculateNextCheckTime();
+    expect($nextCheck)->toBeBetween(now()->addWeek()->subMinute(), now()->addWeek()->addMinute());
+});

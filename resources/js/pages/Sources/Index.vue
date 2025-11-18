@@ -23,6 +23,7 @@ interface Source {
     should_notify: boolean;
     auto_summarize: boolean;
     last_checked_at: string | null;
+    next_check_at: string | null;
     posts_count: number;
     tags: Tag[];
 }
@@ -214,6 +215,7 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             >
                                 Last Checked {{ getSortIcon('last_checked_at') }}
                             </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Next Check</th>
                             <th
                                 class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('is_active')"
@@ -253,6 +255,9 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 {{ source.last_checked_at || 'Never' }}
                             </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                {{ source.next_check_at || 'Not scheduled' }}
+                            </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
                                 <span
                                     :class="source.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
@@ -283,7 +288,7 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             </td>
                         </tr>
                         <tr v-if="sources.data.length === 0">
-                            <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td colspan="9" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                 No sources found. Click "Add Source" to create your first source.
                             </td>
                         </tr>

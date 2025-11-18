@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\Source;
 use App\Services\KeywordFilterService;
 use App\Services\SourceParser;
-use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -67,7 +66,7 @@ class MonitorSource implements ShouldQueue
             // Update source timestamps
             $this->source->update([
                 'last_checked_at' => now(),
-                'next_check_at' => $this->calculateNextCheck(),
+                'next_check_at' => $this->source->calculateNextCheckTime(),
             ]);
 
             Log::info("Monitored source {$this->source->id}: found {$newPostsCount} new posts");
@@ -88,18 +87,5 @@ class MonitorSource implements ShouldQueue
             Log::error("Failed to monitor source {$this->source->id}: {$e->getMessage()}");
             throw $e;
         }
-    }
-
-    private function calculateNextCheck(): Carbon
-    {
-        return match ($this->source->monitoring_interval) {
-            'EVERY_10_MIN' => now()->addMinutes(10),
-            'EVERY_30_MIN' => now()->addMinutes(30),
-            'HOURLY' => now()->addHour(),
-            'EVERY_6_HOURS' => now()->addHours(6),
-            'DAILY' => now()->addDay(),
-            'WEEKLY' => now()->addWeek(),
-            default => now()->addDay(),
-        };
     }
 }

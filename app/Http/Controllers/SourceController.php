@@ -64,6 +64,7 @@ class SourceController extends Controller
                     'should_notify' => $source->should_notify,
                     'auto_summarize' => $source->auto_summarize,
                     'last_checked_at' => $source->last_checked_at?->diffForHumans(),
+                    'next_check_at' => $source->next_check_at?->diffForHumans(),
                     'posts_count' => $source->posts_count,
                     'tags' => $source->tags->map(fn (Tag $tag) => [
                         'id' => $tag->id,
@@ -188,6 +189,11 @@ class SourceController extends Controller
             );
             $keywords = array_filter($keywords, fn ($keyword) => $keyword !== '');
             $data['keywords'] = implode(',', $keywords);
+        }
+
+        // Recalculate next_check_at if monitoring_interval has changed
+        if (isset($data['monitoring_interval']) && $data['monitoring_interval'] !== $source->monitoring_interval) {
+            $data['next_check_at'] = $source->calculateNextCheckTime($data['monitoring_interval']);
         }
 
         $source->update($data);

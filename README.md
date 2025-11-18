@@ -2,6 +2,23 @@
 
 Relevant infos here.
 
+## Hetzner server
+
+### PHP settings
+1. Login as user forge
+2. su root
+3. sudo nano /etc/php/8.3/fpm/pool.d/www.conf
+4. Set request_terminate_timeout to 600 seconds (600)
+5. sudo systemctl restart php8.3-fpm
+
+### Nginx settings
+
+In nginx general site config add these lines:
+
+    fastcgi_read_timeout 600;
+    fastcgi_send_timeout 600;
+    fastcgi_connect_timeout 600;
+
 ## Database seeder
 
 1. UserSeeder (database/seeders/UserSeeder.php) - Creates the user and their team

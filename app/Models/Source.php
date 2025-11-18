@@ -57,4 +57,19 @@ class Source extends Model
     {
         return $this->belongsToMany(Tag::class);
     }
+
+    public function calculateNextCheckTime(?string $interval = null): \Carbon\Carbon
+    {
+        $interval = $interval ?? $this->monitoring_interval;
+
+        return match ($interval) {
+            'EVERY_10_MIN' => now()->addMinutes(10),
+            'EVERY_30_MIN' => now()->addMinutes(30),
+            'HOURLY' => now()->addHour(),
+            'EVERY_6_HOURS' => now()->addHours(6),
+            'DAILY' => now()->addDay(),
+            'WEEKLY' => now()->addWeek(),
+            default => now()->addDay(),
+        };
+    }
 }
