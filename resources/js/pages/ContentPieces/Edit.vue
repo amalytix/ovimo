@@ -99,6 +99,10 @@ const startPolling = (contentPieceId: number) => {
                 stopPolling();
                 generatedContent.value = data.full_text;
                 form.full_text = data.full_text || '';
+                // Automatically change status to DRAFT when content is generated
+                if (props.contentPiece.status !== 'DRAFT' && props.contentPiece.status !== 'FINAL') {
+                    updateStatus('DRAFT');
+                }
                 showSuccessMessage.value = true;
 
                 // Auto-hide success message after 5 seconds

@@ -40,7 +40,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const form = useForm({
     internal_name: props.initialTitle || '',
-    prompt_id: null as number | null,
+    prompt_id: props.prompts.length > 0 ? props.prompts[0].id : null,
     briefing_text: '',
     channel: 'BLOG_POST',
     target_language: 'ENGLISH',
@@ -89,6 +89,7 @@ const startPolling = (contentPieceId: number) => {
                 stopPolling();
                 generatedContent.value = data.full_text;
                 form.full_text = data.full_text || '';
+                form.status = 'DRAFT'; // Automatically change status to DRAFT when content is generated
                 showSuccessMessage.value = true;
 
                 // Auto-hide success message after 5 seconds
