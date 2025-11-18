@@ -2,6 +2,16 @@
 
 Relevant infos here.
 
+## Local development
+
+php artisan config:clear
+npm run build
+
+### Worker
+
+php artisan queue:work
+php artisan schedule:run
+
 ## Hetzner server
 
 ### PHP settings

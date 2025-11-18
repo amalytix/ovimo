@@ -26,6 +26,7 @@ class ActivityLog extends Model
         'source.created' => 'Source Created',
         'source.updated' => 'Source Updated',
         'source.deleted' => 'Source Deleted',
+        'content_piece.generated' => 'Content Piece Generated',
 
         // Error/Warning events
         'source.monitoring_failed' => 'Source Monitoring Failed',

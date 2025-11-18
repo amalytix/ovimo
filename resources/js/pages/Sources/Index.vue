@@ -5,6 +5,7 @@ import { Pagination } from '@/components/ui/pagination';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { Pencil, RefreshCw, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import { toast } from 'vue3-toastify';
 
@@ -185,7 +186,7 @@ watch(selectedTagIds, applyFilters, { deep: true });
                 </div>
             </div>
 
-            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
@@ -290,24 +291,29 @@ watch(selectedTagIds, applyFilters, { deep: true });
                                 </span>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                <Link
-                                    :href="`/sources/${source.id}/edit`"
-                                    class="mr-3 text-blue-600 hover:text-blue-900 dark:text-blue-400"
-                                >
-                                    Edit
-                                </Link>
-                                <button
-                                    @click="deleteSource(source.id)"
-                                    class="mr-3 text-red-600 hover:text-red-900 dark:text-red-400"
-                                >
-                                    Delete
-                                </button>
-                                <button
-                                    @click="checkSource(source.id)"
-                                    class="text-green-600 hover:text-green-900 dark:text-green-400"
-                                >
-                                    Check now
-                                </button>
+                                <div class="flex items-center justify-end gap-3">
+                                    <Link
+                                        :href="`/sources/${source.id}/edit`"
+                                        class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                                        title="Edit"
+                                    >
+                                        <Pencil :size="18" />
+                                    </Link>
+                                    <button
+                                        @click="checkSource(source.id)"
+                                        class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                                        title="Check now"
+                                    >
+                                        <RefreshCw :size="18" />
+                                    </button>
+                                    <button
+                                        @click="deleteSource(source.id)"
+                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"
+                                        title="Delete"
+                                    >
+                                        <Trash2 :size="18" />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="sources.data.length === 0">
