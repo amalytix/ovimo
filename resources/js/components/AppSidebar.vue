@@ -14,7 +14,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BarChart3, BookOpen, FileText, Folder, LayoutGrid, MessageSquare, PenTool, Rss, Settings } from 'lucide-vue-next';
+import { Activity, BarChart3, BookOpen, FileText, Folder, LayoutGrid, MessageSquare, PenTool, Rss, Settings } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -56,6 +56,12 @@ const mainNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
+    
+    {
+        title: 'Logs',
+        href: '/activity-logs',
+        icon: Activity,
+    },
     // {
     //     title: 'Github Repo',
     //     href: 'https://github.com/laravel/vue-starter-kit',

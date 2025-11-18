@@ -112,6 +112,9 @@ class SourceController extends Controller
             $this->syncTagsByName($source, $request->tags);
         }
 
+        // Dispatch source created event
+        event(new \App\Events\SourceCreated($source, auth()->user()));
+
         // Auto-trigger check if source is active
         if ($source->is_active) {
             MonitorSource::dispatch($source);
@@ -204,6 +207,9 @@ class SourceController extends Controller
             $source->tags()->detach();
         }
 
+        // Dispatch source updated event
+        event(new \App\Events\SourceUpdated($source, auth()->user()));
+
         return redirect()->route('sources.index')
             ->with('success', 'Source updated successfully.');
     }
@@ -212,7 +218,20 @@ class SourceController extends Controller
     {
         $this->authorize('delete', $source);
 
+        // Capture source data before deletion
+        $sourceId = $source->id;
+        $teamId = $source->team_id;
+        $sourceName = $source->internal_name;
+
         $source->delete();
+
+        // Dispatch source deleted event
+        event(new \App\Events\SourceDeleted(
+            $sourceId,
+            $teamId,
+            $sourceName,
+            auth()->user()
+        ));
 
         return redirect()->route('sources.index')
             ->with('success', 'Source deleted successfully.');

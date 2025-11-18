@@ -6,6 +6,7 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -31,6 +32,7 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->configureActivityLogging();
     }
 
     /**
@@ -86,6 +88,37 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
+        });
+    }
+
+    /**
+     * Configure activity logging for authentication events.
+     */
+    private function configureActivityLogging(): void
+    {
+        // Listen to Laravel's Login event
+        Event::listen(\Illuminate\Auth\Events\Login::class, function ($event) {
+            $user = $event->user;
+            $team = $user->currentTeam;
+
+            if ($team) {
+                event(new \App\Events\UserLoggedIn(
+                    $user,
+                    $team,
+                    request()->ip(),
+                    request()->userAgent()
+                ));
+            }
+        });
+
+        // Listen to Laravel's PasswordReset event
+        Event::listen(\Illuminate\Auth\Events\PasswordReset::class, function ($event) {
+            $user = $event->user;
+            $team = $user->currentTeam;
+
+            if ($team) {
+                event(new \App\Events\PasswordReset($user, $team));
+            }
         });
     }
 }

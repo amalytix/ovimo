@@ -215,7 +215,6 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             >
                                 Last Checked {{ getSortIcon('last_checked_at') }}
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Next Check</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Notifications</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Auto Summarize</th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Bypass Filter</th>
@@ -257,9 +256,6 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 {{ source.last_checked_at || 'Never' }}
-                            </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                {{ source.next_check_at || 'Not scheduled' }}
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
                                 <span

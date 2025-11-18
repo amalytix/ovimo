@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ContentPieceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PostController;
@@ -38,6 +39,8 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('webhooks/{webhook}/test', [WebhookController::class, 'test'])->name('webhooks.test');
 
     Route::get('usage', [UsageController::class, 'index'])->name('usage.index');
+
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 
     Route::get('team-settings', [SettingsController::class, 'index'])->name('team-settings.index');
     Route::put('team-settings', [SettingsController::class, 'update'])->name('team-settings.update');

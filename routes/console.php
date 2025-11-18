@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Monitor sources every minute (the command checks which sources actually need monitoring)
 Schedule::command('sources:monitor')->everyMinute();
+
+// Prune old activity logs daily at midnight
+Schedule::job(new \App\Jobs\PruneOldActivityLogs)->dailyAt('00:00');

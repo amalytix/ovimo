@@ -23,7 +23,8 @@ Team (tenant)
 │   └── Tags (categorization)
 ├── Prompts (AI prompt templates)
 ├── Webhooks (external integrations)
-└── TokenUsageLogs (AI usage tracking)
+├── TokenUsageLogs (AI usage tracking)
+└── ActivityLogs (audit trail for all team events)
 ```
 
 ### Entity Relationships
@@ -39,6 +40,7 @@ Team (tenant)
 | **Tag** | Categorization label | Belongs to Team, many Sources (via pivot) |
 | **Webhook** | External notification endpoint | Belongs to Team |
 | **TokenUsageLog** | AI token consumption record | Belongs to Team and User |
+| **ActivityLog** | Activity audit trail | Belongs to Team, optional User/Source/Post |
 
 ## Backend Architecture
 
@@ -48,6 +50,7 @@ Team (tenant)
 app/
 ├── Actions/Fortify/          # Authentication actions (user creation, password reset)
 ├── Console/Commands/         # Artisan commands (ScheduleSourceMonitoring)
+├── Events/                   # Application events (14 types for activity logging)
 ├── Http/
 │   ├── Controllers/          # Inertia page controllers
 │   │   └── Settings/         # User settings controllers
@@ -56,8 +59,12 @@ app/
 ├── Jobs/                     # Queue jobs
 │   ├── MonitorSource.php     # Fetches new posts from sources
 │   ├── SummarizePost.php     # AI summarization
-│   └── SendWebhookNotification.php
+│   ├── SendWebhookNotification.php
+│   └── PruneOldActivityLogs.php  # Cleanup job (daily)
+├── Listeners/                # Event listeners
+│   └── LogActivityToDatabase.php  # Unified activity logging listener
 ├── Models/                   # Eloquent models
+├── Observers/                # Model observers (UserObserver for 2FA detection)
 ├── Policies/                 # Authorization policies (SourcePolicy, PostPolicy, etc.)
 ├── Providers/                # Service providers (App, Fortify)
 └── Services/                 # Business logic
@@ -74,6 +81,7 @@ app/
 - `PromptController` - CRUD for AI prompt templates
 - `WebhookController` - CRUD for webhook configurations + test
 - `UsageController` - Token usage statistics
+- `ActivityLogController` - View activity logs with filtering
 - `SettingsController` - Team settings management
 - `Settings/*` - User profile, password, 2FA settings
 
@@ -84,6 +92,7 @@ app/
 | `MonitorSource` | Scheduled via `ScheduleSourceMonitoring` | Parses source URL, creates new Posts |
 | `SummarizePost` | When auto_summarize enabled | Uses AI to analyze and summarize post |
 | `SendWebhookNotification` | On events (NEW_POSTS, etc.) | Delivers webhook payloads |
+| `PruneOldActivityLogs` | Scheduled daily at midnight | Deletes activity logs older than 30 days |
 
 ### Services Layer
 
@@ -111,9 +120,19 @@ app/
    → Returns generated content
    ```
 
-3. **Source Intervals**: `EVERY_10_MIN`, `EVERY_30_MIN`, `HOURLY`, `EVERY_6_HOURS`, `DAILY`, `WEEKLY`
+3. **Activity Logging Flow** (Event-Driven):
+   ```
+   Application Event Triggered (14 event types)
+   → Event dispatched (queued for async processing)
+   → LogActivityToDatabase listener receives event
+   → Extracts relevant data (team, user, metadata)
+   → Creates ActivityLog record
+   → Pruned after 30 days by scheduled job
+   ```
 
-4. **Post Status Values**: `NOT_RELEVANT`, plus relevancy_score tracking
+4. **Source Intervals**: `EVERY_10_MIN`, `EVERY_30_MIN`, `HOURLY`, `EVERY_6_HOURS`, `DAILY`, `WEEKLY`
+
+5. **Post Status Values**: `NOT_RELEVANT`, plus relevancy_score tracking
 
 ## Frontend Architecture
 
@@ -138,7 +157,8 @@ resources/js/
 │   ├── ContentPieces/        # Content generation
 │   ├── Prompts/              # Prompt management
 │   ├── Webhooks/             # Webhook configuration
-│   └── Usage/                # Token usage stats
+│   ├── Usage/                # Token usage stats
+│   └── ActivityLogs/         # Activity log viewer
 ├── layouts/                  # Page layout wrappers
 │   ├── app/                  # AppSidebarLayout, AppHeaderLayout
 │   ├── auth/                 # Authentication layouts
@@ -296,6 +316,7 @@ Flash messages pass one-time data from backend to frontend (success/error notifi
 | `tags` | Categorization | `name` (unique per team) |
 | `webhooks` | External integrations | `event`, `url`, `secret`, `failure_count` |
 | `token_usage_logs` | AI consumption tracking | `input_tokens`, `output_tokens`, `model`, `operation` |
+| `activity_logs` | Activity audit trail | `event_type`, `level`, `description`, `metadata` (JSON), `ip_address`, `user_agent` |
 
 ### Pivot Tables
 
@@ -309,6 +330,8 @@ Flash messages pass one-time data from backend to frontend (success/error notifi
 - `posts(source_id, relevancy_score)` - Sorting by relevance
 - `sources(team_id, is_active, next_check_at)` - Scheduling queries
 - `token_usage_logs(team_id, created_at)` - Usage reporting
+- `activity_logs(team_id, created_at)` - Log browsing and filtering
+- `activity_logs(team_id, event_type, created_at)` - Filtered log queries
 
 ## Authentication & Authorization
 
@@ -328,6 +351,7 @@ All team-scoped models use Laravel Policies for authorization:
 | `ContentPiecePolicy` | ContentPiece | `generate` (AI content generation) |
 | `PromptPolicy` | Prompt | Standard CRUD |
 | `WebhookPolicy` | Webhook | `test` (send test webhook) |
+| `ActivityLogPolicy` | ActivityLog | `viewAny` only (read-only) |
 
 **Usage in Controllers**:
 ```php
@@ -375,6 +399,199 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
 - Checks monthly token usage against `team.monthly_token_limit`
 - Returns 429 with usage statistics if exceeded
 - Zero limit means unlimited (no restriction)
+
+## Activity Logging System
+
+The application uses an event-driven activity logging system to track all important actions across the application. Logs are team-scoped, automatically pruned after 30 days, and displayed in a filterable web UI.
+
+### Architecture Overview
+
+**Event-Driven Pattern**:
+```
+Action occurs → Event dispatched (queued) → LogActivityToDatabase listener → ActivityLog created
+```
+
+**Components**:
+- **Events** (`app/Events/`) - 14 queued event classes capturing different activity types
+- **Listener** (`app/Listeners/LogActivityToDatabase.php`) - Single unified listener handling all events
+- **Model** (`app/Models/ActivityLog.php`) - Stores log records with team scoping
+- **Controller** (`app/Http/Controllers/ActivityLogController.php`) - Displays logs with filtering
+- **Observer** (`app/Observers/UserObserver.php`) - Detects 2FA changes via model observation
+- **Cleanup Job** (`app/Jobs/PruneOldActivityLogs.php`) - Daily pruning of logs older than 30 days
+
+### Event Categories
+
+The system tracks 14 event types across 3 categories:
+
+**User Events** (5):
+- `user.login` - User login
+- `user.2fa_enabled` - Two-factor authentication enabled
+- `user.2fa_disabled` - Two-factor authentication disabled
+- `user.password_changed` - Password changed
+- `user.password_reset` - Password reset via email
+
+**Domain Events** (4):
+- `post.found` - New post discovered from source
+- `source.created` - Source created
+- `source.updated` - Source updated
+- `source.deleted` - Source deleted
+
+**Error/Warning Events** (5):
+- `source.monitoring_failed` - Source monitoring job failed
+- `content.generation_failed` - Content generation failed
+- `openai.request_failed` - OpenAI API request failed
+- `webhook.delivery_failed` - Webhook delivery failed
+- `token.limit_exceeded` - Token limit exceeded
+
+### Adding New Activity Log Events
+
+Follow these steps to add a new logged event:
+
+#### 1. Create the Event Class
+
+```php
+// app/Events/YourNewEvent.php
+namespace App\Events;
+
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class YourNewEvent implements ShouldQueue
+{
+    use Dispatchable, SerializesModels;
+
+    public function __construct(
+        public Team $team,
+        public ?User $user = null,
+        // Add any other context data needed
+    ) {}
+}
+```
+
+**Key Requirements**:
+- Must implement `ShouldQueue` for async processing
+- Use public constructor properties for auto-assignment
+- Always include `$team` (required) and `$user` (optional when available)
+- Add any additional context needed (source, post, error message, metadata)
+
+#### 2. Add Event Type to ActivityLog Model
+
+```php
+// app/Models/ActivityLog.php
+public const EVENT_TYPES = [
+    // ... existing types ...
+    'your.new_event' => 'Your New Event',  // key => display label
+];
+```
+
+**Convention**: Use dot notation (category.action) for event type keys.
+
+#### 3. Add Event Handler to Listener
+
+```php
+// app/Listeners/LogActivityToDatabase.php
+public function handle(object $event): void
+{
+    $logData = match (true) {
+        // ... existing handlers ...
+        $event instanceof YourNewEvent => [
+            'team_id' => $event->team->id,
+            'user_id' => $event->user?->id,  // Nullable
+            'event_type' => 'your.new_event',
+            'level' => 'info',  // or 'warning', 'error'
+            'description' => 'Description of what happened',
+            'ip_address' => request()->ip(),  // Optional
+            'user_agent' => request()->userAgent(),  // Optional
+            'metadata' => [  // Optional JSON data
+                'additional' => 'context',
+            ],
+        ],
+        default => null,
+    };
+
+    if ($logData !== null) {
+        ActivityLog::create($logData);
+    }
+}
+```
+
+**Field Guidelines**:
+- `team_id` - Required, always from `$event->team->id`
+- `user_id` - Optional, use `?->id` for nullable users
+- `event_type` - Required, must match key in `EVENT_TYPES` constant
+- `level` - Required, use `'info'`, `'warning'`, or `'error'`
+- `description` - Optional, human-readable summary
+- `source_id`, `post_id` - Optional, when event relates to these entities
+- `ip_address`, `user_agent` - Optional, for user-initiated actions
+- `metadata` - Optional, array of additional context (stored as JSON)
+
+#### 4. Register Event in AppServiceProvider
+
+```php
+// app/Providers/AppServiceProvider.php
+Event::listen([
+    // ... existing events ...
+    YourNewEvent::class,
+], LogActivityToDatabase::class);
+```
+
+#### 5. Dispatch the Event
+
+Dispatch from controllers, jobs, or other application code:
+
+```php
+// In your controller or job
+event(new YourNewEvent($team, $user));
+```
+
+**Best Practices**:
+- Dispatch after successful operations (not before)
+- Include all relevant context in event constructor
+- Use nullable types for optional data (`?User $user`)
+- For delete operations, capture data before deletion
+
+### Special Cases
+
+**1. Laravel Authentication Events** (Login, PasswordReset):
+- Handled in `FortifyServiceProvider::configureActivityLogging()`
+- Listens to Laravel's built-in auth events
+- Dispatches our custom events with team context
+
+**2. Model Observation** (2FA Changes):
+- `UserObserver` watches `two_factor_secret` field changes
+- Dispatches `TwoFactorEnabled`/`TwoFactorDisabled` events
+- Used because Fortify doesn't fire explicit 2FA events
+
+**3. Delete Operations** (SourceDeleted):
+- Capture source data before calling `$source->delete()`
+- Pass captured data to event constructor
+- Source model is unavailable after deletion
+
+### Viewing Activity Logs
+
+- **URL**: `/activity-logs` (requires authentication)
+- **Filters**: Event type, date range (from/to)
+- **Default**: Last 7 days of team's logs
+- **Details**: Click "View Details" to see full context including JSON metadata
+- **Retention**: Logs automatically deleted after 30 days
+
+### Database Schema
+
+```sql
+activity_logs (
+    id, team_id, user_id (nullable),
+    event_type, level, description (nullable),
+    source_id (nullable), post_id (nullable),
+    ip_address (nullable), user_agent (nullable),
+    metadata (JSON, nullable),
+    created_at
+)
+```
+
+**Indexes**:
+- `(team_id, created_at)` - For browsing team logs
+- `(team_id, event_type, created_at)` - For filtered queries
 
 ## Key Patterns for Agents
 

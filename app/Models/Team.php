@@ -70,4 +70,9 @@ class Team extends Model
     {
         return $this->hasMany(Webhook::class);
     }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
 }

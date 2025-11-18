@@ -57,6 +57,9 @@ class MonitorSource implements ShouldQueue
                 if ($post->wasRecentlyCreated) {
                     $newPostsCount++;
 
+                    // Dispatch post found event
+                    event(new \App\Events\PostFound($post, $this->source));
+
                     // Collect new post data for webhook notification
                     $newPosts[] = [
                         'title' => $post->external_title,
@@ -93,6 +96,10 @@ class MonitorSource implements ShouldQueue
             }
         } catch (\Exception $e) {
             Log::error("Failed to monitor source {$this->source->id}: {$e->getMessage()}");
+
+            // Dispatch source monitoring failed event
+            event(new \App\Events\SourceMonitoringFailed($this->source, $e->getMessage()));
+
             throw $e;
         }
     }

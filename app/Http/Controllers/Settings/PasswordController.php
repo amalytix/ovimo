@@ -33,6 +33,12 @@ class PasswordController extends Controller
             'password' => $validated['password'],
         ]);
 
+        // Dispatch password changed event
+        $user = $request->user();
+        if ($user->currentTeam) {
+            event(new \App\Events\PasswordChanged($user, $user->currentTeam));
+        }
+
         return back();
     }
 }

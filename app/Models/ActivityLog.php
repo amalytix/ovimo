@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ActivityLog extends Model
+{
+    /** @use HasFactory<\Database\Factories\ActivityLogFactory> */
+    use HasFactory;
+
+    public const UPDATED_AT = null;
+
+    public const EVENT_TYPES = [
+        // User events
+        'user.login' => 'User Login',
+        'user.2fa_enabled' => '2FA Enabled',
+        'user.2fa_disabled' => '2FA Disabled',
+        'user.password_changed' => 'Password Changed',
+        'user.password_reset' => 'Password Reset',
+
+        // Domain events
+        'post.found' => 'Post Found',
+        'source.created' => 'Source Created',
+        'source.updated' => 'Source Updated',
+        'source.deleted' => 'Source Deleted',
+
+        // Error/Warning events
+        'source.monitoring_failed' => 'Source Monitoring Failed',
+        'content_piece.generation_failed' => 'Content Generation Failed',
+        'openai.request_failed' => 'OpenAI Request Failed',
+        'webhook.delivery_failed' => 'Webhook Delivery Failed',
+        'token.limit_exceeded' => 'Token Limit Exceeded',
+    ];
+
+    protected $fillable = [
+        'team_id',
+        'user_id',
+        'event_type',
+        'level',
+        'description',
+        'source_id',
+        'post_id',
+        'ip_address',
+        'user_agent',
+        'metadata',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'metadata' => 'array',
+            'created_at' => 'datetime',
+        ];
+    }
+
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(Source::class);
+    }
+
+    public function post(): BelongsTo
+    {
+        return $this->belongsTo(Post::class);
+    }
+}
