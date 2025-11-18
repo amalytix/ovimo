@@ -71,14 +71,6 @@ class ContentPieceController extends Controller
             ->orderBy('internal_name')
             ->get(['id', 'internal_name as name']);
 
-        $availablePosts = \App\Models\Post::query()
-            ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-            ->where('status', 'CREATE_CONTENT')
-            ->whereNotNull('summary')
-            ->orderByDesc('found_at')
-            ->take(100)
-            ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
-
         // Pre-selected post IDs from query params
         $preselectedPostIds = $request->input('post_ids', []);
         if (! is_array($preselectedPostIds)) {
@@ -86,16 +78,21 @@ class ContentPieceController extends Controller
         }
         $preselectedPostIds = array_map('intval', $preselectedPostIds);
 
-        // If there are pre-selected posts not in availablePosts, add them
+        // If post_ids are provided, only show those specific posts
+        // Otherwise, show all available posts for selection
         if (! empty($preselectedPostIds)) {
-            $missingPostIds = array_diff($preselectedPostIds, $availablePosts->pluck('id')->toArray());
-            if (! empty($missingPostIds)) {
-                $missingPosts = \App\Models\Post::query()
-                    ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-                    ->whereIn('id', $missingPostIds)
-                    ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
-                $availablePosts = $availablePosts->merge($missingPosts);
-            }
+            $availablePosts = \App\Models\Post::query()
+                ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
+                ->whereIn('id', $preselectedPostIds)
+                ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
+        } else {
+            $availablePosts = \App\Models\Post::query()
+                ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
+                ->where('status', 'CREATE_CONTENT')
+                ->whereNotNull('summary')
+                ->orderByDesc('found_at')
+                ->take(100)
+                ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
         }
 
         // Get the first selected post's title for pre-populating the name
