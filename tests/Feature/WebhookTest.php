@@ -53,7 +53,7 @@ test('authenticated users can create a webhook', function () {
         'secret' => 'test-secret-123',
     ]);
 
-    $response->assertRedirect('/webhooks');
+    $response->assertRedirect('/team-settings?tab=webhooks');
 
     $this->assertDatabaseHas('webhooks', [
         'team_id' => $team->id,
@@ -132,7 +132,7 @@ test('authenticated users can update their webhooks', function () {
         'secret' => 'new-secret',
     ]);
 
-    $response->assertRedirect('/webhooks');
+    $response->assertRedirect('/team-settings?tab=webhooks');
 
     $webhook->refresh();
     expect($webhook->name)->toBe('Updated Webhook');
@@ -161,7 +161,7 @@ test('authenticated users can delete their webhooks', function () {
 
     $response = $this->actingAs($user)->delete("/webhooks/{$webhook->id}");
 
-    $response->assertRedirect('/webhooks');
+    $response->assertRedirect('/team-settings?tab=webhooks');
     $this->assertDatabaseMissing('webhooks', ['id' => $webhook->id]);
 });
 

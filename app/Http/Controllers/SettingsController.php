@@ -18,13 +18,14 @@ class SettingsController extends Controller
             'team' => [
                 'id' => $team->id,
                 'name' => $team->name,
-                'notifications_enabled' => $team->notifications_enabled,
-                'webhook_url' => $team->webhook_url,
                 'post_auto_hide_days' => $team->post_auto_hide_days,
                 'monthly_token_limit' => $team->monthly_token_limit,
                 'relevancy_prompt' => $team->relevancy_prompt,
                 'positive_keywords' => $team->positive_keywords,
                 'negative_keywords' => $team->negative_keywords,
+            ],
+            'webhooks' => [
+                'data' => $team->webhooks,
             ],
         ]);
     }

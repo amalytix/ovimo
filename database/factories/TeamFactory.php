@@ -20,8 +20,6 @@ class TeamFactory extends Factory
         return [
             'name' => fake()->company(),
             'owner_id' => User::factory(),
-            'notifications_enabled' => true,
-            'webhook_url' => null,
             'post_auto_hide_days' => null,
             'monthly_token_limit' => 10000000,
             'relevancy_prompt' => null,

@@ -14,7 +14,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BarChart3, Bell, BookOpen, FileText, Folder, LayoutGrid, MessageSquare, PenTool, Rss, Settings } from 'lucide-vue-next';
+import { BarChart3, BookOpen, FileText, Folder, LayoutGrid, MessageSquare, PenTool, Rss, Settings } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -42,11 +42,6 @@ const mainNavItems: NavItem[] = [
         title: 'Content',
         href: '/content-pieces',
         icon: PenTool,
-    },
-    {
-        title: 'Webhooks',
-        href: '/webhooks',
-        icon: Bell,
     },
     {
         title: 'Usage',

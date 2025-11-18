@@ -16,8 +16,6 @@ class Team extends Model
     protected $fillable = [
         'name',
         'owner_id',
-        'notifications_enabled',
-        'webhook_url',
         'post_auto_hide_days',
         'monthly_token_limit',
         'relevancy_prompt',
@@ -28,7 +26,6 @@ class Team extends Model
     protected function casts(): array
     {
         return [
-            'notifications_enabled' => 'boolean',
             'post_auto_hide_days' => 'integer',
             'monthly_token_limit' => 'integer',
         ];
@@ -67,5 +64,10 @@ class Team extends Model
     public function tokenUsageLogs(): HasMany
     {
         return $this->hasMany(TokenUsageLog::class);
+    }
+
+    public function webhooks(): HasMany
+    {
+        return $this->hasMany(Webhook::class);
     }
 }

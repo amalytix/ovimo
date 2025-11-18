@@ -18,8 +18,6 @@ class UpdateTeamSettingsRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'notifications_enabled' => ['boolean'],
-            'webhook_url' => ['nullable', 'url', 'max:500'],
             'post_auto_hide_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'monthly_token_limit' => ['nullable', 'integer', 'min:0'],
             'relevancy_prompt' => ['nullable', 'string', 'max:5000'],

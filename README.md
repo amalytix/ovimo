@@ -5,6 +5,7 @@ Relevant infos here.
 ## Hetzner server
 
 ### PHP settings
+
 1. Login as user forge
 2. su root
 3. sudo nano /etc/php/8.3/fpm/pool.d/www.conf
@@ -18,6 +19,29 @@ In nginx general site config add these lines:
     fastcgi_read_timeout 600;
     fastcgi_send_timeout 600;
     fastcgi_connect_timeout 600;
+
+### Scheduler setting
+
+php /home/forge/ovimo.ai/current/artisan schedule:run
+
+### Worker setting
+
+[program:worker-606160]
+directory=/home/forge/ovimo.ai/current/
+command=php8.3 /home/forge/ovimo.ai/current/artisan queue:work database --sleep=3 --tries=3 --max-time=3600 --quiet
+process_name=%(program_name)s_%(process_num)02d
+autostart=true
+autorestart=true
+user=forge
+numprocs=4
+redirect_stderr=true
+stdout_logfile=/home/forge/.forge/worker-606160.log
+stdout_logfile_maxbytes=5MB
+stdout_logfile_backups=3
+stopwaitsecs=15
+stopasgroup=true
+killasgroup=true
+
 
 ## Database seeder
 

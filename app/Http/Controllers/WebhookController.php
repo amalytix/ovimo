@@ -45,7 +45,7 @@ class WebhookController extends Controller
             ...$request->validated(),
         ]);
 
-        return redirect()->route('webhooks.index')
+        return redirect('/team-settings?tab=webhooks')
             ->with('success', 'Webhook created successfully.');
     }
 
@@ -71,7 +71,7 @@ class WebhookController extends Controller
 
         $webhook->update($request->validated());
 
-        return redirect()->route('webhooks.index')
+        return redirect('/team-settings?tab=webhooks')
             ->with('success', 'Webhook updated successfully.');
     }
 
@@ -81,7 +81,7 @@ class WebhookController extends Controller
 
         $webhook->delete();
 
-        return redirect()->route('webhooks.index')
+        return redirect('/team-settings?tab=webhooks')
             ->with('success', 'Webhook deleted successfully.');
     }
 
@@ -97,13 +97,22 @@ class WebhookController extends Controller
                 'webhook_id' => $webhook->id,
                 'webhook_name' => $webhook->name,
                 'source_id' => 1,
-                'source_name' => 'Example Source',
-                'post_id' => 123,
-                'post_uri' => 'https://example.com/article/test-post',
-                'post_external_title' => 'Example Post Title for Testing',
-                'post_summary' => 'This is a sample summary of the post content that would normally be generated from the actual article.',
-                'post_relevancy_score' => 85,
-                'post_created_at' => now()->toIso8601String(),
+                'source_name' => 'Example Test Source',
+                'new_posts_count' => 3,
+                'posts' => [
+                    [
+                        'title' => 'Revolutionary AI Model Achieves Human-Level Performance',
+                        'url' => 'https://example.com/articles/ai-breakthrough-2024',
+                    ],
+                    [
+                        'title' => 'Climate Tech Startup Raises $50M Series B Funding',
+                        'url' => 'https://example.com/articles/climate-tech-funding',
+                    ],
+                    [
+                        'title' => 'New Study Reveals Impact of Remote Work on Productivity',
+                        'url' => 'https://example.com/articles/remote-work-study',
+                    ],
+                ],
             ],
         ];
 
