@@ -41,6 +41,8 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
 
     Route::get('team-settings', [SettingsController::class, 'index'])->name('team-settings.index');
     Route::put('team-settings', [SettingsController::class, 'update'])->name('team-settings.update');
+    Route::post('team-settings/export-sources', [SettingsController::class, 'exportSources'])->name('team-settings.export-sources');
+    Route::post('team-settings/import-sources', [SettingsController::class, 'importSources'])->name('team-settings.import-sources');
 
     Route::get('posts', [PostController::class, 'index'])->name('posts.index');
     Route::patch('posts/{post}/toggle-read', [PostController::class, 'toggleRead'])->name('posts.toggle-read');

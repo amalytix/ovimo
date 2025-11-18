@@ -198,6 +198,86 @@ defineProps<{
 - **App Components** (`components/`): Composition of UI primitives
 - **Reka UI Pattern**: Uses `modelValue`/`update:modelValue` (see `docs/ui-components.md`)
 
+### Inertia Integration Patterns
+
+#### CSRF Token Handling
+
+Laravel requires CSRF tokens for all POST/PUT/PATCH/DELETE requests. When using Inertia:
+
+1. **Add CSRF meta tag** in `resources/views/app.blade.php`:
+   ```html
+   <meta name="csrf-token" content="{{ csrf_token() }}">
+   ```
+
+2. **Inertia forms handle CSRF automatically** when using `useForm()` or `<Form>` component
+
+3. **Manual form submissions** (e.g., for file downloads) must include the token:
+   ```typescript
+   const form = document.createElement('form');
+   form.method = 'POST';
+   form.action = '/endpoint';
+
+   const csrfInput = document.createElement('input');
+   csrfInput.type = 'hidden';
+   csrfInput.name = '_token';
+   csrfInput.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+   form.appendChild(csrfInput);
+
+   document.body.appendChild(form);
+   form.submit();
+   ```
+
+4. **Common CSRF errors**:
+   - 419 "Page Expired" = Missing or invalid CSRF token
+   - "CSRF token mismatch" = Token not properly included in request
+
+#### Flash Messages
+
+Flash messages pass one-time data from backend to frontend (success/error notifications).
+
+1. **Share flash data** in `app/Http/Middleware/HandleInertiaRequests.php`:
+   ```php
+   public function share(Request $request): array
+   {
+       return [
+           ...parent::share($request),
+           'flash' => [
+               'success' => $request->session()->get('success'),
+               'error' => $request->session()->get('error'),
+           ],
+       ];
+   }
+   ```
+
+2. **Set flash messages** in controllers:
+   ```php
+   return redirect('/route')->with('success', 'Operation completed!');
+   return back()->with('error', 'Something went wrong.');
+   ```
+
+3. **Access flash messages** in Vue components:
+   ```vue
+   <script setup>
+   import { usePage } from '@inertiajs/vue3'
+
+   const page = usePage()
+   </script>
+
+   <template>
+     <div v-if="page.props.flash?.success">
+       {{ page.props.flash.success }}
+     </div>
+   </template>
+   ```
+
+4. **Flash messages are automatically cleared** after being displayed once
+
+5. **Preserve query parameters** when redirecting with flash messages:
+   ```php
+   // Redirect to specific tab with flash message
+   return redirect('/settings?tab=notifications')->with('success', 'Settings saved!');
+   ```
+
 ## Database Schema
 
 **Engine**: SQLite (development), configurable for production

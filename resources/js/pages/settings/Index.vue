@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 interface Team {
@@ -41,6 +41,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const page = usePage();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Team Settings', href: '/team-settings' }];
 
@@ -165,6 +167,75 @@ const submitButtonText = computed(() => {
     }
     return editingWebhook.value ? 'Update Webhook' : 'Create Webhook';
 });
+
+// Import/Export functionality
+const importForm = useForm({
+    file: null as File | null,
+});
+
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const exportProcessing = ref(false);
+const importResult = ref<{
+    success: boolean;
+    message: string;
+} | null>(null);
+
+const handleFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        importForm.file = target.files[0];
+        importResult.value = null;
+    }
+};
+
+const exportSources = () => {
+    exportProcessing.value = true;
+
+    // Create a hidden form to handle the download with CSRF token
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/team-settings/export-sources';
+    form.style.display = 'none';
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    // Reset processing state after a short delay
+    setTimeout(() => {
+        exportProcessing.value = false;
+    }, 1000);
+};
+
+const submitImport = () => {
+    if (!importForm.file) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', importForm.file);
+
+    importForm.post('/team-settings/import-sources', {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            importForm.file = null;
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
+        },
+    });
+};
 </script>
 
 <template>
@@ -183,6 +254,7 @@ const submitButtonText = computed(() => {
                     <TabsTrigger value="keywords">Keyword Filters</TabsTrigger>
                     <TabsTrigger value="ai">AI</TabsTrigger>
                     <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+                    <TabsTrigger value="import-export">Import / Export</TabsTrigger>
                 </TabsList>
 
                 <!-- General Tab -->
@@ -417,6 +489,137 @@ const submitButtonText = computed(() => {
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </TabsContent>
+
+                <!-- Import / Export Tab -->
+                <TabsContent value="import-export">
+                    <div class="max-w-2xl space-y-8">
+                        <!-- Success Message -->
+                        <div
+                            v-if="page.props.flash?.success && activeTab === 'import-export'"
+                            class="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20"
+                        >
+                            <div class="flex items-start">
+                                <svg class="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div class="flex-1">
+                                    <h3 class="text-sm font-medium text-green-800 dark:text-green-200">
+                                        Import Successful
+                                    </h3>
+                                    <p class="mt-1 text-sm text-green-700 dark:text-green-300">
+                                        {{ page.props.flash.success }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div
+                            v-if="page.props.flash?.error && activeTab === 'import-export'"
+                            class="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+                        >
+                            <div class="flex items-start">
+                                <svg class="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div class="flex-1">
+                                    <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
+                                        Import Failed
+                                    </h3>
+                                    <p class="mt-1 text-sm text-red-700 dark:text-red-300">
+                                        {{ page.props.flash.error }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Export Section -->
+                        <div class="space-y-6">
+                            <div>
+                                <h2 class="text-lg font-medium">Export Sources</h2>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    Download all your team's sources as a JSON file. The export will include up to 1000 sources with their configuration and tags.
+                                </p>
+                            </div>
+
+                            <div class="rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800">
+                                <div class="space-y-4">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                                        <p class="font-medium mb-2">The export will include:</p>
+                                        <ul class="list-disc list-inside space-y-1 ml-2">
+                                            <li>Internal name, type, and URL</li>
+                                            <li>CSS selectors (for website sources)</li>
+                                            <li>Keywords and monitoring interval</li>
+                                            <li>Active status and notification settings</li>
+                                            <li>Associated tags</li>
+                                        </ul>
+                                    </div>
+
+                                    <Button
+                                        @click="exportSources"
+                                        :disabled="exportProcessing"
+                                        class="w-full sm:w-auto"
+                                    >
+                                        {{ exportProcessing ? 'Exporting...' : 'Export Sources' }}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-gray-200 dark:border-gray-700"></div>
+
+                        <!-- Import Section -->
+                        <div class="space-y-6">
+                            <div>
+                                <h2 class="text-lg font-medium">Import Sources</h2>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    Upload a JSON file to import sources into your team. Sources with duplicate URLs will be skipped automatically.
+                                </p>
+                            </div>
+
+                            <form @submit.prevent="submitImport" class="space-y-6">
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800">
+                                    <div class="space-y-4">
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                                            <p class="font-medium mb-2">Import requirements:</p>
+                                            <ul class="list-disc list-inside space-y-1 ml-2">
+                                                <li>File must be in valid JSON format</li>
+                                                <li>Maximum 1000 sources per import</li>
+                                                <li>Maximum file size: 10MB</li>
+                                                <li>Duplicate sources (same URL) will be skipped</li>
+                                                <li>Tags will be created automatically if they don't exist</li>
+                                            </ul>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <Label for="import_file">Select JSON File</Label>
+                                            <Input
+                                                id="import_file"
+                                                ref="fileInputRef"
+                                                type="file"
+                                                accept=".json,application/json"
+                                                @change="handleFileSelect"
+                                                :disabled="importForm.processing"
+                                            />
+                                            <InputError :message="importForm.errors.file" />
+                                            <p v-if="importForm.file" class="text-sm text-gray-600 dark:text-gray-400">
+                                                Selected: {{ importForm.file.name }} ({{ (importForm.file.size / 1024).toFixed(2) }} KB)
+                                            </p>
+                                        </div>
+
+                                        <Button
+                                            type="submit"
+                                            :disabled="!importForm.file || importForm.processing"
+                                            class="w-full sm:w-auto"
+                                        >
+                                            {{ importForm.processing ? 'Importing...' : 'Import Sources' }}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </TabsContent>
