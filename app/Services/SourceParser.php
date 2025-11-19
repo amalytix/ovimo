@@ -10,6 +10,12 @@ class SourceParser
 {
     private WebsiteParserService $websiteParser;
 
+    private int $webhookTimeoutSeconds = 45; // allow at least 30s per requirement
+
+    private int $webhookMaxBodyBytes = 524288; // 512KB limit to avoid huge payloads
+
+    private int $webhookMaxRedirects = 2;
+
     public function __construct(?WebsiteParserService $websiteParser = null)
     {
         $this->websiteParser = $websiteParser ?? new WebsiteParserService;
@@ -72,6 +78,15 @@ class SourceParser
             throw new \InvalidArgumentException('Source model is required for WEBHOOK type');
         }
 
+        if (! $this->isWebhookUrlAllowed($source->url)) {
+            \Log::warning('Webhook URL blocked for safety', [
+                'source_id' => $source->id,
+                'url' => $source->url,
+            ]);
+
+            return [];
+        }
+
         // Convert comma-separated keywords to array
         $keywords = [];
         if ($source->keywords) {
@@ -83,17 +98,46 @@ class SourceParser
             $keywords = array_filter($keywords, fn ($keyword) => ! empty($keyword));
         }
 
-        // Make POST request to webhook URL with 60-second timeout
-        $response = Http::timeout(60)
-            ->post($source->url, [
-                'keywords' => array_values($keywords),
+        try {
+            $response = Http::timeout($this->webhookTimeoutSeconds)
+                ->withOptions([
+                    'allow_redirects' => ['max' => $this->webhookMaxRedirects],
+                ])
+                ->acceptJson()
+                ->asJson()
+                ->post($source->url, [
+                    'keywords' => array_values($keywords),
+                ]);
+        } catch (\Throwable $e) {
+            \Log::warning('Webhook request failed', [
+                'source_id' => $source->id,
+                'url' => $source->url,
+                'exception' => $e->getMessage(),
             ]);
+
+            return [];
+        }
 
         // Check for HTTP errors
         if (! $response->successful()) {
-            throw new \RuntimeException(
-                "Webhook request failed with status {$response->status()}: {$source->url}"
-            );
+            \Log::warning('Webhook request returned non-success status', [
+                'source_id' => $source->id,
+                'url' => $source->url,
+                'status' => $response->status(),
+            ]);
+
+            return [];
+        }
+
+        // Guard against oversized payloads
+        if (mb_strlen($response->body(), '8bit') > $this->webhookMaxBodyBytes) {
+            \Log::warning('Webhook response body too large, skipping', [
+                'source_id' => $source->id,
+                'url' => $source->url,
+                'bytes' => mb_strlen($response->body(), '8bit'),
+            ]);
+
+            return [];
         }
 
         // Parse JSON response
@@ -324,5 +368,52 @@ class SourceParser
         }
 
         return false;
+    }
+
+    private function isWebhookUrlAllowed(string $url): bool
+    {
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $parts = parse_url($url);
+        $scheme = strtolower($parts['scheme'] ?? '');
+        $host = $parts['host'] ?? '';
+
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return false;
+        }
+
+        if ($host === '' || $host === 'localhost') {
+            return false;
+        }
+
+        if ($this->hostResolvesToPrivateNetwork($host)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function hostResolvesToPrivateNetwork(string $host): bool
+    {
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return ! $this->isPublicIp($host);
+        }
+
+        $ips = gethostbynamel($host) ?: [];
+
+        foreach ($ips as $ip) {
+            if (! $this->isPublicIp($ip)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isPublicIp(string $ip): bool
+    {
+        return (bool) filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
     }
 }

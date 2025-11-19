@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Source;
 use App\Services\SourceParser;
 use Illuminate\Support\Facades\Http;
 
@@ -209,6 +210,45 @@ it('handles real large Amazon Science RSS feed efficiently', function () {
         expect($item['uri'])->toBeUrl();
         expect($item['title'])->toBeString();
     }
+});
+
+it('blocks webhook URLs pointing to private networks', function () {
+    Http::fake();
+
+    $parser = new SourceParser;
+    $source = Source::factory()->make([
+        'url' => 'http://127.0.0.1/webhook',
+        'type' => 'WEBHOOK',
+        'keywords' => null,
+    ]);
+
+    $items = $parser->parse($source->url, 'WEBHOOK', null, $source);
+
+    expect($items)->toBeEmpty();
+    Http::assertNothingSent();
+});
+
+it('skips webhook responses with oversized payloads', function () {
+    $largeBody = json_encode([
+        'data' => [
+            ['url' => 'https://example.com/post-1', 'title' => 'Post 1'],
+        ],
+    ]).str_repeat('a', 600000);
+
+    Http::fake([
+        'https://webhook.example.com/*' => Http::response($largeBody, 200),
+    ]);
+
+    $parser = new SourceParser;
+    $source = Source::factory()->make([
+        'url' => 'https://webhook.example.com/hook',
+        'type' => 'WEBHOOK',
+        'keywords' => null,
+    ]);
+
+    $items = $parser->parse($source->url, 'WEBHOOK', null, $source);
+
+    expect($items)->toBeEmpty();
 });
 
 /**

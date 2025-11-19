@@ -17,18 +17,18 @@ test('summarization job stops when team is over limit', function () {
     $team = Team::factory()->create(['owner_id' => $user->id, 'monthly_token_limit' => 1000]);
     $team->users()->attach($user);
 
+    $source = $team->sources()->create([
+        'internal_name' => 'Test Source',
+        'type' => 'RSS',
+        'url' => 'https://example.com/rss',
+        'monitoring_interval' => 'DAILY',
+        'is_active' => true,
+        'should_notify' => false,
+        'auto_summarize' => true,
+    ]);
+
     /** @var Post $post */
-    $post = Post::factory()->for(
-        $team->sources()->create([
-            'internal_name' => 'Test Source',
-            'type' => 'RSS',
-            'url' => 'https://example.com/rss',
-            'monitoring_interval' => 'DAILY',
-            'is_active' => true,
-            'should_notify' => false,
-            'auto_summarize' => true,
-        ])
-    )->create([
+    $post = Post::factory()->for($source)->create([
         'uri' => 'https://example.com/article-1',
         'summary' => null,
     ]);
