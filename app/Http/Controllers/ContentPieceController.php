@@ -70,7 +70,7 @@ class ContentPieceController extends Controller
         $prompts = Prompt::where('team_id', $teamId)
             ->orderByDesc('is_default')
             ->orderByDesc('created_at')
-            ->get(['id', 'internal_name as name']);
+            ->get(['id', 'internal_name as name', 'channel']);
 
         // Pre-selected post IDs from query params
         $preselectedPostIds = $request->input('post_ids', []);
@@ -151,7 +151,7 @@ class ContentPieceController extends Controller
         $prompts = Prompt::where('team_id', $teamId)
             ->orderByDesc('is_default')
             ->orderByDesc('created_at')
-            ->get(['id', 'internal_name as name']);
+            ->get(['id', 'internal_name as name', 'channel']);
 
         $availablePosts = \App\Models\Post::query()
             ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))

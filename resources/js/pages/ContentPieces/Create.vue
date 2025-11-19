@@ -14,6 +14,7 @@ import { status } from '@/routes/content-pieces';
 interface Prompt {
     id: number;
     name: string;
+    channel: string;
 }
 
 interface Post {
@@ -42,7 +43,7 @@ const form = useForm({
     internal_name: props.initialTitle || '',
     prompt_id: props.prompts.length > 0 ? props.prompts[0].id : null,
     briefing_text: '',
-    channel: 'BLOG_POST',
+    channel: props.prompts.length > 0 ? props.prompts[0].channel : 'BLOG_POST',
     target_language: 'ENGLISH',
     status: 'NOT_STARTED',
     post_ids: props.preselectedPostIds || ([] as number[]),
