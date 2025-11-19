@@ -57,13 +57,12 @@ class GenerateContentPiece implements ShouldQueue
 
             // 5. Track usage
             $team = $this->contentPiece->team;
-            $owner = $team->owner;
             $openAI->trackUsage(
                 $result['input_tokens'],
                 $result['output_tokens'],
                 $result['total_tokens'],
                 $result['model'],
-                $owner,
+                null,
                 $team,
                 'content_generation'
             );
