@@ -10,6 +10,8 @@ class SourceParser
 {
     private WebsiteParserService $websiteParser;
 
+    private int $feedMaxBytes = 25 * 1024 * 1024; // 25MB cap to protect disk/worker
+
     private int $webhookTimeoutSeconds = 45; // allow at least 30s per requirement
 
     private int $webhookMaxBodyBytes = 524288; // 512KB limit to avoid huge payloads
@@ -221,11 +223,45 @@ class SourceParser
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'rss_');
 
-        $response = Http::timeout(30)->sink($tempFile)->get($url);
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Accept' => 'application/rss+xml, application/atom+xml, application/xml, text/xml, text/html',
+                ])
+                ->withOptions([
+                    'sink' => $tempFile,
+                    'progress' => function ($downloadTotal, $downloadedBytes) {
+                        if ($downloadedBytes > $this->feedMaxBytes) {
+                            throw new \RuntimeException('Feed exceeds maximum allowed size');
+                        }
+                    },
+                ])
+                ->get($url);
+        } catch (\Throwable $e) {
+            @unlink($tempFile);
+            throw $e;
+        }
 
         if (! $response->successful()) {
             @unlink($tempFile);
             throw new \RuntimeException("Failed to fetch URL: {$url}");
+        }
+
+        $contentLength = (int) ($response->header('Content-Length') ?? 0);
+        if ($contentLength > $this->feedMaxBytes) {
+            @unlink($tempFile);
+            throw new \RuntimeException('Feed exceeds maximum allowed size');
+        }
+
+        $contentType = (string) $response->header('Content-Type');
+        if ($contentType && ! $this->isAllowedFeedContentType($contentType)) {
+            @unlink($tempFile);
+            throw new \RuntimeException("Unsupported feed content type: {$contentType}");
+        }
+
+        if (file_exists($tempFile) && filesize($tempFile) > $this->feedMaxBytes) {
+            @unlink($tempFile);
+            throw new \RuntimeException('Feed exceeds maximum allowed size');
         }
 
         return $tempFile;
@@ -415,5 +451,21 @@ class SourceParser
     private function isPublicIp(string $ip): bool
     {
         return (bool) filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+    }
+
+    private function isAllowedFeedContentType(string $contentType): bool
+    {
+        $normalized = strtolower(trim(strtok($contentType, ';')));
+
+        $allowed = [
+            'application/rss+xml',
+            'application/atom+xml',
+            'application/xml',
+            'text/xml',
+            'text/html',
+            'text/plain',
+        ];
+
+        return in_array($normalized, $allowed, true);
     }
 }
