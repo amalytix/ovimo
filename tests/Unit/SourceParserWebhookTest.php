@@ -66,7 +66,7 @@ describe('parseWebhook', function () {
         });
     });
 
-    it('throws exception on HTTP error', function () {
+    it('returns empty array on HTTP error', function () {
         $source = Source::factory()->make([
             'type' => 'WEBHOOK',
             'url' => 'https://example.com/webhook',
@@ -77,8 +77,9 @@ describe('parseWebhook', function () {
             'example.com/*' => Http::response([], 500),
         ]);
 
-        expect(fn () => $this->parser->parse($source->url, $source->type, null, $source))
-            ->toThrow(\RuntimeException::class);
+        $result = $this->parser->parse($source->url, $source->type, null, $source);
+
+        expect($result)->toBeEmpty();
     });
 
     it('returns empty array for missing data field', function () {

@@ -245,8 +245,11 @@ test('webhook notification includes posts array with title and url', function ()
         ->andReturnUsing(fn ($items) => $items);
 
     // Dispatch the MonitorSource job
+    $tokenLimit = Mockery::mock(\App\Services\TokenLimitService::class);
+    $tokenLimit->shouldReceive('assertWithinLimit')->andReturnTrue();
+
     $job = new \App\Jobs\MonitorSource($source);
-    $job->handle($parser, $keywordFilter);
+    $job->handle($parser, $keywordFilter, $tokenLimit);
 
     // Assert webhook notification was dispatched
     Queue::assertPushed(SendWebhookNotification::class, function ($job) use ($webhook) {
