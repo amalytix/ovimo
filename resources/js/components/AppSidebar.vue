@@ -44,11 +44,6 @@ const mainNavItems: NavItem[] = [
         icon: PenTool,
     },
     {
-        title: 'Usage',
-        href: '/usage',
-        icon: BarChart3,
-    },
-    {
         title: 'Settings',
         href: '/team-settings',
         icon: Settings,
@@ -62,11 +57,11 @@ const footerNavItems: NavItem[] = [
         href: '/activity-logs',
         icon: Activity,
     },
-    // {
-    //     title: 'Github Repo',
-    //     href: 'https://github.com/laravel/vue-starter-kit',
-    //     icon: Folder,
-    // },
+    {
+        title: 'Usage',
+        href: '/usage',
+        icon: BarChart3,
+    },
     // {
     //     title: 'Documentation',
     //     href: 'https://laravel.com/docs/starter-kits#vue',
