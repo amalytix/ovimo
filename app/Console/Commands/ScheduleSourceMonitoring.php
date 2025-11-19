@@ -38,54 +38,55 @@ class ScheduleSourceMonitoring extends Command
         $now = now();
         $reservationUntil = $now->copy()->addMinutes($this->reservationMinutes);
 
-        $sources = DB::transaction(function () use ($reservationUntil, $now) {
-            $dueSources = Source::query()
-                ->where('is_active', true)
-                ->where(function ($query) use ($now) {
-                    $query->whereNull('next_check_at')
-                        ->orWhere('next_check_at', '<=', $now);
-                })
-                ->orderBy('next_check_at')
-                ->lockForUpdate()
-                ->get();
+        $processed = 0;
+        $this->info('Scanning for sources to monitor...');
 
-            foreach ($dueSources as $source) {
-                $source->updateQuietly(['next_check_at' => $reservationUntil]);
-            }
+        Source::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($now) {
+                $query->whereNull('next_check_at')
+                    ->orWhere('next_check_at', '<=', $now);
+            })
+            ->orderBy('next_check_at')
+            ->chunkById(200, function ($chunk) use ($reservationUntil, &$processed) {
+                // Claim a limited batch inside a transaction to avoid double-dispatching
+                $claimed = DB::transaction(function () use ($chunk, $reservationUntil) {
+                    $claimedSources = collect();
 
-            return $dueSources;
-        });
+                    foreach ($chunk as $source) {
+                        // Re-check inside lock in case another worker updated next_check_at
+                        $fresh = Source::lockForUpdate()->find($source->id);
 
-        $count = $sources->count();
-        $sourceIds = $sources->pluck('id')->toArray();
+                        if (! $fresh || ! $fresh->is_active) {
+                            continue;
+                        }
 
-        // Log::info('Sources query completed', [
-        //     'count' => $count,
-        //     'source_ids' => $sourceIds,
-        //     'source_names' => $sources->pluck('internal_name', 'id')->toArray(),
-        // ]);
+                        if ($fresh->next_check_at && $fresh->next_check_at->isFuture()) {
+                            continue;
+                        }
 
-        if ($count === 0) {
+                        $fresh->updateQuietly(['next_check_at' => $reservationUntil]);
+                        $claimedSources->push($fresh);
+                    }
+
+                    return $claimedSources;
+                });
+
+                foreach ($claimed as $source) {
+                    MonitorSource::dispatch($source);
+                    $processed++;
+                    $this->line("  - Dispatched job for source: {$source->internal_name}");
+                }
+            });
+
+        if ($processed === 0) {
             $this->info('No sources need monitoring at this time.');
             // Log::info('No sources need monitoring - command exiting');
 
             return self::SUCCESS;
         }
 
-        $this->info("Dispatching monitoring jobs for {$count} sources...");
-        // Log::info("Dispatching monitoring jobs for {$count} sources");
-
-        foreach ($sources as $source) {
-            MonitorSource::dispatch($source);
-            $this->line("  - Dispatched job for source: {$source->internal_name}");
-            // Log::info('MonitorSource job dispatched', [
-            //     'source_id' => $source->id,
-            //     'source_name' => $source->internal_name,
-            //     'next_check_at' => $source->next_check_at?->toDateTimeString(),
-            // ]);
-        }
-
-        $this->info("Done. {$count} jobs dispatched.");
+        $this->info("Done. {$processed} jobs dispatched.");
         // Log::info('ScheduleSourceMonitoring command completed', [
         //     'total_dispatched' => $count,
         // ]);
