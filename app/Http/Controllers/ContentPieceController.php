@@ -153,14 +153,6 @@ class ContentPieceController extends Controller
             ->orderByDesc('created_at')
             ->get(['id', 'internal_name as name', 'channel']);
 
-        $availablePosts = \App\Models\Post::query()
-            ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-            ->where('status', 'TO_REPURPOSE')
-            ->whereNotNull('summary')
-            ->orderByDesc('found_at')
-            ->take(100)
-            ->get(['id', 'uri', 'summary']);
-
         return Inertia::render('ContentPieces/Edit', [
             'contentPiece' => [
                 'id' => $contentPiece->id,
@@ -175,7 +167,6 @@ class ContentPieceController extends Controller
                 'posts' => $contentPiece->posts,
             ],
             'prompts' => $prompts,
-            'availablePosts' => $availablePosts,
         ]);
     }
 
