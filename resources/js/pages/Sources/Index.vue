@@ -24,6 +24,7 @@ interface Source {
     is_active: boolean;
     should_notify: boolean;
     auto_summarize: boolean;
+    bypass_keyword_filter: boolean;
     last_checked_at: string | null;
     next_check_at: string | null;
     posts_count: number;

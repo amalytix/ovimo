@@ -63,6 +63,7 @@ class SourceController extends Controller
                     'is_active' => $source->is_active,
                     'should_notify' => $source->should_notify,
                     'auto_summarize' => $source->auto_summarize,
+                    'bypass_keyword_filter' => $source->bypass_keyword_filter,
                     'last_checked_at' => $source->last_checked_at?->diffForHumans(),
                     'next_check_at' => $source->next_check_at?->diffForHumans(),
                     'posts_count' => $source->posts_count,
