@@ -18,6 +18,8 @@ class MonitorSource implements ShouldQueue
 
     public int $backoff = 300; // 5 minutes between retries
 
+    public int $timeout = 300;
+
     public function __construct(
         public Source $source
     ) {}

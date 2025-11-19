@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\MonitorSource;
 use App\Models\Source;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ScheduleSourceMonitoring extends Command
@@ -23,6 +24,8 @@ class ScheduleSourceMonitoring extends Command
      */
     protected $description = 'Dispatch monitoring jobs for sources that need to be checked';
 
+    private int $reservationMinutes = 2;
+
     /**
      * Execute the console command.
      */
@@ -32,13 +35,26 @@ class ScheduleSourceMonitoring extends Command
         //     'current_time' => now()->toDateTimeString(),
         // ]);
 
-        $sources = Source::query()
-            ->where('is_active', true)
-            ->where(function ($query) {
-                $query->whereNull('next_check_at')
-                    ->orWhere('next_check_at', '<=', now());
-            })
-            ->get();
+        $now = now();
+        $reservationUntil = $now->copy()->addMinutes($this->reservationMinutes);
+
+        $sources = DB::transaction(function () use ($reservationUntil, $now) {
+            $dueSources = Source::query()
+                ->where('is_active', true)
+                ->where(function ($query) use ($now) {
+                    $query->whereNull('next_check_at')
+                        ->orWhere('next_check_at', '<=', $now);
+                })
+                ->orderBy('next_check_at')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($dueSources as $source) {
+                $source->updateQuietly(['next_check_at' => $reservationUntil]);
+            }
+
+            return $dueSources;
+        });
 
         $count = $sources->count();
         $sourceIds = $sources->pluck('id')->toArray();
