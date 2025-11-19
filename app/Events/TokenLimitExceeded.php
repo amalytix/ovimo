@@ -14,8 +14,9 @@ class TokenLimitExceeded implements ShouldQueue
 
     public function __construct(
         public Team $team,
-        public User $user,
+        public ?User $user,
         public int $currentUsage,
-        public int $limit
+        public int $limit,
+        public string $operation
     ) {}
 }

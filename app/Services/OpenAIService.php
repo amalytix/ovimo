@@ -12,7 +12,7 @@ class OpenAIService
 {
     private OpenAI\Client $client;
 
-    public function __construct()
+    public function __construct(private TokenLimitService $tokenLimitService)
     {
         $this->client = OpenAI::factory()
             ->withApiKey(config('openai.api_key'))
@@ -170,10 +170,12 @@ class OpenAIService
         ];
     }
 
-    public function trackUsage(int $inputTokens, int $outputTokens, int $totalTokens, string $model, User $user, Team $team, string $operation): void
+    public function trackUsage(int $inputTokens, int $outputTokens, int $totalTokens, string $model, ?User $user, Team $team, string $operation): void
     {
+        $this->tokenLimitService->assertWithinLimit($team, $totalTokens, $user, $operation);
+
         TokenUsageLog::create([
-            'user_id' => $user->id,
+            'user_id' => $user?->id,
             'team_id' => $team->id,
             'input_tokens' => $inputTokens,
             'output_tokens' => $outputTokens,

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Source;
 use App\Services\KeywordFilterService;
 use App\Services\SourceParser;
+use App\Services\TokenLimitService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -21,10 +22,19 @@ class MonitorSource implements ShouldQueue
         public Source $source
     ) {}
 
-    public function handle(SourceParser $parser, KeywordFilterService $keywordFilter): void
+    public function handle(SourceParser $parser, KeywordFilterService $keywordFilter, TokenLimitService $tokenLimitService): void
     {
         if (! $this->source->is_active) {
             return;
+        }
+
+        $canSummarize = true;
+
+        try {
+            $tokenLimitService->assertWithinLimit($this->source->team, 0, null, 'post_summarization');
+        } catch (\Throwable $e) {
+            $canSummarize = false;
+            Log::warning("Skipping auto-summarization for source {$this->source->id}: token limit exceeded");
         }
 
         try {
@@ -68,7 +78,7 @@ class MonitorSource implements ShouldQueue
                     ];
 
                     // Queue summarization if enabled
-                    if ($this->source->auto_summarize) {
+                    if ($this->source->auto_summarize && $canSummarize) {
                         SummarizePost::dispatch($post);
                     }
                 }

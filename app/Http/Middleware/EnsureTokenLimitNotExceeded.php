@@ -2,13 +2,16 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\TokenUsageLog;
+use App\Exceptions\TokenLimitExceededException;
+use App\Services\TokenLimitService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureTokenLimitNotExceeded
 {
+    public function __construct(private TokenLimitService $tokenLimitService) {}
+
     /**
      * Handle an incoming request.
      *
@@ -28,24 +31,13 @@ class EnsureTokenLimitNotExceeded
             return $next($request);
         }
 
-        $monthlyLimit = $team->monthly_token_limit;
+        try {
+            $this->tokenLimitService->assertWithinLimit($team, 0, $user, 'http_request');
+        } catch (TokenLimitExceededException $e) {
+            $remaining = max(0, $e->limit - $e->currentUsage);
+            $percentUsed = round(($e->currentUsage / $e->limit) * 100, 1);
 
-        // If no limit is set (null or 0), allow the request
-        if (! $monthlyLimit) {
-            return $next($request);
-        }
-
-        // Calculate tokens used this month
-        $currentMonthUsage = TokenUsageLog::where('team_id', $team->id)
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->sum('total_tokens');
-
-        if ($currentMonthUsage >= $monthlyLimit) {
-            $remaining = max(0, $monthlyLimit - $currentMonthUsage);
-            $percentUsed = round(($currentMonthUsage / $monthlyLimit) * 100, 1);
-
-            abort(429, "Monthly token limit exceeded. You have used {$currentMonthUsage} of {$monthlyLimit} tokens ({$percentUsed}%). Limit resets next month.");
+            abort(429, "Monthly token limit exceeded. You have used {$e->currentUsage} of {$e->limit} tokens ({$percentUsed}%). Remaining: {$remaining}. Limit resets next month.");
         }
 
         return $next($request);

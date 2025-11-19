@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\TokenLimitExceededException;
 use App\Http\Requests\StoreSourceRequest;
 use App\Http\Requests\UpdateSourceRequest;
 use App\Jobs\MonitorSource;
@@ -267,15 +268,22 @@ class SourceController extends Controller
         $result = $openAIService->analyzeWebpage($html);
 
         // Track token usage
-        $openAIService->trackUsage(
-            $result['input_tokens'],
-            $result['output_tokens'],
-            $result['total_tokens'],
-            $result['model'],
-            auth()->user(),
-            auth()->user()->currentTeam,
-            'analyze_webpage'
-        );
+        try {
+            $openAIService->trackUsage(
+                $result['input_tokens'],
+                $result['output_tokens'],
+                $result['total_tokens'],
+                $result['model'],
+                auth()->user(),
+                auth()->user()->currentTeam,
+                'analyze_webpage'
+            );
+        } catch (TokenLimitExceededException $e) {
+            $remaining = max(0, $e->limit - $e->currentUsage);
+            $percentUsed = round(($e->currentUsage / $e->limit) * 100, 1);
+
+            abort(429, "Monthly token limit exceeded. You have used {$e->currentUsage} of {$e->limit} tokens ({$percentUsed}%). Remaining: {$remaining}. Limit resets next month.");
+        }
 
         return response()->json([
             'css_selector_title' => $result['css_selector_title'],

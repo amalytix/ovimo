@@ -195,13 +195,14 @@ class LogActivityToDatabase implements ShouldQueue
 
             $event instanceof TokenLimitExceeded => [
                 'team_id' => $event->team->id,
-                'user_id' => $event->user->id,
+                'user_id' => $event->user?->id,
                 'event_type' => 'token.limit_exceeded',
                 'level' => 'warning',
                 'description' => 'Monthly token limit exceeded for team',
                 'metadata' => [
                     'limit' => $event->limit,
                     'current_usage' => $event->currentUsage,
+                    'operation' => $event->operation,
                 ],
             ],
 
