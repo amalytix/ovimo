@@ -251,6 +251,21 @@ it('skips webhook responses with oversized payloads', function () {
     expect($items)->toBeEmpty();
 });
 
+it('rejects oversized feeds via content-length header', function () {
+    Http::fake([
+        'https://example.com/feed.xml' => Http::response(
+            createRssFeed(1),
+            200,
+            ['Content-Length' => 30 * 1024 * 1024, 'Content-Type' => 'application/rss+xml']
+        ),
+    ]);
+
+    $parser = new SourceParser;
+
+    expect(fn () => $parser->parse('https://example.com/feed.xml', 'RSS', 1))
+        ->toThrow(\RuntimeException::class, 'Feed exceeds maximum allowed size');
+});
+
 /**
  * Helper function to create an RSS feed with specified number of items.
  */
