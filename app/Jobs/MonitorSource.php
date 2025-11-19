@@ -15,7 +15,7 @@ class MonitorSource implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $backoff = 60;
+    public int $backoff = 300; // 5 minutes between retries
 
     public function __construct(
         public Source $source
@@ -47,6 +47,7 @@ class MonitorSource implements ShouldQueue
                         'internal_title' => null,
                         'summary' => null,
                         'relevancy_score' => null,
+                        'metadata' => $item['metadata'] ?? null,
                         'is_read' => false,
                         'is_hidden' => false,
                         'status' => 'NOT_RELEVANT',
@@ -73,10 +74,12 @@ class MonitorSource implements ShouldQueue
                 }
             }
 
-            // Update source timestamps
+            // Update source timestamps and reset failure tracking
             $this->source->update([
                 'last_checked_at' => now(),
                 'next_check_at' => $this->source->calculateNextCheckTime(),
+                'consecutive_failures' => 0,
+                'failed_at' => null,
             ]);
 
             Log::info("Monitored source {$this->source->id}: found {$newPostsCount} new posts");
@@ -95,6 +98,22 @@ class MonitorSource implements ShouldQueue
                 );
             }
         } catch (\Exception $e) {
+            // Increment failure counter
+            $consecutiveFailures = $this->source->consecutive_failures + 1;
+
+            // Auto-disable source after 3 consecutive failures
+            $isActive = $this->source->is_active;
+            if ($consecutiveFailures >= 3) {
+                $isActive = false;
+                Log::warning("Source {$this->source->id} disabled after {$consecutiveFailures} consecutive failures");
+            }
+
+            $this->source->update([
+                'consecutive_failures' => $consecutiveFailures,
+                'failed_at' => now(),
+                'is_active' => $isActive,
+            ]);
+
             Log::error("Failed to monitor source {$this->source->id}: {$e->getMessage()}");
 
             // Dispatch source monitoring failed event

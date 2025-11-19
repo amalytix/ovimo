@@ -19,6 +19,7 @@ class Post extends Model
         'internal_title',
         'summary',
         'relevancy_score',
+        'metadata',
         'is_read',
         'is_hidden',
         'status',
@@ -38,6 +39,7 @@ class Post extends Model
     {
         return [
             'relevancy_score' => 'integer',
+            'metadata' => 'array',
             'is_read' => 'boolean',
             'is_hidden' => 'boolean',
             'found_at' => 'datetime',

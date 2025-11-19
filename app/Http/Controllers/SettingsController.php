@@ -114,7 +114,7 @@ class SettingsController extends Controller
         $validator = validator(['sources' => $sourcesData], [
             'sources' => ['required', 'array', 'max:1000'],
             'sources.*.internal_name' => ['required', 'string', 'max:255'],
-            'sources.*.type' => ['required', 'in:RSS,XML_SITEMAP,WEBSITE'],
+            'sources.*.type' => ['required', 'in:RSS,XML_SITEMAP,WEBSITE,WEBHOOK'],
             'sources.*.url' => ['required', 'url', 'max:2048'],
             'sources.*.css_selector_title' => ['nullable', 'string', 'max:500'],
             'sources.*.css_selector_link' => ['nullable', 'string', 'max:500'],

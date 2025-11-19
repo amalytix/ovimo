@@ -19,7 +19,7 @@ class StoreSourceRequest extends FormRequest
     {
         return [
             'internal_name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::in(['RSS', 'XML_SITEMAP', 'WEBSITE'])],
+            'type' => ['required', Rule::in(['RSS', 'XML_SITEMAP', 'WEBSITE', 'WEBHOOK'])],
             'url' => ['required', 'url', 'max:2048'],
             'css_selector_title' => ['nullable', 'required_if:type,WEBSITE', 'string', 'max:500'],
             'css_selector_link' => ['nullable', 'required_if:type,WEBSITE', 'string', 'max:500'],

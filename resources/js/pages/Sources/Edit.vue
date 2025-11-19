@@ -50,13 +50,19 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Edit', href: `/sources/${props.source.id}/edit` },
 ];
 
+// Convert comma-separated keywords to newline-separated for WEBHOOK type
+const keywordsValue =
+    props.source.type === 'WEBHOOK' && props.source.keywords
+        ? props.source.keywords.split(',').map((k) => k.trim()).join('\n')
+        : props.source.keywords || '';
+
 const form = useForm({
     internal_name: props.source.internal_name,
     type: props.source.type,
     url: props.source.url,
     css_selector_title: props.source.css_selector_title || '',
     css_selector_link: props.source.css_selector_link || '',
-    keywords: props.source.keywords || '',
+    keywords: keywordsValue,
     monitoring_interval: props.source.monitoring_interval,
     is_active: props.source.is_active,
     should_notify: props.source.should_notify,
@@ -73,6 +79,15 @@ const analyzeError = ref('');
 const testError = ref('');
 
 const submit = () => {
+    // Convert newline-separated keywords to comma-separated for WEBHOOK type
+    if (form.type === 'WEBHOOK' && form.keywords) {
+        const keywordsArray = form.keywords
+            .split('\n')
+            .map((keyword) => keyword.trim())
+            .filter((keyword) => keyword.length > 0);
+        form.keywords = keywordsArray.join(',');
+    }
+
     form.put(`/sources/${props.source.id}`);
 };
 
@@ -133,6 +148,7 @@ const sourceTypes = [
     { value: 'RSS', label: 'RSS Feed' },
     { value: 'XML_SITEMAP', label: 'XML Sitemap' },
     { value: 'WEBSITE', label: 'Website (Other)' },
+    { value: 'WEBHOOK', label: 'Webhook' },
 ];
 
 const intervals = [
@@ -207,10 +223,53 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="url">URL</Label>
+                    <Label for="url">{{ form.type === 'WEBHOOK' ? 'Webhook URL' : 'URL' }}</Label>
                     <Input id="url" v-model="form.url" type="url" required placeholder="https://example.com/feed" />
+                    <p v-if="form.type === 'WEBHOOK'" class="text-xs text-gray-500">Must accept POST requests</p>
                     <InputError :message="form.errors.url" />
                 </div>
+
+                <!-- Webhook-specific fields -->
+                <template v-if="form.type === 'WEBHOOK'">
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+                        <h3 class="mb-4 font-medium">Webhook Settings</h3>
+
+                        <div class="grid gap-4">
+                            <div class="grid gap-2">
+                                <Label for="webhook_keywords">Keywords</Label>
+                                <textarea
+                                    id="webhook_keywords"
+                                    v-model="form.keywords"
+                                    rows="5"
+                                    class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    placeholder="Enter keywords (one per line)&#10;amvisor&#10;amalytix&#10;insightleap"
+                                ></textarea>
+                                <p class="text-xs text-gray-500">These keywords will be sent to your webhook endpoint in the request body</p>
+                                <InputError :message="form.errors.keywords" />
+                            </div>
+
+                            <div class="rounded-md bg-blue-50 p-3 dark:bg-blue-950">
+                                <h4 class="mb-2 text-sm font-medium">Expected Response Format</h4>
+                                <p class="mb-2 text-xs text-gray-600 dark:text-gray-400">
+                                    Your webhook must return a JSON response with a "data" array. Each item must have at least "title" and "url" fields.
+                                </p>
+                                <details class="text-xs">
+                                    <summary class="cursor-pointer font-medium text-blue-600 dark:text-blue-400">Show example response</summary>
+                                    <pre class="mt-2 overflow-x-auto rounded bg-white p-2 dark:bg-gray-900"><code>{
+  "data": [
+    {
+      "title": "Example Post Title",
+      "url": "https://example.com/post/123",
+      "created": 1741793734,
+      "id": "abc123"
+    }
+  ]
+}</code></pre>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                </template>
 
                 <!-- Website-specific fields -->
                 <template v-if="form.type === 'WEBSITE'">

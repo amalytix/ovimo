@@ -35,7 +35,7 @@ class ImportSourcesRequest extends FormRequest
             'sources.max' => 'Cannot import more than 1000 sources at once.',
             'sources.*.internal_name.required' => 'Each source must have an internal_name.',
             'sources.*.type.required' => 'Each source must have a type.',
-            'sources.*.type.in' => 'Source type must be one of: RSS, XML_SITEMAP, WEBSITE.',
+            'sources.*.type.in' => 'Source type must be one of: RSS, XML_SITEMAP, WEBSITE, WEBHOOK.',
             'sources.*.url.required' => 'Each source must have a URL.',
             'sources.*.url.url' => 'Each source URL must be a valid URL.',
             'sources.*.monitoring_interval.required' => 'Each source must have a monitoring_interval.',

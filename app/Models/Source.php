@@ -28,6 +28,8 @@ class Source extends Model
         'auto_summarize',
         'bypass_keyword_filter',
         'last_checked_at',
+        'consecutive_failures',
+        'failed_at',
         'next_check_at',
     ];
 
@@ -39,6 +41,7 @@ class Source extends Model
             'auto_summarize' => 'boolean',
             'bypass_keyword_filter' => 'boolean',
             'last_checked_at' => 'datetime',
+            'failed_at' => 'datetime',
             'next_check_at' => 'datetime',
         ];
     }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Pagination } from '@/components/ui/pagination';
@@ -149,11 +150,8 @@ watch(selectedTagIds, applyFilters, { deep: true });
         <div class="p-6">
             <div class="mb-6 flex items-center justify-between">
                 <h1 class="text-2xl font-semibold">Sources</h1>
-                <Link
-                    href="/sources/create"
-                    class="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                >
-                    Add Source
+                <Link href="/sources/create">
+                    <Button>Add Source</Button>
                 </Link>
             </div>
 

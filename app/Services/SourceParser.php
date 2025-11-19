@@ -26,6 +26,7 @@ class SourceParser
             'RSS' => $this->parseRssStreaming($url, $maxEntries ?? config('services.rss.max_entries', 10)),
             'XML_SITEMAP' => $this->parseXmlSitemap($url, $maxEntries ?? config('services.xml.max_entries', 500)),
             'WEBSITE' => $this->parseWebsite($source, $maxEntries ?? config('services.website.max_entries', 100)),
+            'WEBHOOK' => $this->parseWebhook($source),
             default => throw new \InvalidArgumentException("Unknown source type: {$type}"),
         };
     }
@@ -58,6 +59,75 @@ class SourceParser
             'uri' => $post['link'],
             'title' => $post['title'],
         ], $posts);
+    }
+
+    /**
+     * Parse webhook response by POSTing keywords to the webhook URL.
+     *
+     * @return array<int, array{uri: string, title?: string, metadata?: array}>
+     */
+    private function parseWebhook(?Source $source): array
+    {
+        if (! $source) {
+            throw new \InvalidArgumentException('Source model is required for WEBHOOK type');
+        }
+
+        // Convert comma-separated keywords to array
+        $keywords = [];
+        if ($source->keywords) {
+            $keywords = array_map(
+                fn ($keyword) => trim($keyword),
+                explode(',', $source->keywords)
+            );
+            // Remove empty keywords
+            $keywords = array_filter($keywords, fn ($keyword) => ! empty($keyword));
+        }
+
+        // Make POST request to webhook URL with 60-second timeout
+        $response = Http::timeout(60)
+            ->post($source->url, [
+                'keywords' => array_values($keywords),
+            ]);
+
+        // Check for HTTP errors
+        if (! $response->successful()) {
+            throw new \RuntimeException(
+                "Webhook request failed with status {$response->status()}: {$source->url}"
+            );
+        }
+
+        // Parse JSON response
+        $data = $response->json();
+
+        // Check if response has 'data' field
+        if (! isset($data['data']) || ! is_array($data['data'])) {
+            \Log::warning('Webhook response missing or invalid "data" field', [
+                'source_id' => $source->id,
+                'url' => $source->url,
+            ]);
+
+            return [];
+        }
+
+        // Transform webhook items to standard format
+        $items = [];
+        foreach ($data['data'] as $item) {
+            // Skip items without required fields
+            if (! isset($item['url']) || ! isset($item['title'])) {
+                continue;
+            }
+
+            // Extract metadata (all fields except title and url)
+            $metadata = array_filter($item, fn ($key) => ! in_array($key, ['url', 'title']), ARRAY_FILTER_USE_KEY);
+
+            $items[] = [
+                'uri' => $item['url'],
+                'title' => $item['title'],
+                'metadata' => ! empty($metadata) ? $metadata : null,
+            ];
+        }
+
+        return $items;
     }
 
     /**
