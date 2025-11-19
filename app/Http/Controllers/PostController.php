@@ -45,11 +45,6 @@ class PostController extends Controller
             $query->where('relevancy_score', '>=', $request->min_relevancy);
         }
 
-        // Filter by read status
-        if ($request->has('is_read') && $request->is_read !== null && $request->is_read !== '') {
-            $query->where('is_read', filter_var($request->is_read, FILTER_VALIDATE_BOOLEAN));
-        }
-
         // Filter by hidden status (default: show non-hidden)
         if ($request->has('show_hidden') && filter_var($request->show_hidden, FILTER_VALIDATE_BOOLEAN)) {
             // Show all including hidden
@@ -89,7 +84,6 @@ class PostController extends Controller
                 'internal_title' => $post->internal_title,
                 'summary' => $post->summary,
                 'relevancy_score' => $post->relevancy_score,
-                'is_read' => $post->is_read,
                 'is_hidden' => $post->is_hidden,
                 'status' => $post->status,
                 'found_at' => $post->found_at->diffForHumans(),
@@ -108,22 +102,12 @@ class PostController extends Controller
                 'tag_ids' => $request->tag_ids ?? [],
                 'search' => $request->search,
                 'min_relevancy' => $request->min_relevancy,
-                'is_read' => $request->is_read,
                 'show_hidden' => $request->show_hidden,
                 'status' => $request->status,
                 'sort_by' => $sortBy,
                 'sort_direction' => $sortDirection,
             ],
         ]);
-    }
-
-    public function toggleRead(Post $post): RedirectResponse
-    {
-        $this->authorize('update', $post);
-
-        $post->update(['is_read' => ! $post->is_read]);
-
-        return back();
     }
 
     public function toggleHidden(Post $post): RedirectResponse
@@ -144,23 +128,6 @@ class PostController extends Controller
         ]);
 
         $post->update(['status' => $request->status]);
-
-        return back();
-    }
-
-    public function bulkToggleRead(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'post_ids' => ['required', 'array'],
-            'post_ids.*' => ['exists:posts,id'],
-            'is_read' => ['required', 'boolean'],
-        ]);
-
-        $teamId = auth()->user()->current_team_id;
-
-        Post::whereIn('id', $request->post_ids)
-            ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-            ->update(['is_read' => $request->is_read]);
 
         return back();
     }

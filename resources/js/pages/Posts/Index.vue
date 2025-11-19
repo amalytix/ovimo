@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
+import { Eye, EyeOff, WandSparkles } from 'lucide-vue-next';
 import { computed, ref, watch, onUnmounted } from 'vue';
 
 interface Source {
@@ -27,7 +28,6 @@ interface Post {
     internal_title: string | null;
     summary: string | null;
     relevancy_score: number | null;
-    is_read: boolean;
     is_hidden: boolean;
     status: string;
     found_at: string;
@@ -60,7 +60,6 @@ interface Props {
         tag_ids: number[];
         search: string | null;
         min_relevancy: number | null;
-        is_read: string | null;
         show_hidden: boolean | null;
         status: string | null;
         sort_by: string;
@@ -115,7 +114,6 @@ const clearFilters = () => {
         tag_ids: [],
         search: null,
         min_relevancy: null,
-        is_read: null,
         show_hidden: null,
         status: null,
         sort_by: 'found_at',
@@ -156,26 +154,12 @@ onUnmounted(() => {
     }
 });
 
-const toggleRead = (postId: number) => {
-    router.patch(`/posts/${postId}/toggle-read`, {}, { preserveScroll: true });
-};
-
 const toggleHidden = (postId: number) => {
     router.patch(`/posts/${postId}/toggle-hidden`, {}, { preserveScroll: true });
 };
 
 const updateStatus = (postId: number, status: string) => {
     router.patch(`/posts/${postId}/status`, { status }, { preserveScroll: true });
-};
-
-const bulkMarkAsRead = () => {
-    if (selectedPosts.value.length === 0) return;
-    router.post('/posts/bulk-toggle-read', { post_ids: selectedPosts.value, is_read: true }, { preserveScroll: true, onSuccess: () => (selectedPosts.value = []) });
-};
-
-const bulkMarkAsUnread = () => {
-    if (selectedPosts.value.length === 0) return;
-    router.post('/posts/bulk-toggle-read', { post_ids: selectedPosts.value, is_read: false }, { preserveScroll: true, onSuccess: () => (selectedPosts.value = []) });
 };
 
 const bulkHide = () => {
@@ -199,6 +183,12 @@ const createContentPiece = () => {
     const params = new URLSearchParams();
     selectedPosts.value.forEach((id) => params.append('post_ids[]', id.toString()));
     router.visit(`/content-pieces/create?${params.toString()}`);
+};
+
+const createContentPieceFromPost = (postId: number) => {
+    const params = new URLSearchParams();
+    params.append('post_ids[]', postId.toString());
+    router.visit(`/content-pieces/create?${params.toString()}`, { preserveScroll: true });
 };
 
 watch(
@@ -242,19 +232,6 @@ watch(
                     <Input id="min_relevancy" v-model.number="localFilters.min_relevancy" type="number" min="0" max="100" placeholder="Min %" class="h-9" @keyup.enter="applyFilters" />
                 </div>
 
-                <div class="w-28">
-                    <Select v-model="localFilters.is_read">
-                        <SelectTrigger id="is_read" class="h-9">
-                            <SelectValue placeholder="Read" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem :value="null">All</SelectItem>
-                            <SelectItem value="true">Read</SelectItem>
-                            <SelectItem value="false">Unread</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
                 <div class="w-60">
                     <Select v-model="localFilters.status">
                         <SelectTrigger id="status" class="h-9">
@@ -279,10 +256,14 @@ watch(
             <!-- Bulk Actions -->
             <div class="mb-4 flex items-center gap-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
                 <span class="text-sm font-medium">{{ selectedPosts.length }} selected</span>
-                <Button size="sm" :disabled="selectedPosts.length === 0" @click="createContentPiece">Create Content Piece</Button>
-                <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkMarkAsRead">Mark as Read</Button>
-                <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkMarkAsUnread">Mark as Unread</Button>
-                <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkHide">Hide</Button>
+                <Button size="sm" :disabled="selectedPosts.length === 0" @click="createContentPiece">
+                    <WandSparkles class="mr-2 h-4 w-4 text-gray-700 dark:text-gray-200" />
+                    Create Content Piece
+                </Button>
+                <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkHide">
+                    <EyeOff class="mr-2 h-4 w-4" />
+                    Hide
+                </Button>
                 <Button size="sm" variant="outline" @click="hideNotRelevant">Hide not relevant</Button>
                 <Button size="sm" variant="destructive" :disabled="selectedPosts.length === 0" @click="bulkDelete">Delete</Button>
             </div>
@@ -325,7 +306,7 @@ watch(
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-                        <tr v-for="post in posts.data" :key="post.id" :class="{ 'bg-gray-50 dark:bg-gray-800/50': post.is_read, 'opacity-50': post.is_hidden }">
+                        <tr v-for="post in posts.data" :key="post.id" :class="{ 'opacity-50': post.is_hidden }">
                             <td class="px-4 py-4">
                                 <Checkbox :model-value="selectedPosts.includes(post.id)" @update:model-value="(checked: boolean) => togglePostSelection(post.id, checked)" />
                             </td>
@@ -369,12 +350,26 @@ watch(
                                 {{ post.found_at }}
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                <button @click="toggleRead(post.id)" class="mr-2 text-blue-600 hover:text-blue-900 dark:text-blue-400">
-                                    {{ post.is_read ? 'Unread' : 'Read' }}
-                                </button>
-                                <button @click="toggleHidden(post.id)" class="text-gray-600 hover:text-gray-900 dark:text-gray-400">
-                                    {{ post.is_hidden ? 'Unhide' : 'Hide' }}
-                                </button>
+                                <div class="flex items-center justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        class="text-blue-500 hover:text-blue-800 dark:text-blue-300"
+                                        title="Create content piece"
+                                        @click="createContentPieceFromPost(post.id)"
+                                    >
+                                        <WandSparkles class="h-4 w-4" />
+                                        <span class="sr-only">Create content piece</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-gray-500 hover:text-gray-800 dark:text-gray-200"
+                                        :title="post.is_hidden ? 'Unhide post' : 'Hide post'"
+                                        @click="toggleHidden(post.id)"
+                                    >
+                                        <component :is="post.is_hidden ? Eye : EyeOff" class="h-4 w-4" />
+                                        <span class="sr-only">{{ post.is_hidden ? 'Unhide' : 'Hide' }}</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="posts.data.length === 0">

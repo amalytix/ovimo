@@ -29,10 +29,6 @@ class DashboardController extends Controller
             ->count();
 
         // Post status breakdown
-        $unreadPosts = Post::whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-            ->where('is_read', false)
-            ->where('is_hidden', false)
-            ->count();
         $createContentPosts = Post::whereHas('source', fn ($q) => $q->where('team_id', $teamId))
             ->where('status', 'CREATE_CONTENT')
             ->count();
@@ -69,7 +65,6 @@ class DashboardController extends Controller
                     'total' => $totalPosts,
                     'today' => $postsToday,
                     'this_week' => $postsThisWeek,
-                    'unread' => $unreadPosts,
                     'create_content' => $createContentPosts,
                     'avg_relevancy' => $avgRelevancy ? round($avgRelevancy, 1) : null,
                 ],

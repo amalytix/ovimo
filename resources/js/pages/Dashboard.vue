@@ -14,7 +14,6 @@ interface Props {
             total: number;
             today: number;
             this_week: number;
-            unread: number;
             create_content: number;
             avg_relevancy: number | null;
         };
@@ -80,9 +79,6 @@ const formatNumber = (num: number): string => {
                     </div>
                     <div class="mt-4">
                         <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ formatNumber(stats.posts.total) }}</p>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            <span class="text-blue-600 dark:text-blue-400">{{ stats.posts.unread }} unread</span>
-                        </p>
                     </div>
                 </div>
 

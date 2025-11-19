@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, onUnmounted, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { status } from '@/routes/content-pieces';
+import { useNow } from '@vueuse/core';
 
 interface Prompt {
     id: number;
@@ -34,6 +35,7 @@ interface ContentPiece {
     prompt_id: number | null;
     prompt: Prompt | null;
     posts: Post[];
+    published_at: string | null;
 }
 
 interface Props {
@@ -49,6 +51,25 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Edit', href: `/content-pieces/${props.contentPiece.id}/edit` },
 ];
 
+const formatDateTimeLocal = (value: string | Date | null) => {
+    if (! value) {
+        return '';
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const now = useNow();
+const minPublish = computed(() => formatDateTimeLocal(now.value));
+
 const form = useForm({
     internal_name: props.contentPiece.internal_name,
     prompt_id: props.contentPiece.prompt_id,
@@ -57,7 +78,33 @@ const form = useForm({
     target_language: props.contentPiece.target_language,
     full_text: props.contentPiece.full_text || '',
     post_ids: props.contentPiece.posts.map((p) => p.id),
+    published_at: formatDateTimeLocal(props.contentPiece.published_at),
 });
+
+const serializePublishedAt = (value: string | null) => {
+    if (! value) {
+        return null;
+    }
+
+    const date = new Date(value);
+
+    return date.toISOString();
+};
+
+const submitWithSchedule = (url: string, options: Parameters<typeof form.put>[1] = {}) => {
+    form
+        .transform((data) => ({
+            ...data,
+            published_at: serializePublishedAt(form.published_at),
+        }))
+        .put(url, {
+            ...options,
+            onFinish: () => {
+                form.transform((data) => data);
+                options.onFinish?.();
+            },
+        });
+};
 
 // Polling state
 const page = usePage();
@@ -145,11 +192,11 @@ const togglePost = (postId: number, checked: boolean) => {
 };
 
 const submit = () => {
-    form.put(`/content-pieces/${props.contentPiece.id}`);
+    submitWithSchedule(`/content-pieces/${props.contentPiece.id}`);
 };
 
 const submitAndClose = () => {
-    form.put(`/content-pieces/${props.contentPiece.id}`, {
+    submitWithSchedule(`/content-pieces/${props.contentPiece.id}`, {
         onSuccess: () => {
             router.visit('/content-pieces');
         },
@@ -160,6 +207,10 @@ const generateContent = () => {
     router.post(`/content-pieces/${props.contentPiece.id}/generate`, {}, {
         preserveScroll: true,
     });
+};
+
+const clearSchedule = () => {
+    form.published_at = null;
 };
 
 const updateStatus = (status: string) => {
@@ -222,9 +273,6 @@ props.contentPiece.posts.forEach((post) => {
                             <span class="text-sm font-medium">✓ Generated</span>
                         </div>
                     </Transition>
-                    <span :class="getStatusColor(contentPiece.status)" class="rounded-full px-3 py-1 text-sm font-medium">
-                        {{ formatStatus(contentPiece.status) }}
-                    </span>
                     <Select :model-value="contentPiece.status" @update:model-value="updateStatus">
                         <SelectTrigger class="w-40">
                             <SelectValue placeholder="Change status" />
@@ -293,14 +341,36 @@ props.contentPiece.posts.forEach((post) => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="ENGLISH">English</SelectItem>
-                                        <SelectItem value="GERMAN">German</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <InputError :message="form.errors.target_language" />
-                            </div>
-                        </div>
+                            <SelectItem value="GERMAN">German</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="form.errors.target_language" />
+                </div>
 
-                        <div class="space-y-2">
+                        <div class="space-y-2 md:col-span-2">
+                            <div class="flex items-center gap-2">
+                                <Label for="published_at">Publish date &amp; time</Label>
+                                <button
+                                    v-if="form.published_at"
+                                    type="button"
+                                    class="inline-flex items-center text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                    @click="clearSchedule"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                            <Input
+                                id="published_at"
+                                v-model="form.published_at"
+                                type="datetime-local"
+                                :min="minPublish"
+                                class="md:w-1/2"
+                            />
+                            <InputError :message="form.errors.published_at" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
                             <Label for="briefing_text">Briefing / Additional Context</Label>
                             <textarea
                                 id="briefing_text"

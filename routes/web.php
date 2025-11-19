@@ -34,6 +34,7 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])
         ->middleware('token.limit')
         ->name('content-pieces.generate');
+    Route::get('content-pieces/calendar', [ContentPieceController::class, 'calendar'])->name('content-pieces.calendar');
     Route::get('content-pieces/{content_piece}/status', [ContentPieceController::class, 'status'])->name('content-pieces.status');
     Route::patch('content-pieces/{content_piece}/status', [ContentPieceController::class, 'updateStatus'])->name('content-pieces.update-status');
 
@@ -50,10 +51,8 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('team-settings/import-sources', [SettingsController::class, 'importSources'])->name('team-settings.import-sources');
 
     Route::get('posts', [PostController::class, 'index'])->name('posts.index');
-    Route::patch('posts/{post}/toggle-read', [PostController::class, 'toggleRead'])->name('posts.toggle-read');
     Route::patch('posts/{post}/toggle-hidden', [PostController::class, 'toggleHidden'])->name('posts.toggle-hidden');
     Route::patch('posts/{post}/status', [PostController::class, 'updateStatus'])->name('posts.update-status');
-    Route::post('posts/bulk-toggle-read', [PostController::class, 'bulkToggleRead'])->name('posts.bulk-toggle-read');
     Route::post('posts/bulk-hide', [PostController::class, 'bulkHide'])->name('posts.bulk-hide');
     Route::post('posts/bulk-delete', [PostController::class, 'bulkDelete'])->name('posts.bulk-delete');
     Route::post('posts/hide-not-relevant', [PostController::class, 'hideNotRelevant'])->name('posts.hide-not-relevant');

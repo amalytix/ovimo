@@ -106,7 +106,6 @@ For each post we should store at least the following:
 - Summary
 - source_id
 - created_at
-- is_read (false by default). Here I would like to allow the user to mark a new found post as read or unread
 - is_hidden (false by default): The user can hide posts.
 - status (allowed values: "not_relevant", "create_content")
 - ...

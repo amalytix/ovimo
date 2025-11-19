@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { setDefault } from '@/actions/App/Http/Controllers/PromptController';
+import { Pencil, Star, Trash2 } from 'lucide-vue-next';
 
 interface Prompt {
     id: number;
@@ -99,25 +100,40 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
                                 <span
                                     v-if="prompt.is_default"
-                                    class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200"
+                                    class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200"
                                 >
+                                    <Star class="h-4 w-4" fill="currentColor" />
                                     Default
                                 </span>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                <Link :href="`/prompts/${prompt.id}/edit`" class="mr-3 text-blue-600 hover:text-blue-900 dark:text-blue-400">
-                                    Edit
-                                </Link>
-                                <button
-                                    v-if="!prompt.is_default"
-                                    @click="setDefaultPrompt(prompt.id)"
-                                    class="mr-3 text-green-600 hover:text-green-900 dark:text-green-400"
-                                >
-                                    Set as Default
-                                </button>
-                                <button @click="deletePrompt(prompt.id)" class="text-red-600 hover:text-red-900 dark:text-red-400">
-                                    Delete
-                                </button>
+                                <div class="flex items-center justify-end gap-3">
+                                    <button
+                                        v-if="!prompt.is_default"
+                                        @click="setDefaultPrompt(prompt.id)"
+                                        class="text-amber-500 hover:text-amber-400 dark:text-amber-300"
+                                        title="Set as default"
+                                    >
+                                        <Star :size="18" fill="currentColor" />
+                                        <span class="sr-only">Set as default</span>
+                                    </button>
+                                    <Link
+                                        :href="`/prompts/${prompt.id}/edit`"
+                                        class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                        title="Edit"
+                                    >
+                                        <Pencil :size="18" />
+                                        <span class="sr-only">Edit</span>
+                                    </Link>
+                                    <button
+                                        @click="deletePrompt(prompt.id)"
+                                        class="text-red-500 hover:text-red-700 dark:text-red-400"
+                                        title="Delete"
+                                    >
+                                        <Trash2 :size="18" />
+                                        <span class="sr-only">Delete</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="prompts.data.length === 0">

@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, onUnmounted, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { status } from '@/routes/content-pieces';
+import { useNow } from '@vueuse/core';
 
 interface Prompt {
     id: number;
@@ -39,6 +40,25 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Create', href: '/content-pieces/create' },
 ];
 
+const formatDateTimeLocal = (value: string | Date | null) => {
+    if (! value) {
+        return '';
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const now = useNow();
+const minPublish = computed(() => formatDateTimeLocal(now.value));
+
 const form = useForm({
     internal_name: props.initialTitle || '',
     prompt_id: props.prompts.length > 0 ? props.prompts[0].id : null,
@@ -48,7 +68,31 @@ const form = useForm({
     status: 'NOT_STARTED',
     post_ids: props.preselectedPostIds || ([] as number[]),
     full_text: '',
+    published_at: '' as string | null,
 });
+
+const serializePublishedAt = (value: string | null) => {
+    if (! value) {
+        return null;
+    }
+
+    const date = new Date(value);
+
+    return date.toISOString();
+};
+
+const submitWithSchedule = (options: Parameters<typeof form.post>[1] = {}) => {
+    form.transform((data) => ({
+        ...data,
+        published_at: serializePublishedAt(form.published_at),
+    })).post('/content-pieces', {
+        ...options,
+        onFinish: () => {
+            form.transform((data) => data);
+            options.onFinish?.();
+        },
+    });
+};
 
 // Polling state
 const page = usePage();
@@ -132,6 +176,10 @@ const togglePost = (postId: number, checked: boolean) => {
     }
 };
 
+const clearSchedule = () => {
+    form.published_at = null;
+};
+
 const formatStatus = (status: string) => {
     const map: Record<string, string> = {
         NOT_STARTED: 'Not Started',
@@ -151,7 +199,7 @@ const getStatusColor = (status: string) => {
 };
 
 const saveAndClose = () => {
-    form.post('/content-pieces', {
+    submitWithSchedule({
         preserveScroll: true,
         onSuccess: () => {
             router.visit('/content-pieces');
@@ -164,8 +212,11 @@ const saveAndGenerate = () => {
         .transform((data) => ({
             ...data,
             generate_content: true,
+            published_at: serializePublishedAt(form.published_at),
         }))
-        .post('/content-pieces');
+        .post('/content-pieces', {
+            onFinish: () => form.transform((data) => data),
+        });
 };
 
 const cancel = () => {
@@ -273,11 +324,33 @@ const cancel = () => {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="ENGLISH">English</SelectItem>
-                                <SelectItem value="GERMAN">German</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <InputError :message="form.errors.target_language" />
-                    </div>
+                            <SelectItem value="GERMAN">German</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="form.errors.target_language" />
+                </div>
+
+                        <div class="space-y-2 md:col-span-2">
+                            <div class="flex items-center gap-2">
+                                <Label for="published_at">Publish date &amp; time</Label>
+                                <button
+                                    v-if="form.published_at"
+                                    type="button"
+                                    class="inline-flex items-center text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                    @click="clearSchedule"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                            <Input
+                                id="published_at"
+                                v-model="form.published_at"
+                                type="datetime-local"
+                                :min="minPublish"
+                                class="md:w-1/2"
+                            />
+                            <InputError :message="form.errors.published_at" />
+                        </div>
                 </div>
 
                 <div class="space-y-2">

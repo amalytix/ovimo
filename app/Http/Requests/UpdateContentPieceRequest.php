@@ -30,6 +30,19 @@ class UpdateContentPieceRequest extends FormRequest
             'full_text' => ['nullable', 'string'],
             'post_ids' => ['nullable', 'array'],
             'post_ids.*' => ['exists:posts,id'],
+            'published_at' => ['nullable', 'date', 'after_or_equal:now'],
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'published_at.after_or_equal' => 'Publish date cannot be in the past.',
         ];
     }
 }

@@ -36,46 +36,6 @@ test('posts index only shows team posts', function () {
     );
 });
 
-test('authenticated users can toggle post read status', function () {
-    [$user, $team] = createUserWithTeam();
-    $source = Source::factory()->create(['team_id' => $team->id]);
-    $post = Post::factory()->create(['source_id' => $source->id, 'is_read' => false]);
-
-    $this->actingAs($user)
-        ->patch("/posts/{$post->id}/toggle-read")
-        ->assertRedirect();
-
-    $this->assertDatabaseHas('posts', [
-        'id' => $post->id,
-        'is_read' => true,
-    ]);
-
-    // Toggle back
-    $this->actingAs($user)->patch("/posts/{$post->id}/toggle-read");
-
-    $this->assertDatabaseHas('posts', [
-        'id' => $post->id,
-        'is_read' => false,
-    ]);
-});
-
-test('users cannot toggle read status for other teams posts', function () {
-    [$user, $team] = createUserWithTeam();
-    [$otherUser, $otherTeam] = createUserWithTeam();
-
-    $otherSource = Source::factory()->create(['team_id' => $otherTeam->id]);
-    $otherPost = Post::factory()->create(['source_id' => $otherSource->id, 'is_read' => false]);
-
-    $this->actingAs($user)
-        ->patch("/posts/{$otherPost->id}/toggle-read")
-        ->assertForbidden();
-
-    $this->assertDatabaseHas('posts', [
-        'id' => $otherPost->id,
-        'is_read' => false,
-    ]);
-});
-
 test('authenticated users can toggle post hidden status', function () {
     [$user, $team] = createUserWithTeam();
     $source = Source::factory()->create(['team_id' => $team->id]);
@@ -147,56 +107,6 @@ test('users cannot update status for other teams posts', function () {
     $this->assertDatabaseHas('posts', [
         'id' => $otherPost->id,
         'status' => 'NOT_RELEVANT',
-    ]);
-});
-
-test('authenticated users can bulk toggle read status', function () {
-    [$user, $team] = createUserWithTeam();
-    $source = Source::factory()->create(['team_id' => $team->id]);
-    $posts = Post::factory()->count(3)->create(['source_id' => $source->id, 'is_read' => false]);
-
-    $this->actingAs($user)
-        ->post('/posts/bulk-toggle-read', [
-            'post_ids' => $posts->pluck('id')->toArray(),
-            'is_read' => true,
-        ])
-        ->assertRedirect();
-
-    foreach ($posts as $post) {
-        $this->assertDatabaseHas('posts', [
-            'id' => $post->id,
-            'is_read' => true,
-        ]);
-    }
-});
-
-test('bulk toggle read only affects team posts', function () {
-    [$user, $team] = createUserWithTeam();
-    [$otherUser, $otherTeam] = createUserWithTeam();
-
-    $teamSource = Source::factory()->create(['team_id' => $team->id]);
-    $otherSource = Source::factory()->create(['team_id' => $otherTeam->id]);
-
-    $teamPost = Post::factory()->create(['source_id' => $teamSource->id, 'is_read' => false]);
-    $otherPost = Post::factory()->create(['source_id' => $otherSource->id, 'is_read' => false]);
-
-    $this->actingAs($user)
-        ->post('/posts/bulk-toggle-read', [
-            'post_ids' => [$teamPost->id, $otherPost->id],
-            'is_read' => true,
-        ])
-        ->assertRedirect();
-
-    // Team post should be updated
-    $this->assertDatabaseHas('posts', [
-        'id' => $teamPost->id,
-        'is_read' => true,
-    ]);
-
-    // Other team's post should NOT be updated
-    $this->assertDatabaseHas('posts', [
-        'id' => $otherPost->id,
-        'is_read' => false,
     ]);
 });
 

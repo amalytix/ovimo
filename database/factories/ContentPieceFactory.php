@@ -23,6 +23,21 @@ class ContentPieceFactory extends Factory
             'target_language' => fake()->randomElement(['ENGLISH', 'GERMAN']),
             'status' => fake()->randomElement(['NOT_STARTED', 'DRAFT', 'FINAL']),
             'full_text' => null,
+            'published_at' => fake()->optional(0.3)->dateTimeBetween('now', '+30 days'),
         ];
+    }
+
+    public function scheduled(): self
+    {
+        return $this->state(fn () => [
+            'published_at' => fake()->dateTimeBetween('now', '+30 days'),
+        ]);
+    }
+
+    public function unscheduled(): self
+    {
+        return $this->state(fn () => [
+            'published_at' => null,
+        ]);
     }
 }

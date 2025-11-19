@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,7 +25,24 @@ class ContentPiece extends Model
         'generation_status',
         'generation_error',
         'generation_error_occurred_at',
+        'published_at',
     ];
+
+    public function casts(): array
+    {
+        return [
+            'published_at' => 'immutable_datetime',
+            'generation_error_occurred_at' => 'immutable_datetime',
+        ];
+    }
+
+    public function scopeOrderedForPublishing(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw('published_at IS NOT NULL')
+            ->orderBy('published_at')
+            ->orderByDesc('created_at');
+    }
 
     public function team(): BelongsTo
     {

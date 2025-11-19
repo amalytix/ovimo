@@ -60,7 +60,6 @@ class MonitorSource implements ShouldQueue
                         'summary' => null,
                         'relevancy_score' => null,
                         'metadata' => $item['metadata'] ?? null,
-                        'is_read' => false,
                         'is_hidden' => false,
                         'status' => 'NOT_RELEVANT',
                         'found_at' => now(),

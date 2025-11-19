@@ -144,6 +144,7 @@ app/
 - **Reka UI** (headless accessible components)
 - **shadcn/ui** (styled component wrappers)
 - **Laravel Wayfinder** (type-safe route generation)
+- **Lucide Icons** (`lucide-vue-next`, wrapped for shorthand names)
 
 ### Directory Structure
 
@@ -199,6 +200,26 @@ defineProps<{
      <Button :disabled="processing">Submit</Button>
    </Form>
    ```
+
+## Icon Usage (Frontend)
+
+- Icons come from `lucide-vue-next`.
+- Preferred: use the shared `Icon.vue` wrapper for kebab-cased names (`file-text`, `wand-sparkles`, `star`). The wrapper:
+  - Tries multiple Lucide export candidates (`Name`, `NameIcon`, `LucideName`, `LucideNameIcon`).
+  - Warns in dev when a name cannot be resolved.
+  - Falls back to `HelpCircle` to avoid broken renders.
+- If you need to guarantee a specific glyph (no fallback), import the component directly:
+  ```vue
+  <script setup lang="ts">
+  import { WandSparkles } from 'lucide-vue-next';
+  </script>
+
+  <template>
+    <WandSparkles class="h-4 w-4 text-gray-700" />
+  </template>
+  ```
+- Discover icons by browsing `node_modules/lucide-vue-next/dist/esm/icons` or by listing exports:
+  - `node -e "const icons = require('lucide-vue-next'); console.log(Object.keys(icons).slice(0, 200))"`
 
 2. **useForm Helper** (programmatic control):
    ```vue

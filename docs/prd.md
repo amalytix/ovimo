@@ -168,7 +168,6 @@ Ovimo provides an end-to-end workflow:
 | summary | text | No | AI-generated summary |
 | relevancy_score | integer | No | AI-assigned relevancy score (1-10), user-overridable |
 | source_id | foreign key | Yes | Parent source |
-| is_read | boolean | Yes | Read/unread status (default: false) |
 | is_hidden | boolean | Yes | Hidden status (default: false) |
 | status | enum | Yes | NOT_RELEVANT or CREATE_CONTENT |
 | found_at | timestamp | Yes | When first discovered |
@@ -557,7 +556,6 @@ Schema::create('posts', function (Blueprint $table) {
     $table->string('uri', 2048);
     $table->text('summary')->nullable();
     $table->unsignedTinyInteger('relevancy_score')->nullable(); // 1-10, AI-assigned, user-overridable
-    $table->boolean('is_read')->default(false);
     $table->boolean('is_hidden')->default(false);
     $table->enum('status', ['NOT_RELEVANT', 'CREATE_CONTENT'])->default('NOT_RELEVANT');
     $table->timestamp('found_at');
@@ -565,7 +563,6 @@ Schema::create('posts', function (Blueprint $table) {
 
     $table->unique(['source_id', 'uri']); // URI unique per source (per team via source)
     $table->index(['source_id', 'is_hidden', 'found_at']);
-    $table->index(['source_id', 'is_read']);
     $table->index(['source_id', 'relevancy_score']);
 });
 ```
@@ -1109,8 +1106,6 @@ it('allows bulk marking posts as read', function () {
         ->click('Mark as Read')
         ->assertSee('2 posts marked as read');
 
-    expect($posts[0]->fresh()->is_read)->toBeTrue();
-    expect($posts[1]->fresh()->is_read)->toBeTrue();
 });
 ```
 
