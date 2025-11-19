@@ -68,7 +68,8 @@ class ContentPieceController extends Controller
         $teamId = auth()->user()->current_team_id;
 
         $prompts = Prompt::where('team_id', $teamId)
-            ->orderBy('internal_name')
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
             ->get(['id', 'internal_name as name']);
 
         // Pre-selected post IDs from query params
@@ -148,7 +149,8 @@ class ContentPieceController extends Controller
         $teamId = auth()->user()->current_team_id;
 
         $prompts = Prompt::where('team_id', $teamId)
-            ->orderBy('internal_name')
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
             ->get(['id', 'internal_name as name']);
 
         $availablePosts = \App\Models\Post::query()

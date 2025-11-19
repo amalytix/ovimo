@@ -17,7 +17,15 @@ class Prompt extends Model
         'internal_name',
         'channel',
         'prompt_text',
+        'is_default',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_default' => 'boolean',
+        ];
+    }
 
     public function team(): BelongsTo
     {

@@ -25,6 +25,7 @@ class StorePromptRequest extends FormRequest
             'internal_name' => ['required', 'string', 'max:255'],
             'channel' => ['required', 'string', 'in:BLOG_POST,LINKEDIN_POST,YOUTUBE_SCRIPT'],
             'prompt_text' => ['required', 'string', 'max:10000'],
+            'is_default' => ['sometimes', 'boolean'],
         ];
     }
 }

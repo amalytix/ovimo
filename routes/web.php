@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
         ->name('sources.analyze-webpage');
     Route::post('sources/test-extraction', [SourceController::class, 'testExtraction'])->name('sources.test-extraction');
     Route::resource('prompts', PromptController::class)->except(['show']);
+    Route::post('prompts/{prompt}/set-default', [PromptController::class, 'setDefault'])->name('prompts.set-default');
     Route::resource('content-pieces', ContentPieceController::class)->except(['show']);
     Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])
         ->middleware('token.limit')

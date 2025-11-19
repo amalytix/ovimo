@@ -19,6 +19,7 @@ class PromptController extends Controller
             'prompts' => Prompt::query()
                 ->where('team_id', $teamId)
                 ->withCount('contentPieces')
+                ->orderByDesc('is_default')
                 ->orderBy('internal_name')
                 ->paginate(15)
                 ->through(fn (Prompt $prompt) => [
@@ -27,6 +28,7 @@ class PromptController extends Controller
                     'prompt_text' => $prompt->prompt_text,
                     'content_pieces_count' => $prompt->content_pieces_count,
                     'created_at' => $prompt->created_at->diffForHumans(),
+                    'is_default' => $prompt->is_default,
                 ]),
         ]);
     }
@@ -79,5 +81,23 @@ class PromptController extends Controller
 
         return redirect()->route('prompts.index')
             ->with('success', 'Prompt deleted successfully.');
+    }
+
+    public function setDefault(Prompt $prompt): RedirectResponse
+    {
+        $this->authorize('setDefault', $prompt);
+
+        $teamId = auth()->user()->current_team_id;
+
+        // Remove is_default flag from all other prompts in this team
+        Prompt::where('team_id', $teamId)
+            ->where('id', '!=', $prompt->id)
+            ->update(['is_default' => false]);
+
+        // Set this prompt as default
+        $prompt->update(['is_default' => true]);
+
+        return redirect()->route('prompts.index')
+            ->with('success', 'Default prompt updated successfully.');
     }
 }

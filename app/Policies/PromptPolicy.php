@@ -40,6 +40,14 @@ class PromptPolicy
     }
 
     /**
+     * Determine whether the user can set the model as default.
+     */
+    public function setDefault(User $user, Prompt $prompt): bool
+    {
+        return $prompt->team_id === $user->current_team_id;
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Prompt $prompt): bool

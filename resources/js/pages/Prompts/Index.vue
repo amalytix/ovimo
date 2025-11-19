@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { setDefault } from '@/actions/App/Http/Controllers/PromptController';
 
 interface Prompt {
     id: number;
@@ -10,6 +11,7 @@ interface Prompt {
     prompt_text: string;
     content_pieces_count: number;
     created_at: string;
+    is_default: boolean;
 }
 
 interface Props {
@@ -28,6 +30,10 @@ const deletePrompt = (id: number) => {
     if (confirm('Are you sure you want to delete this prompt?')) {
         router.delete(`/prompts/${id}`);
     }
+};
+
+const setDefaultPrompt = (id: number) => {
+    router.post(setDefault(id).url);
 };
 
 const truncateContent = (content: string, maxLength: number = 100) => {
@@ -64,6 +70,9 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                 Created
                             </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                Default
+                            </th>
                             <th
                                 class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"
                             >
@@ -87,17 +96,32 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 {{ prompt.created_at }}
                             </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                                <span
+                                    v-if="prompt.is_default"
+                                    class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200"
+                                >
+                                    Default
+                                </span>
+                            </td>
                             <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                 <Link :href="`/prompts/${prompt.id}/edit`" class="mr-3 text-blue-600 hover:text-blue-900 dark:text-blue-400">
                                     Edit
                                 </Link>
+                                <button
+                                    v-if="!prompt.is_default"
+                                    @click="setDefaultPrompt(prompt.id)"
+                                    class="mr-3 text-green-600 hover:text-green-900 dark:text-green-400"
+                                >
+                                    Set as Default
+                                </button>
                                 <button @click="deletePrompt(prompt.id)" class="text-red-600 hover:text-red-900 dark:text-red-400">
                                     Delete
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="prompts.data.length === 0">
-                            <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                 No prompts found. Click "Add Prompt" to create your first prompt.
                             </td>
                         </tr>
