@@ -13,7 +13,7 @@ const props = withDefaults(
     data-slot="tabs-list"
     v-bind="props"
     :class="cn(
-      'inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground',
+      'flex flex-wrap items-center gap-3 rounded-none bg-transparent p-0 text-muted-foreground',
       props.class
     )"
   >

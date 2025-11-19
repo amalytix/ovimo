@@ -11,6 +11,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { Pencil, PlayCircle, Trash2 } from 'lucide-vue-next';
 
 interface Team {
     id: number;
@@ -469,16 +470,25 @@ const submitImport = () => {
                                                 :disabled="testProcessing === webhook.id"
                                                 class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
                                             >
-                                                {{ testProcessing === webhook.id ? 'Testing...' : 'Test' }}
+                                                <span class="inline-flex items-center gap-1.5">
+                                                    <PlayCircle class="h-4 w-4" />
+                                                    <span>{{ testProcessing === webhook.id ? 'Testing...' : 'Test' }}</span>
+                                                </span>
                                             </button>
                                             <button
                                                 @click="openEditWebhookModal(webhook)"
                                                 class="text-blue-600 hover:text-blue-900 dark:text-blue-400"
                                             >
-                                                Edit
+                                                <span class="inline-flex items-center gap-1.5">
+                                                    <Pencil class="h-4 w-4" />
+                                                    <span>Edit</span>
+                                                </span>
                                             </button>
                                             <button @click="deleteWebhook(webhook.id)" class="text-red-600 hover:text-red-900 dark:text-red-400">
-                                                Delete
+                                                <span class="inline-flex items-center gap-1.5">
+                                                    <Trash2 class="h-4 w-4" />
+                                                    <span>Delete</span>
+                                                </span>
                                             </button>
                                         </td>
                                     </tr>
