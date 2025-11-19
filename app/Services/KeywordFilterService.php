@@ -7,6 +7,13 @@ use Illuminate\Support\Facades\Http;
 
 class KeywordFilterService
 {
+    private int $fetchTimeoutSeconds = 5;
+
+    private int $maxTitleBytes = 262144; // 256KB cap to avoid huge responses
+
+    /** @var array<string, string|null> */
+    private static array $titleCache = [];
+
     /**
      * Parse keywords string (one per line) into an array.
      *
@@ -97,18 +104,45 @@ class KeywordFilterService
      */
     public function fetchTitleFromUrl(string $url): ?string
     {
+        if (isset(self::$titleCache[$url])) {
+            return self::$titleCache[$url];
+        }
+
         try {
-            $response = Http::timeout(10)->get($url);
+            $response = Http::timeout($this->fetchTimeoutSeconds)
+                ->withHeaders([
+                    'Accept' => 'text/html,application/xhtml+xml',
+                ])
+                ->withOptions([
+                    'progress' => function ($downloadTotal, $downloadedBytes) {
+                        if ($downloadedBytes > $this->maxTitleBytes) {
+                            throw new \RuntimeException('Title fetch exceeded size limit');
+                        }
+                    },
+                ])
+                ->get($url);
 
             if (! $response->successful()) {
                 return null;
             }
 
+            $contentLength = (int) ($response->header('Content-Length') ?? 0);
+            if ($contentLength > $this->maxTitleBytes) {
+                return null;
+            }
+
             $html = $response->body();
+
+            if (strlen($html) > $this->maxTitleBytes) {
+                return null;
+            }
 
             // Extract title from <title> tag
             if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $matches)) {
-                return trim(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                $title = trim(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                self::$titleCache[$url] = $title;
+
+                return $title;
             }
 
             return null;
