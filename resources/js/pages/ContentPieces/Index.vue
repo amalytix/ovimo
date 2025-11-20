@@ -180,11 +180,11 @@ const togglePublishSort = () => {
                         <Button :variant="view === 'list' ? 'default' : 'outline'" class="rounded-none" @click="switchView('list')">
                             List
                         </Button>
-                        <Button :variant="view === 'month' ? 'default' : 'outline'" class="rounded-none" @click="switchView('month')">
-                            Month
-                        </Button>
                         <Button :variant="view === 'week' ? 'default' : 'outline'" class="rounded-none" @click="switchView('week')">
                             Week
+                        </Button>
+                        <Button :variant="view === 'month' ? 'default' : 'outline'" class="rounded-none" @click="switchView('month')">
+                            Month
                         </Button>
                     </div>
                     <Link href="/content-pieces/create">
