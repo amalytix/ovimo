@@ -4,6 +4,10 @@ namespace App\Listeners;
 
 use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
+use App\Events\MediaBulkDeleted;
+use App\Events\MediaDeleted;
+use App\Events\MediaUpdated;
+use App\Events\MediaUploaded;
 use App\Events\OpenAIRequestFailed;
 use App\Events\PasswordChanged;
 use App\Events\PasswordReset;
@@ -119,6 +123,54 @@ class LogActivityToDatabase implements ShouldQueue
                 'source_id' => $event->sourceId,
                 'metadata' => [
                     'source_name' => $event->sourceName,
+                ],
+            ],
+
+            $event instanceof MediaUploaded => [
+                'team_id' => $event->media->team_id,
+                'user_id' => $event->user->id,
+                'event_type' => 'media.uploaded',
+                'level' => 'info',
+                'description' => "Media uploaded: '{$event->media->filename}'",
+                'metadata' => [
+                    'media_id' => $event->media->id,
+                    'mime_type' => $event->media->mime_type,
+                    'file_size' => $event->media->file_size,
+                ],
+            ],
+
+            $event instanceof MediaUpdated => [
+                'team_id' => $event->media->team_id,
+                'user_id' => $event->user->id,
+                'event_type' => 'media.updated',
+                'level' => 'info',
+                'description' => "Media updated: '{$event->media->filename}'",
+                'metadata' => [
+                    'media_id' => $event->media->id,
+                    'changes' => $event->changes,
+                ],
+            ],
+
+            $event instanceof MediaDeleted => [
+                'team_id' => $event->teamId,
+                'user_id' => $event->user->id,
+                'event_type' => 'media.deleted',
+                'level' => 'info',
+                'description' => "Media deleted: '{$event->filename}'",
+                'metadata' => [
+                    'media_id' => $event->mediaId,
+                ],
+            ],
+
+            $event instanceof MediaBulkDeleted => [
+                'team_id' => $event->teamId,
+                'user_id' => $event->user->id,
+                'event_type' => 'media.bulk_deleted',
+                'level' => 'info',
+                'description' => 'Media items deleted',
+                'metadata' => [
+                    'media_ids' => $event->mediaIds,
+                    'count' => count($event->mediaIds),
                 ],
             ],
 

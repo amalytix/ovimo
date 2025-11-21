@@ -3,6 +3,8 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ContentPieceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MediaController;
+use App\Http\Controllers\MediaTagController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PromptController;
 use App\Http\Controllers\SettingsController;
@@ -56,6 +58,20 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('posts/bulk-hide', [PostController::class, 'bulkHide'])->name('posts.bulk-hide');
     Route::post('posts/bulk-delete', [PostController::class, 'bulkDelete'])->name('posts.bulk-delete');
     Route::post('posts/hide-not-relevant', [PostController::class, 'hideNotRelevant'])->name('posts.hide-not-relevant');
+
+    Route::get('media', [MediaController::class, 'index'])->name('media.index');
+    Route::post('media/presign', [MediaController::class, 'presign'])->name('media.presign');
+    Route::post('media', [MediaController::class, 'store'])->name('media.store');
+    Route::get('media/{media}', [MediaController::class, 'show'])->name('media.show');
+    Route::patch('media/{media}', [MediaController::class, 'update'])->name('media.update');
+    Route::delete('media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
+    Route::post('media/bulk-delete', [MediaController::class, 'bulkDestroy'])->name('media.bulk-delete');
+    Route::post('media/bulk-tag', [MediaController::class, 'bulkTag'])->name('media.bulk-tag');
+
+    Route::get('media-tags', [MediaTagController::class, 'index'])->name('media-tags.index');
+    Route::post('media-tags', [MediaTagController::class, 'store'])->name('media-tags.store');
+    Route::patch('media-tags/{mediaTag}', [MediaTagController::class, 'update'])->name('media-tags.update');
+    Route::delete('media-tags/{mediaTag}', [MediaTagController::class, 'destroy'])->name('media-tags.destroy');
 });
 
 require __DIR__.'/settings.php';

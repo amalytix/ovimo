@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
+use App\Events\MediaBulkDeleted;
+use App\Events\MediaDeleted;
+use App\Events\MediaUpdated;
+use App\Events\MediaUploaded;
 use App\Events\OpenAIRequestFailed;
 use App\Events\PasswordChanged;
 use App\Events\PasswordReset;
@@ -53,6 +57,10 @@ class AppServiceProvider extends ServiceProvider
             SourceCreated::class,
             SourceUpdated::class,
             SourceDeleted::class,
+            MediaUploaded::class,
+            MediaUpdated::class,
+            MediaDeleted::class,
+            MediaBulkDeleted::class,
 
             // Error/Warning events
             SourceMonitoringFailed::class,

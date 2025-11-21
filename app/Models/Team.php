@@ -56,6 +56,16 @@ class Team extends Model
         return $this->hasMany(Prompt::class);
     }
 
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class);
+    }
+
+    public function mediaTags(): HasMany
+    {
+        return $this->hasMany(MediaTag::class);
+    }
+
     public function contentPieces(): HasMany
     {
         return $this->hasMany(ContentPiece::class);
