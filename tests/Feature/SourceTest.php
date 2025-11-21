@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\MonitorSource;
+use App\Models\Post;
 use App\Models\Source;
 use Illuminate\Support\Facades\Queue;
 
@@ -30,6 +31,23 @@ test('sources index only shows team sources', function () {
         ->component('Sources/Index')
         ->has('sources.data', 1)
         ->where('sources.data.0.id', $teamSource->id)
+    );
+});
+
+test('sources index includes posts created in last 7 days', function () {
+    [$user, $team] = createUserWithTeam();
+    $source = Source::factory()->create(['team_id' => $team->id]);
+
+    Post::factory()->for($source)->create(['created_at' => now()->subDays(2)]);
+    Post::factory()->for($source)->create(['created_at' => now()->subDays(6)]);
+    Post::factory()->for($source)->create(['created_at' => now()->subDays(10)]);
+
+    $response = $this->actingAs($user)->get('/sources');
+
+    $response->assertInertia(fn ($page) => $page
+        ->component('Sources/Index')
+        ->where('sources.data.0.posts_count', 3)
+        ->where('sources.data.0.posts_last_7_days_count', 2)
     );
 });
 

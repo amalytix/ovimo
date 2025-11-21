@@ -10,6 +10,7 @@ use App\Models\Source;
 use App\Models\Tag;
 use App\Services\OpenAIService;
 use App\Services\WebsiteParserService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,12 @@ class SourceController extends Controller
         $query = Source::query()
             ->where('team_id', $teamId)
             ->with('tags')
-            ->withCount('posts');
+            ->withCount([
+                'posts',
+                'posts as posts_last_7_days_count' => function (Builder $query) {
+                    $query->where('created_at', '>=', now()->subDays(7));
+                },
+            ]);
 
         // Filter by tags if provided
         if (! empty($tagIds)) {
@@ -46,6 +52,7 @@ class SourceController extends Controller
         match ($sortBy) {
             'type' => $query->orderBy('type', $sortDirection),
             'posts_count' => $query->orderBy('posts_count', $sortDirection),
+            'posts_last_7_days_count' => $query->orderBy('posts_last_7_days_count', $sortDirection),
             'last_checked_at' => $query->orderByRaw("last_checked_at IS NULL, last_checked_at {$sortDirection}"),
             'is_active' => $query->orderBy('is_active', $sortDirection),
             default => $query->orderBy('internal_name', $sortDirection),
@@ -68,6 +75,7 @@ class SourceController extends Controller
                     'last_checked_at' => $source->last_checked_at?->diffForHumans(),
                     'next_check_at' => $source->next_check_at?->diffForHumans(),
                     'posts_count' => $source->posts_count,
+                    'posts_last_7_days_count' => $source->posts_last_7_days_count,
                     'tags' => $source->tags->map(fn (Tag $tag) => [
                         'id' => $tag->id,
                         'name' => $tag->name,

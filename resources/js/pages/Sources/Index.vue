@@ -28,6 +28,7 @@ interface Source {
     last_checked_at: string | null;
     next_check_at: string | null;
     posts_count: number;
+    posts_last_7_days_count: number;
     tags: Tag[];
 }
 
@@ -130,7 +131,10 @@ const sortBy = (column: string) => {
     } else {
         // New column, default to desc for posts_count and last_checked_at, asc for others
         currentSortBy.value = column;
-        currentSortDirection.value = column === 'posts_count' || column === 'last_checked_at' ? 'desc' : 'asc';
+        currentSortDirection.value =
+            column === 'posts_count' || column === 'posts_last_7_days_count' || column === 'last_checked_at'
+                ? 'desc'
+                : 'asc';
     }
     applyFilters();
 };
@@ -211,6 +215,12 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             </th>
                             <th
                                 class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                @click="sortBy('posts_last_7_days_count')"
+                            >
+                                Posts 7D {{ getSortIcon('posts_last_7_days_count') }}
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('last_checked_at')"
                             >
                                 Last Checked {{ getSortIcon('last_checked_at') }}
@@ -253,6 +263,9 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 {{ source.posts_count }}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                {{ source.posts_last_7_days_count }}
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 {{ source.last_checked_at || 'Never' }}
