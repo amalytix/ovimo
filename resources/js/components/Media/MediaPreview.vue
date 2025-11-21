@@ -25,9 +25,9 @@ const isImage = computed(() => props.media?.mime_type.startsWith('image/'));
 
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
-        <DialogContent class="max-w-4xl">
+        <DialogContent class="max-w-4xl pr-12">
             <DialogHeader>
-                <div class="flex items-start justify-between gap-3 pr-12">
+                <div class="flex items-start justify-between gap-3">
                     <div class="space-y-1">
                         <DialogTitle>{{ media?.filename }}</DialogTitle>
                         <DialogDescription>
@@ -35,14 +35,13 @@ const isImage = computed(() => props.media?.mime_type.startsWith('image/'));
                             <span v-if="media?.file_size">{{ (media.file_size / 1024 / 1024).toFixed(2) }} MB</span>
                         </DialogDescription>
                     </div>
-                    <div class="flex items-start gap-2 pt-0.5">
+                    <div class="flex shrink-0 items-center gap-2">
                         <Button v-if="media?.download_url || media?.temporary_url" size="sm" variant="outline" as-child>
                             <a :href="media?.download_url || media?.temporary_url" download class="inline-flex items-center gap-2">
                                 <Download class="h-4 w-4" />
                                 Download
                             </a>
                         </Button>
-                        <Dialog.Title class="sr-only">Close</Dialog.Title>
                     </div>
                 </div>
             </DialogHeader>
