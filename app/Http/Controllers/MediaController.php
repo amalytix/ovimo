@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Normalizer;
 
 class MediaController extends Controller
 {
@@ -37,16 +38,32 @@ class MediaController extends Controller
             'file_type' => $request->get('file_type', 'all'),
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
+            'sort_by' => $request->get('sort_by', 'uploaded_at'),
+            'sort_dir' => $request->get('sort_dir', 'desc'),
         ];
+
+        $sortBy = $filters['sort_by'] === 'filename' ? 'filename' : 'created_at';
+        $sortDirection = $filters['sort_dir'] === 'asc' ? 'asc' : 'desc';
+
+        $filters['sort_by'] = $sortBy === 'filename' ? 'filename' : 'uploaded_at';
+        $filters['sort_dir'] = $sortDirection;
 
         $query = Media::query()
             ->where('team_id', $teamId)
             ->with(['tags', 'uploader']);
 
         if ($filters['search']) {
-            $query->where(function (Builder $builder) use ($filters): void {
-                $builder->where('filename', 'like', '%'.$filters['search'].'%')
-                    ->orWhere('stored_filename', 'like', '%'.$filters['search'].'%');
+            $searchTerms = array_unique(array_filter([
+                $filters['search'],
+                Normalizer::normalize($filters['search'], Normalizer::FORM_D),
+                Normalizer::normalize($filters['search'], Normalizer::FORM_C),
+            ]));
+
+            $query->where(function (Builder $builder) use ($searchTerms): void {
+                foreach ($searchTerms as $term) {
+                    $builder->orWhere('filename', 'like', '%'.$term.'%')
+                        ->orWhere('stored_filename', 'like', '%'.$term.'%');
+                }
             });
         }
 
@@ -71,7 +88,7 @@ class MediaController extends Controller
         }
 
         $media = $query
-            ->latest()
+            ->orderBy($sortBy, $sortDirection)
             ->paginate(20)
             ->withQueryString()
             ->through(fn (Media $media) => [
@@ -85,6 +102,7 @@ class MediaController extends Controller
                     'name' => $tag->name,
                 ]),
                 'temporary_url' => $media->getTemporaryUrl(),
+                'download_url' => $media->getTemporaryUrl(download: true),
             ]);
 
         return Inertia::render('Media/Index', [
@@ -185,6 +203,7 @@ class MediaController extends Controller
                 'file_size' => $media->file_size,
                 'created_at' => $media->created_at?->toDateTimeString(),
                 'temporary_url' => $media->getTemporaryUrl(),
+                'download_url' => $media->getTemporaryUrl(download: true),
                 'tags' => [],
             ],
         ], 201);
@@ -206,6 +225,7 @@ class MediaController extends Controller
                 'created_at' => $media->created_at?->toDateTimeString(),
                 'metadata' => $media->metadata,
                 'temporary_url' => $media->getTemporaryUrl(),
+                'download_url' => $media->getTemporaryUrl(download: true),
                 'tags' => $media->tags->map(fn (MediaTag $tag) => [
                     'id' => $tag->id,
                     'name' => $tag->name,

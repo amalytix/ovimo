@@ -78,3 +78,66 @@ test('media update can sync tags within team', function () {
     expect($media->fresh()->filename)->toBe('renamed-file.jpg');
     expect($media->fresh()->tags()->pluck('media_tags.id')->all())->toEqual([$tag->id]);
 });
+
+test('media index defaults to uploaded date descending', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $older = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        'created_at' => now()->subDay(),
+    ]);
+
+    $newer = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        'created_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)->get('/media');
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->where('media.data.0.id', $newer->id)
+        ->where('media.data.1.id', $older->id)
+    );
+});
+
+test('media index can be sorted by filename', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $alpha = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        'filename' => 'alpha.pdf',
+    ]);
+
+    $zulu = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        'filename' => 'zulu.pdf',
+    ]);
+
+    $response = $this->actingAs($user)->get('/media?sort_by=filename&sort_dir=asc');
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->where('media.data.0.id', $alpha->id)
+        ->where('media.data.1.id', $zulu->id)
+    );
+});
+
+test('media search matches filenames with umlauts', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $media = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        'filename' => "Vo\u{0308}gel-5.jpg", // V + ö (decomposed)
+    ]);
+
+    // Searching with composed umlaut should still find it
+    $response = $this->actingAs($user)->get('/media?search=Vögel');
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->where('media.data.0.id', $media->id)
+    );
+});

@@ -24,7 +24,7 @@ import { Head, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { GalleryHorizontal, GalleryVertical, Tags, UploadCloud } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { toast } from 'vue3-toastify';
+import { toast } from '@/components/ui/sonner';
 
 interface MediaPagination {
     data: MediaItem[];
@@ -42,6 +42,8 @@ interface Filters {
     file_type: 'all' | 'images' | 'pdfs';
     date_from: string | null;
     date_to: string | null;
+    sort_by: 'uploaded_at' | 'filename';
+    sort_dir: 'asc' | 'desc';
 }
 
 interface Props {
@@ -61,6 +63,8 @@ const filters = ref<Filters>({
     file_type: (props.filters?.file_type as Filters['file_type']) || 'all',
     date_from: (props.filters?.date_from as string | null) || null,
     date_to: (props.filters?.date_to as string | null) || null,
+    sort_by: (props.filters?.sort_by as Filters['sort_by']) || 'uploaded_at',
+    sort_dir: (props.filters?.sort_dir as Filters['sort_dir']) || 'desc',
 });
 
 const selectedIds = ref<number[]>([]);
@@ -76,6 +80,14 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const allSelected = computed(() => {
     return props.media.data.length > 0 && selectedIds.value.length === props.media.data.length;
+});
+
+const paginationInfo = computed(() => {
+    const from = props.media.meta?.from ?? (props.media.data.length ? 1 : 0);
+    const to = props.media.meta?.to ?? props.media.data.length;
+    const total = props.media.meta?.total ?? props.media.data.length;
+
+    return { from, to, total };
 });
 
 watch(viewMode, (mode) => {
@@ -109,6 +121,8 @@ const normalizedFilters = () => ({
     file_type: filters.value.file_type !== 'all' ? filters.value.file_type : undefined,
     date_from: filters.value.date_from || undefined,
     date_to: filters.value.date_to || undefined,
+    sort_by: filters.value.sort_by,
+    sort_dir: filters.value.sort_dir,
 });
 
 const applyFilters = () => {
@@ -133,6 +147,8 @@ const clearFilters = () => {
         file_type: 'all',
         date_from: null,
         date_to: null,
+        sort_by: 'uploaded_at',
+        sort_dir: 'desc',
     };
     applyFilters();
 };
@@ -153,6 +169,43 @@ const toggleAll = (checked: boolean) => {
     } else {
         selectedIds.value = [];
     }
+};
+
+const togglePageSelection = () => {
+    if (allSelected.value) {
+        selectedIds.value = [];
+    } else {
+        toggleAll(true);
+    }
+};
+
+const sortOption = computed({
+    get: () => `${filters.value.sort_by}:${filters.value.sort_dir}`,
+    set: (value: string) => {
+        const [sortBy, sortDir] = value.split(':');
+        filters.value.sort_by = (sortBy as Filters['sort_by']) || 'uploaded_at';
+        filters.value.sort_dir = (sortDir as Filters['sort_dir']) || 'desc';
+        applyFilters();
+    },
+});
+
+const sortBy = (column: Filters['sort_by']) => {
+    if (filters.value.sort_by === column) {
+        filters.value.sort_dir = filters.value.sort_dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        filters.value.sort_by = column;
+        filters.value.sort_dir = column === 'filename' ? 'asc' : 'desc';
+    }
+
+    applyFilters();
+};
+
+const sortIcon = (column: Filters['sort_by']) => {
+    if (filters.value.sort_by !== column) {
+        return '';
+    }
+
+    return filters.value.sort_dir === 'asc' ? '↑' : '↓';
 };
 
 const openPreview = (media: MediaItem) => {
@@ -264,6 +317,9 @@ const onUploaded = () => {
                             Manage Tags
                         </a>
                     </Button>
+                    <Button variant="ghost" size="sm" @click="togglePageSelection">
+                        {{ allSelected ? 'Clear selection' : 'Select page' }}
+                    </Button>
                     <div class="flex rounded-full border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                         <Button
                             size="icon"
@@ -316,13 +372,23 @@ const onUploaded = () => {
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
                         <thead class="bg-gray-50 dark:bg-gray-900/60">
                             <tr>
-                                <th class="px-4 py-3">
-                                    <Checkbox :checked="allSelected" @update:model-value="toggleAll($event === true)" />
+                                <th class="px-4 py-3 align-middle">
+                                    <Checkbox :model-value="allSelected" @update:model-value="toggleAll($event === true)" />
                                 </th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">File</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
+                                    @click="sortBy('filename')"
+                                >
+                                    File {{ sortIcon('filename') }}
+                                </th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Tags</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Size</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Uploaded</th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
+                                    @click="sortBy('uploaded_at')"
+                                >
+                                    Uploaded {{ sortIcon('uploaded_at') }}
+                                </th>
                                 <th class="px-4 py-3" />
                             </tr>
                         </thead>
@@ -340,9 +406,7 @@ const onUploaded = () => {
                 </div>
 
                 <div class="mt-6 flex items-center justify-between text-sm text-gray-500">
-                    <div>
-                        Showing {{ media.meta?.from }} to {{ media.meta?.to }} of {{ media.meta?.total }} results
-                    </div>
+                    <div>Showing {{ paginationInfo.from }} to {{ paginationInfo.to }} of {{ paginationInfo.total }} results</div>
                     <Pagination :links="media.links" />
                 </div>
             </div>

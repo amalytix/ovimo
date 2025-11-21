@@ -11,7 +11,7 @@ import type { MediaItem, MediaTag } from '@/types/media';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
-import { toast } from 'vue3-toastify';
+import { toast } from '@/components/ui/sonner';
 
 interface MediaProps extends MediaItem {
     uploaded_by?: {

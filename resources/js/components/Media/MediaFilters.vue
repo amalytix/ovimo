@@ -11,6 +11,8 @@ interface Filters {
     file_type: 'all' | 'images' | 'pdfs';
     date_from: string | null;
     date_to: string | null;
+    sort_by: 'uploaded_at' | 'filename';
+    sort_dir: 'asc' | 'desc';
 }
 
 const props = defineProps<{
@@ -63,6 +65,7 @@ const setFileType = (type: Filters['file_type']) => {
 
 const clearFilters = () => {
     localFilters.value = {
+        ...localFilters.value,
         search: '',
         tag_ids: [],
         file_type: 'all',

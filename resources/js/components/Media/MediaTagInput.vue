@@ -85,7 +85,7 @@ const createTag = () => {
                 variant="outline"
                 size="sm"
                 class="gap-2 border-dashed"
-                :class="internalSelection.includes(tag.id) ? 'bg-blue-600 text-white hover:bg-blue-700' : ''"
+                :class="internalSelection.includes(tag.id) ? 'bg-gray-900 text-white hover:bg-black dark:bg-white/90 dark:text-gray-900' : ''"
                 @click="toggle(tag.id)"
             >
                 <Badge

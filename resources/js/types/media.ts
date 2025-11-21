@@ -10,6 +10,7 @@ export interface MediaItem {
     file_size: number;
     created_at: string | null;
     temporary_url?: string;
+    download_url?: string;
     metadata?: Record<string, unknown> | null;
     tags: MediaTag[];
 }

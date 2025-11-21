@@ -92,13 +92,16 @@ class Media extends Model
         };
     }
 
-    public function getTemporaryUrl(int $expiryMinutes = 60): string
+    public function getTemporaryUrl(int $expiryMinutes = 60, bool $download = false): string
     {
         try {
-            return Storage::disk('s3')->temporaryUrl(
-                $this->s3_key,
-                now()->addMinutes($expiryMinutes)
-            );
+            $options = [];
+
+            if ($download) {
+                $options['ResponseContentDisposition'] = 'attachment; filename="'.$this->filename.'"';
+            }
+
+            return Storage::disk('s3')->temporaryUrl($this->s3_key, now()->addMinutes($expiryMinutes), $options);
         } catch (\Throwable) {
             $baseUrl = config('filesystems.disks.s3.url');
 

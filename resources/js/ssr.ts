@@ -1,8 +1,9 @@
 import { createInertiaApp } from '@inertiajs/vue3';
 import createServer from '@inertiajs/vue3/server';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { createSSRApp, DefineComponent, h } from 'vue';
+import { createSSRApp, DefineComponent, Fragment, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
+import { Toaster } from './components/ui/sonner';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -18,7 +19,13 @@ createServer(
                     import.meta.glob<DefineComponent>('./pages/**/*.vue'),
                 ),
             setup: ({ App, props, plugin }) =>
-                createSSRApp({ render: () => h(App, props) }).use(plugin),
+                createSSRApp({
+                    render: () =>
+                        h(Fragment, [
+                            h(App, props),
+                            h(Toaster),
+                        ]),
+                }).use(plugin),
         }),
     { cluster: true },
 );

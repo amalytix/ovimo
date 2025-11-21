@@ -7,7 +7,7 @@ import type { BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Pencil, Save, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
-import { toast } from 'vue3-toastify';
+import { toast } from '@/components/ui/sonner';
 
 interface Tag {
     id: number;

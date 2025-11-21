@@ -634,6 +634,48 @@ $team = auth()->user()->currentTeam;
 $team->sources()->where(...);
 ```
 
+### Media Gallery (Files + Tags)
+
+**Purpose**: Team-scoped upload/view/manage of images and PDFs with tagging, bulk actions, and S3-backed storage.
+
+**Server flow**
+- Routes: `routes/web.php` (`media.*`, `media-tags.*`).
+- Controller: `App\Http\Controllers\MediaController` lists, presigns uploads, stores metadata, updates tags/filename, bulk deletes/tags, shows details.
+- Tag CRUD: `MediaTagController`.
+- Policies: `MediaPolicy`, `MediaTagPolicy` enforce team isolation and auth.
+- Requests: `PresignMediaRequest`, `StoreMediaRequest`, `UpdateMediaRequest`, `BulkActionRequest`, plus tag store/update requests handle validation.
+- Model: `Media` belongs to `Team`, `uploader` (`User`), many `MediaTag` via pivot. `getTemporaryUrl()` builds signed read URLs.
+- Listing: query scoped to `current_team_id`, filters (search, tags, file type, date range), sort (filename or uploaded date), pagination (20). Search normalizes diacritics (NFD/NFC) so umlauts match.
+- Events: `MediaUploaded`, `MediaUpdated`, `MediaDeleted`, `MediaBulkDeleted` emit for activity/logging.
+
+**Frontend flow**
+- Page: `resources/js/Pages/Media/Index.vue` (grid/list, sort, filters, pagination).
+  - Filters component (`MediaFilters.vue`) syncs search, tag, type, date, sort.
+  - Tag picker (`MediaTagInput.vue`) supports inline tag creation, searchable chips, and high-contrast selection state.
+  - Bulk selection: “Select page” plus per-card/list checkboxes; bottom bulk-action bar stays visible while items remain selected.
+  - Sorting in list view via clickable table headers (File, Uploaded) with direction indicators.
+  - Upload dialog: `MediaUploader` calls `/media/presign`, then posts metadata to `/media`.
+  - Bulk actions: bulk delete, bulk add/remove tags.
+  - Preview modal for images/PDFs uses temporary URLs.
+- Detail page: `resources/js/Pages/Media/Show.vue` edits filename/tags and shows metadata.
+
+**Upload + S3 presign**
+- Presign endpoint: `MediaController@presign` creates a `Media` instance in memory to derive `s3_key` (`teams/{team_id}/...`) and returns a POST form (`PostObjectV4`) with ACL `private`, exact `Content-Type`, and `content-length-range`.
+- Upload flow: frontend posts the file directly to S3 with returned `url`/`fields`, then calls `/media` with `s3_key`, `stored_filename`, `filename`, `mime_type`, `file_size`. Validation ensures `s3_key` is under the team prefix.
+- Reads: `getTemporaryUrl()` signs GET access for previews (private bucket).
+
+**S3/IAM setup checklist (from-scratch deployment)**
+- Bucket: create private bucket (no public ACLs). Optional: enable versioning; enable default encryption (SSE-S3 or SSE-KMS).
+- Folder convention: objects live under `teams/{team_id}/...` (images/documents). No special folder config required beyond IAM permissions.
+- CORS (bucket): allow `POST`, `PUT`, `GET`, `HEAD` from your app origin; allow `Content-Type`, `acl`, `x-amz-*`; expose `ETag`. Keep `max-age` reasonable (e.g., 300).
+- IAM user/role for app:
+  - Permissions limited to the bucket: `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`, `s3:ListBucket` with prefix `teams/*`.
+  - If using `PostObjectV4`, also allow `s3:PutObject` with `s3:ListBucket` for the prefix and `s3:GetBucketLocation`.
+  - Deny public ACLs/policies (`s3:PutObjectAcl` not needed).
+- Credentials: set in `.env` for `filesystems.s3` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_BUCKET`). Ensure `filesystems.default` remains `s3`/`local` per environment, but media uses `s3` disk.
+- CloudFront (optional): if using a CDN domain, ensure `Storage::disk('s3')->url()` is configured with `AWS_URL`.
+- Size limits: presign enforces `content-length-range` using `file_size` from the request; adjust validation in `PresignMediaRequest` if needed.
+
 ### AI Integration
 
 Use `OpenAIService` for all AI operations, which automatically:
