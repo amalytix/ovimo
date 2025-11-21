@@ -319,7 +319,7 @@ watch(
                                 </a>
                             </td>
                             <td class="max-w-md px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                                <div class="line-clamp-3">{{ post.summary || 'No summary' }}</div>
+                                <div class="line-clamp-4">{{ post.summary || 'No summary' }}</div>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
                                 <span
