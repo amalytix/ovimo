@@ -217,24 +217,6 @@ const updateStatus = (status: string) => {
     router.patch(`/content-pieces/${props.contentPiece.id}/status`, { status }, { preserveScroll: true });
 };
 
-const formatStatus = (status: string) => {
-    const map: Record<string, string> = {
-        NOT_STARTED: 'Not Started',
-        DRAFT: 'Draft',
-        FINAL: 'Final',
-    };
-    return map[status] || status;
-};
-
-const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-        NOT_STARTED: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-        DRAFT: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-        FINAL: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-};
-
 // Combine available posts with already selected posts
 const allAvailablePosts = [...props.availablePosts];
 props.contentPiece.posts.forEach((post) => {

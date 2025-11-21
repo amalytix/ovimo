@@ -94,13 +94,6 @@ const switchView = (nextView: 'list' | 'month' | 'week') => {
     applyFilters();
 };
 
-const updateSelectedDate = (nextDate: string) => {
-    selectedDate.value = nextDate;
-    if (! showListView.value) {
-        applyFilters({ date: nextDate });
-    }
-};
-
 const deleteContentPiece = (id: number) => {
     if (confirm('Are you sure you want to delete this content piece?')) {
         router.delete(`/content-pieces/${id}`);

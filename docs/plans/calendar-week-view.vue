@@ -268,7 +268,7 @@
     </div>
   </template>
   
-  <script setup>
+  <script setup lang="ts">
   import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, EllipsisHorizontalIcon } from '@heroicons/vue/20/solid'
   import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue'
   </script>
