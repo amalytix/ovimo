@@ -306,7 +306,7 @@ watch(
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-                        <tr v-for="post in posts.data" :key="post.id" :class="{ 'opacity-50': post.is_hidden }">
+                        <tr v-for="post in posts.data" :key="post.id" :class="{ 'opacity-80': post.is_hidden }">
                             <td class="px-4 py-4">
                                 <Checkbox :model-value="selectedPosts.includes(post.id)" @update:model-value="(checked: boolean) => togglePostSelection(post.id, checked)" />
                             </td>
