@@ -2,7 +2,7 @@ import Image from '@tiptap/extension-image';
 import { mergeAttributes } from '@tiptap/core';
 
 export const ResizableImage = Image.extend({
-    name: 'resizableImage',
+    name: 'image',
 
     addAttributes() {
         return {
@@ -101,7 +101,7 @@ export const ResizableImage = Image.extend({
                 if (typeof getPos === 'function' && editor.isEditable) {
                     editor
                         .chain()
-                        .updateAttributes('resizableImage', {
+                        .updateAttributes('image', {
                             width,
                             height,
                         })
@@ -117,7 +117,7 @@ export const ResizableImage = Image.extend({
             return {
                 dom: container,
                 update: (updatedNode) => {
-                    if (updatedNode.type.name !== 'resizableImage') {
+                    if (updatedNode.type.name !== 'image') {
                         return false;
                     }
 
