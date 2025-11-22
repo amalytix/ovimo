@@ -131,3 +131,34 @@ it('includes published_at fields in the inertia payload', function () {
         ->where('contentPieces.data.0.published_at_human', $scheduled->published_at?->diffForHumans())
     );
 });
+
+it('sorts by published_at with scheduled items first when sorting by publish date', function () {
+    [$user, $team] = createUserWithTeam();
+    $prompt = Prompt::factory()->create(['team_id' => $team->id]);
+    Carbon::setTestNow('2025-01-01 09:00:00');
+
+    $unscheduled = ContentPiece::factory()->for($team)->create([
+        'prompt_id' => $prompt->id,
+        'published_at' => null,
+    ]);
+
+    $scheduledSoon = ContentPiece::factory()->for($team)->scheduled()->create([
+        'prompt_id' => $prompt->id,
+        'published_at' => Carbon::now()->addDays(1),
+    ]);
+
+    $scheduledLater = ContentPiece::factory()->for($team)->scheduled()->create([
+        'prompt_id' => $prompt->id,
+        'published_at' => Carbon::now()->addDays(5),
+    ]);
+
+    $response = $this->actingAs($user)->get('/content-pieces?sort_by=published_at&sort_direction=asc');
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('contentPieces.data.0.id', $scheduledSoon->id)
+        ->where('contentPieces.data.1.id', $scheduledLater->id)
+        ->where('contentPieces.data.2.id', $unscheduled->id)
+    );
+
+    Carbon::setTestNow();
+});

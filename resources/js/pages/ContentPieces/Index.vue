@@ -151,6 +151,17 @@ const formatPublishDate = (publishedAt: string | null) => {
     }).format(date);
 };
 
+const isPublishDateInPast = (publishedAt: string | null) => {
+    if (! publishedAt) {
+        return false;
+    }
+
+    const date = new Date(publishedAt);
+    const now = new Date();
+
+    return date < now;
+};
+
 const togglePublishSort = () => {
     sortBy.value = 'published_at';
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
@@ -288,7 +299,10 @@ const togglePublishSort = () => {
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
                                     <div v-if="piece.published_at" class="space-y-1">
-                                        <div class="text-sm text-gray-900 dark:text-white">
+                                        <div
+                                            class="text-sm text-gray-900 dark:text-white"
+                                            :class="{ 'line-through opacity-60': isPublishDateInPast(piece.published_at) }"
+                                        >
                                             {{ formatPublishDate(piece.published_at) }}
                                         </div>
                                         <div class="text-xs text-gray-500 dark:text-gray-400">

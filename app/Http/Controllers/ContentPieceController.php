@@ -72,7 +72,7 @@ class ContentPieceController extends Controller
 
         if ($sortBy === 'published_at') {
             $query
-                ->orderByRaw('published_at IS NOT NULL')
+                ->orderByRaw('published_at IS NULL')
                 ->orderBy('published_at', $sortDirection)
                 ->orderByDesc('created_at');
         } else {
