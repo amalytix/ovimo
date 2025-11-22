@@ -222,3 +222,43 @@ test('media index exposes pagination meta for selection UI', function () {
         expect(count($data))->toBe(20);
     });
 });
+
+test('media view endpoint redirects to signed url', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $media = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        's3_key' => "teams/{$team->id}/images/example.jpg",
+        'filename' => 'example.jpg',
+    ]);
+
+    Storage::partialMock()
+        ->shouldReceive('disk')
+        ->with('s3')
+        ->andReturnSelf();
+
+    Storage::shouldReceive('temporaryUrl')
+        ->once()
+        ->with($media->s3_key, \Mockery::type(\DateTimeInterface::class), [])
+        ->andReturn('https://signed-url.test/example.jpg');
+
+    $response = $this->actingAs($user)->get("/media/{$media->id}/view");
+
+    $response->assertRedirect('https://signed-url.test/example.jpg');
+});
+
+test('media view endpoint respects team authorization', function () {
+    [$user, $team] = createUserWithTeam();
+    [$otherUser, $otherTeam] = createUserWithTeam();
+
+    $media = Media::factory()->create([
+        'team_id' => $otherTeam->id,
+        'uploaded_by' => $otherUser->id,
+        's3_key' => "teams/{$otherTeam->id}/images/example.jpg",
+    ]);
+
+    $response = $this->actingAs($user)->get("/media/{$media->id}/view");
+
+    $response->assertForbidden();
+});

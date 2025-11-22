@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
-import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import StarterKit from '@tiptap/starter-kit';
@@ -9,6 +8,7 @@ import { Markdown } from '@tiptap/markdown';
 import Typography from '@tiptap/extension-typography';
 import { Bold, Code, Heading1, Heading2, Heading3, Image as ImageIcon, Italic, Link2, ListOrdered, List, Quote, Strikethrough, WrapText, Type } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { ResizableImage } from './ResizableImage';
 
 const props = defineProps<{
     modelValue: string;
@@ -38,7 +38,13 @@ const editor = useEditor({
             autolink: true,
             linkOnPaste: true,
         }),
-        Image,
+        ResizableImage.configure({
+            inline: false,
+            allowBase64: false,
+            HTMLAttributes: {
+                class: 'tiptap-image',
+            },
+        }),
         Placeholder.configure({
             placeholder: props.placeholder || 'Start writing...',
         }),
@@ -389,5 +395,59 @@ onBeforeUnmount(() => {
 :deep(.tiptap:focus-visible) {
     outline: none;
     box-shadow: none;
+}
+
+:deep(.tiptap img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+    cursor: pointer;
+}
+
+:deep(.tiptap img.ProseMirror-selectednode) {
+    outline: 2px solid rgb(37 99 235);
+    outline-offset: 2px;
+}
+
+:deep(.tiptap img:hover) {
+    opacity: 0.9;
+}
+
+:deep(.image-resizer) {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+:deep(.image-resizer.ProseMirror-selectednode) {
+    outline: 2px solid rgb(37 99 235);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+}
+
+:deep(.resize-handle) {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    width: 12px;
+    height: 12px;
+    background: rgb(37 99 235);
+    border: 2px solid white;
+    border-radius: 50%;
+    cursor: nwse-resize;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+:deep(.image-resizer:hover .resize-handle),
+:deep(.image-resizer.ProseMirror-selectednode .resize-handle) {
+    opacity: 1;
+}
+
+:deep(.image-resizer img) {
+    margin: 0;
+    display: block;
 }
 </style>

@@ -12,6 +12,7 @@ import type { MediaItem, MediaTag } from '@/types/media';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { status } from '@/routes/content-pieces';
+import { view as mediaView } from '@/routes/media';
 
 type Prompt = {
     id: number;
@@ -199,10 +200,8 @@ const applyMediaSelection = (items: MediaItem[]) => {
     if (pickerMode.value === 'insert') {
         const first = items[0];
         if (first) {
-            const src = first.temporary_url || first.download_url || '';
-            if (src) {
-                editingTabRef.value?.insertImage(src);
-            }
+            const src = mediaView.url(first.id);
+            editingTabRef.value?.insertImage(src);
         }
         imagePickerOpen.value = false;
         return;

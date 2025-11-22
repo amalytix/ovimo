@@ -357,4 +357,13 @@ class MediaController extends Controller
             'download_url' => route('media.download', $media),
         ]);
     }
+
+    public function view(Request $request, Media $media): RedirectResponse
+    {
+        $this->authorize('view', $media);
+
+        $signedUrl = $media->getTemporaryUrl();
+
+        return redirect()->away($signedUrl);
+    }
 }
