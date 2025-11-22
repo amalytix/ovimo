@@ -102,7 +102,7 @@ class MediaController extends Controller
                     'name' => $tag->name,
                 ]),
                 'temporary_url' => $media->getTemporaryUrl(),
-                'download_url' => $media->getTemporaryUrl(download: true),
+                'download_url' => route('media.download', $media),
             ]);
 
         return Inertia::render('Media/Index', [
@@ -203,7 +203,7 @@ class MediaController extends Controller
                 'file_size' => $media->file_size,
                 'created_at' => $media->created_at?->toDateTimeString(),
                 'temporary_url' => $media->getTemporaryUrl(),
-                'download_url' => $media->getTemporaryUrl(download: true),
+                'download_url' => route('media.download', $media),
                 'tags' => [],
             ],
         ], 201);
@@ -225,7 +225,7 @@ class MediaController extends Controller
                 'created_at' => $media->created_at?->toDateTimeString(),
                 'metadata' => $media->metadata,
                 'temporary_url' => $media->getTemporaryUrl(),
-                'download_url' => $media->getTemporaryUrl(download: true),
+                'download_url' => route('media.download', $media),
                 'tags' => $media->tags->map(fn (MediaTag $tag) => [
                     'id' => $tag->id,
                     'name' => $tag->name,
@@ -235,6 +235,15 @@ class MediaController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ]);
+    }
+
+    public function download(Request $request, Media $media): RedirectResponse
+    {
+        $this->authorize('view', $media);
+
+        $signedUrl = $media->getTemporaryUrl(download: true);
+
+        return redirect()->away($signedUrl);
     }
 
     public function update(UpdateMediaRequest $request, Media $media): RedirectResponse|JsonResponse

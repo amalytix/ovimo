@@ -141,3 +141,30 @@ test('media search matches filenames with umlauts', function () {
         ->where('media.data.0.id', $media->id)
     );
 });
+
+test('media download endpoint redirects to signed url', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $media = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        's3_key' => "teams/{$team->id}/images/example.jpg",
+        'filename' => 'example.jpg',
+    ]);
+
+    Storage::partialMock()
+        ->shouldReceive('disk')
+        ->with('s3')
+        ->andReturnSelf();
+
+    Storage::shouldReceive('temporaryUrl')
+        ->once()
+        ->with($media->s3_key, \Mockery::type(\DateTimeInterface::class), \Mockery::subset([
+            'ResponseContentDisposition' => 'attachment; filename="example.jpg"',
+        ]))
+        ->andReturn('https://signed-url.test/example.jpg');
+
+    $response = $this->actingAs($user)->get("/media/{$media->id}/download");
+
+    $response->assertRedirect('https://signed-url.test/example.jpg');
+});
