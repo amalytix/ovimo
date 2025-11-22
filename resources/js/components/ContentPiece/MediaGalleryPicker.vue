@@ -83,7 +83,7 @@ const handleClose = () => emit('update:open', false);
 
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
-        <DialogContent class="max-w-[80vw]">
+        <DialogContent class="w-[90vw] max-w-[90vw] sm:max-w-[90vw]">
             <DialogHeader>
                 <DialogTitle>Select Media</DialogTitle>
             </DialogHeader>
@@ -92,7 +92,7 @@ const handleClose = () => emit('update:open', false);
                 <MediaFilters :filters="filters" :tags="tags" @change="(value) => Object.assign(filters, value)" @clear="resetFilters" />
 
                 <div class="flex-1 overflow-y-auto pr-1">
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-4 lg:grid-cols-8">
                         <MediaCard
                             v-for="item in paginatedMedia"
                             :key="item.id"
