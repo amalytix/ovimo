@@ -63,8 +63,7 @@ class MediaController extends Controller
 
             $query->where(function (Builder $builder) use ($searchTerms): void {
                 foreach ($searchTerms as $term) {
-                    $builder->orWhere('filename', 'like', '%'.$term.'%')
-                        ->orWhere('stored_filename', 'like', '%'.$term.'%');
+                    $builder->orWhere('filename', 'like', '%'.$term.'%');
                 }
             });
         }
@@ -347,5 +346,24 @@ class MediaController extends Controller
         }
 
         return response()->json(['message' => 'Tags updated successfully.']);
+    }
+
+    public function download(Request $request, Media $media): RedirectResponse
+    {
+        $this->authorize('view', $media);
+
+        $signedUrl = $media->getTemporaryUrl(download: true);
+
+        return redirect()->away($signedUrl);
+    }
+
+    public function temporary(Request $request, Media $media): JsonResponse
+    {
+        $this->authorize('view', $media);
+
+        return response()->json([
+            'temporary_url' => $media->getTemporaryUrl(),
+            'download_url' => route('media.download', $media),
+        ]);
     }
 }
