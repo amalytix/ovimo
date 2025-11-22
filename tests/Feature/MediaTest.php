@@ -186,3 +186,39 @@ test('search does not match stored filename', function () {
         ->where('media.data', [])
     );
 });
+
+test('media index includes signed preview and download urls', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $media = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        's3_key' => "teams/{$team->id}/images/example.jpg",
+    ]);
+
+    $response = $this->actingAs($user)->get('/media');
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->whereNot('media.data.0.temporary_url', null)
+        ->where('media.data.0.download_url', route('media.download', $media))
+    );
+});
+
+test('media index exposes pagination meta for selection UI', function () {
+    [$user, $team] = createUserWithTeam();
+
+    Media::factory()->count(25)->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+    ]);
+
+    $response = $this->actingAs($user)->get('/media');
+
+    $response->assertOk()->assertInertia(function ($page) {
+        $page->has('media.links');
+
+        $data = $page->toArray()['props']['media']['data'];
+
+        expect(count($data))->toBe(20);
+    });
+});

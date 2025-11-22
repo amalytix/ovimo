@@ -52,3 +52,19 @@ test('bulk tag add attaches tags to all selected media', function () {
         expect($item->fresh()->tags()->pluck('media_tags.id')->all())->toEqual([$tag->id]);
     }
 });
+
+test('newly created tag is immediately available for bulk tagging', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $tagResponse = $this->actingAs($user)->postJson('/media-tags', [
+        'name' => 'InstantTag',
+    ]);
+
+    $tagResponse->assertCreated();
+
+    $index = $this->actingAs($user)->get('/media');
+
+    $index->assertOk()->assertInertia(fn ($page) => $page
+        ->where('tags.0.name', 'InstantTag')
+    );
+});
