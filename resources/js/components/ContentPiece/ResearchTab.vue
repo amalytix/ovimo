@@ -142,7 +142,7 @@ const togglePost = (postId: number, checked: boolean) => {
                     >
                         {{ generationStatus.status || 'Idle' }}
                     </span>
-                    <Button variant="outline" size="sm" @click="emit('copy-to-editor')">Copy to editing tab</Button>
+                    <Button variant="secondary" size="sm" @click="emit('copy-to-editor')">Copy to editing tab</Button>
                 </div>
             </div>
             <textarea

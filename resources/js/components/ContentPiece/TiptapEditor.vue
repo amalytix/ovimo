@@ -341,17 +341,43 @@ onBeforeUnmount(() => {
 }
 
 :deep(.tiptap pre) {
-    background: rgb(15 23 42);
-    color: white;
+    background: rgb(30 41 59);
+    color: rgb(226 232 240);
     padding: 0.75rem 1rem;
     border-radius: 0.5rem;
     overflow-x: auto;
+    border: 1px solid rgb(51 65 85);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+:deep(.dark .tiptap pre) {
+    background: rgb(15 23 42);
+    color: rgb(203 213 225);
+    border-color: rgb(30 41 59);
+}
+
+:deep(.tiptap pre code) {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
 }
 
 :deep(.tiptap code) {
     background: rgb(241 245 249);
+    color: rgb(51 65 85);
     padding: 0.2rem 0.4rem;
     border-radius: 0.3rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875em;
+}
+
+:deep(.dark .tiptap code) {
+    background: rgb(30 41 59);
+    color: rgb(203 213 225);
 }
 
 :deep(.tiptap a) {
