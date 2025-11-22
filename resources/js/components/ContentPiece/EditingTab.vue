@@ -55,7 +55,10 @@ defineExpose({
 
         <div class="space-y-3">
             <div class="flex items-center justify-between">
-                <h4 class="text-sm font-semibold">Attached media</h4>
+                <div class="flex items-center gap-3">
+                    <h4 class="text-sm font-semibold">Attached media</h4>
+                    <Button size="sm" variant="outline" @click="emit('open-media-picker')">Add Media</Button>
+                </div>
                 <span class="text-xs text-muted-foreground">{{ selectedMedia.length }} files</span>
             </div>
             <div v-if="selectedMedia.length" class="grid grid-cols-1 gap-3 md:grid-cols-3">
