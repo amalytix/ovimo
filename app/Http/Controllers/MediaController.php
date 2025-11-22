@@ -32,8 +32,11 @@ class MediaController extends Controller
         $user = $request->user();
         $teamId = $user->current_team_id;
 
+        $rawSearch = trim($request->string('search')->toString());
+        $search = mb_substr($rawSearch, 0, 120);
+
         $filters = [
-            'search' => $request->string('search')->toString(),
+            'search' => $search,
             'tag_ids' => array_map('intval', (array) $request->input('tag_ids', [])),
             'file_type' => $request->get('file_type', 'all'),
             'date_from' => $request->get('date_from'),
@@ -53,11 +56,10 @@ class MediaController extends Controller
             ->with(['tags', 'uploader']);
 
         if ($filters['search']) {
-            $searchTerms = array_unique(array_filter([
-                $filters['search'],
-                Normalizer::normalize($filters['search'], Normalizer::FORM_D),
-                Normalizer::normalize($filters['search'], Normalizer::FORM_C),
-            ]));
+            $normalized = Normalizer::normalize($filters['search'], Normalizer::FORM_C) ?: $filters['search'];
+            $decomposed = Normalizer::normalize($filters['search'], Normalizer::FORM_D) ?: $normalized;
+
+            $searchTerms = array_unique(array_filter([$normalized, $decomposed]));
 
             $query->where(function (Builder $builder) use ($searchTerms): void {
                 foreach ($searchTerms as $term) {

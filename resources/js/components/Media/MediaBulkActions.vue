@@ -5,7 +5,7 @@ defineProps<{
     count: number;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     (event: 'delete'): void;
     (event: 'add-tags'): void;
     (event: 'remove-tags'): void;
