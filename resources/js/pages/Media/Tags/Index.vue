@@ -19,7 +19,7 @@ interface Props {
     tags: Tag[];
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Media', href: '/media' },

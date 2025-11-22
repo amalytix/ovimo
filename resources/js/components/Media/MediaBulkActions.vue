@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 
-const props = defineProps<{
+defineProps<{
     count: number;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
     (event: 'delete'): void;
     (event: 'add-tags'): void;
     (event: 'remove-tags'): void;

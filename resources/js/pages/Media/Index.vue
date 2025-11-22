@@ -179,16 +179,6 @@ const togglePageSelection = () => {
     }
 };
 
-const sortOption = computed({
-    get: () => `${filters.value.sort_by}:${filters.value.sort_dir}`,
-    set: (value: string) => {
-        const [sortBy, sortDir] = value.split(':');
-        filters.value.sort_by = (sortBy as Filters['sort_by']) || 'uploaded_at';
-        filters.value.sort_dir = (sortDir as Filters['sort_dir']) || 'desc';
-        applyFilters();
-    },
-});
-
 const sortBy = (column: Filters['sort_by']) => {
     if (filters.value.sort_by === column) {
         filters.value.sort_dir = filters.value.sort_dir === 'asc' ? 'desc' : 'asc';
