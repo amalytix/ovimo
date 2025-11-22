@@ -168,3 +168,21 @@ test('media download endpoint redirects to signed url', function () {
 
     $response->assertRedirect('https://signed-url.test/example.jpg');
 });
+
+test('search does not match stored filename', function () {
+    [$user, $team] = createUserWithTeam();
+
+    // stored filename contains "19", user-facing filename does not
+    Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+        'filename' => '21.jpg',
+        'stored_filename' => 'uuid-19-random.jpg',
+    ]);
+
+    $response = $this->actingAs($user)->get('/media?search=19');
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->where('media.data', [])
+    );
+});

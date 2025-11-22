@@ -8,8 +8,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { MediaItem } from '@/types/media';
-import { computed } from 'vue';
-import { Download } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
+import { Download, RefreshCw } from 'lucide-vue-next';
+import axios from 'axios';
 
 const props = defineProps<{
     open: boolean;
@@ -21,6 +22,36 @@ const emit = defineEmits<{
 }>();
 
 const isImage = computed(() => props.media?.mime_type.startsWith('image/'));
+const tempUrl = ref<string | null>(props.media?.temporary_url ?? null);
+const isRefreshing = ref(false);
+const loadError = ref(false);
+
+watch(
+    () => props.media,
+    (value) => {
+        tempUrl.value = value?.temporary_url ?? null;
+        loadError.value = false;
+    }
+);
+
+const refreshUrl = async () => {
+    if (!props.media || isRefreshing.value) {
+        return;
+    }
+
+    isRefreshing.value = true;
+    loadError.value = false;
+
+    try {
+        const response = await axios.get(`/media/${props.media.id}/temporary`);
+        tempUrl.value = response.data?.temporary_url ?? null;
+    } catch (error) {
+        console.error(error);
+        loadError.value = true;
+    } finally {
+        isRefreshing.value = false;
+    }
+};
 </script>
 
 <template>
@@ -36,8 +67,8 @@ const isImage = computed(() => props.media?.mime_type.startsWith('image/'));
                         </DialogDescription>
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
-                        <Button v-if="media?.download_url || media?.temporary_url" size="sm" variant="outline" as-child>
-                            <a :href="media?.download_url || media?.temporary_url" download class="inline-flex items-center gap-2">
+                        <Button v-if="media?.download_url || tempUrl" size="sm" variant="outline" as-child>
+                            <a :href="media?.download_url || tempUrl" download class="inline-flex items-center gap-2">
                                 <Download class="h-4 w-4" />
                                 Download
                             </a>
@@ -48,16 +79,24 @@ const isImage = computed(() => props.media?.mime_type.startsWith('image/'));
 
             <div v-if="media" class="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
                 <img
-                    v-if="isImage && media.temporary_url"
-                    :src="media.temporary_url"
+                    v-if="isImage && tempUrl"
+                    :src="tempUrl"
                     :alt="media.filename"
                     class="mx-auto max-h-[70vh] w-full rounded-lg object-contain"
+                    @error="loadError = true"
                 />
                 <div v-else class="flex h-[70vh] items-center justify-center">
                     <object v-if="media.temporary_url" :data="media.temporary_url" type="application/pdf" class="h-full w-full">
                         <p class="text-center text-sm text-gray-500">Unable to preview this file.</p>
                     </object>
-                    <p v-else class="text-sm text-gray-500">Preview unavailable.</p>
+                    <div v-else class="flex flex-col items-center gap-2 text-sm text-gray-500">
+                        <p>Preview unavailable.</p>
+                        <Button size="sm" variant="outline" class="gap-2" :disabled="isRefreshing" @click="refreshUrl">
+                            <RefreshCw class="h-4 w-4" />
+                            {{ isRefreshing ? 'Refreshing...' : 'Refresh link' }}
+                        </Button>
+                        <p v-if="loadError" class="text-xs text-red-500">Unable to load preview.</p>
+                    </div>
                 </div>
             </div>
         </DialogContent>

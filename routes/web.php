@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('media/presign', [MediaController::class, 'presign'])->name('media.presign');
     Route::post('media', [MediaController::class, 'store'])->name('media.store');
     Route::get('media/{media}/download', [MediaController::class, 'download'])->name('media.download');
+    Route::get('media/{media}/temporary', [MediaController::class, 'temporary'])->name('media.temporary');
     Route::get('media/{media}', [MediaController::class, 'show'])->name('media.show');
     Route::patch('media/{media}', [MediaController::class, 'update'])->name('media.update');
     Route::delete('media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');

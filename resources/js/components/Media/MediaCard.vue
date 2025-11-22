@@ -2,8 +2,9 @@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { MediaItem } from '@/types/media';
-import { Download, FileText, Image as ImageIcon } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Download, FileText, Image as ImageIcon, RefreshCw } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
+import axios from 'axios';
 
 const props = defineProps<{
     media: MediaItem;
@@ -16,6 +17,37 @@ const emit = defineEmits<{
 }>();
 
 const isImage = computed(() => props.media.mime_type.startsWith('image/'));
+
+const tempUrl = ref(props.media.temporary_url);
+const isRefreshing = ref(false);
+const loadError = ref(false);
+
+watch(
+    () => props.media.temporary_url,
+    (value) => {
+        tempUrl.value = value;
+        loadError.value = false;
+    }
+);
+
+const refreshUrl = async () => {
+    if (isRefreshing.value) {
+        return;
+    }
+
+    isRefreshing.value = true;
+    loadError.value = false;
+
+    try {
+        const response = await axios.get(`/media/${props.media.id}/temporary`);
+        tempUrl.value = response.data?.temporary_url ?? null;
+    } catch (error) {
+        console.error(error);
+        loadError.value = true;
+    } finally {
+        isRefreshing.value = false;
+    }
+};
 
 const formattedSize = computed(() => {
     const size = props.media.file_size;
@@ -44,13 +76,26 @@ const createdDisplay = computed(() => {
         <div class="relative w-full pb-[100%]">
             <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
                 <img
-                    v-if="isImage && media.temporary_url"
-                    :src="media.temporary_url"
+                    v-if="isImage && tempUrl"
+                    :src="tempUrl"
                     :alt="media.filename"
                     class="h-full w-full object-cover"
+                    @error="loadError = true"
                 />
                 <div v-else class="flex h-full items-center justify-center text-gray-500">
-                    <FileText class="h-10 w-10" />
+                    <div v-if="isImage" class="flex flex-col items-center gap-2 text-xs text-gray-500">
+                        <RefreshCw class="h-6 w-6" />
+                        <button
+                            type="button"
+                            class="rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+                            :disabled="isRefreshing"
+                            @click.stop="refreshUrl"
+                        >
+                            {{ isRefreshing ? 'Refreshing...' : 'Refresh link' }}
+                        </button>
+                        <span v-if="loadError" class="text-[11px] text-red-500">Unable to load preview.</span>
+                    </div>
+                    <FileText v-else class="h-10 w-10" />
                 </div>
                 <div class="absolute left-3 top-3 z-10" @click.stop>
                     <Checkbox :model-value="selected" @update:model-value="emit('toggle', $event === true)" />

@@ -238,15 +238,6 @@ class MediaController extends Controller
         ]);
     }
 
-    public function download(Request $request, Media $media): RedirectResponse
-    {
-        $this->authorize('view', $media);
-
-        $signedUrl = $media->getTemporaryUrl(download: true);
-
-        return redirect()->away($signedUrl);
-    }
-
     public function update(UpdateMediaRequest $request, Media $media): RedirectResponse|JsonResponse
     {
         $this->authorize('update', $media);

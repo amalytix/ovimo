@@ -25,6 +25,7 @@ import axios from 'axios';
 import { GalleryHorizontal, GalleryVertical, Tags, UploadCloud } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { toast } from '@/components/ui/sonner';
+import { useMediaFilters, type MediaFilters as MediaFiltersState } from '@/composables/useMediaFilters';
 
 interface MediaPagination {
     data: MediaItem[];
@@ -36,19 +37,9 @@ interface MediaPagination {
     };
 }
 
-interface Filters {
-    search: string;
-    tag_ids: number[];
-    file_type: 'all' | 'images' | 'pdfs';
-    date_from: string | null;
-    date_to: string | null;
-    sort_by: 'uploaded_at' | 'filename';
-    sort_dir: 'asc' | 'desc';
-}
-
 interface Props {
     media: MediaPagination;
-    filters: Partial<Filters>;
+    filters: Partial<MediaFiltersState>;
     tags: MediaTag[];
 }
 
@@ -57,15 +48,7 @@ const props = defineProps<Props>();
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Media', href: '/media' }];
 
 const availableTags = ref<MediaTag[]>([...props.tags]);
-const filters = ref<Filters>({
-    search: props.filters?.search || '',
-    tag_ids: props.filters?.tag_ids || [],
-    file_type: (props.filters?.file_type as Filters['file_type']) || 'all',
-    date_from: (props.filters?.date_from as string | null) || null,
-    date_to: (props.filters?.date_to as string | null) || null,
-    sort_by: (props.filters?.sort_by as Filters['sort_by']) || 'uploaded_at',
-    sort_dir: (props.filters?.sort_dir as Filters['sort_dir']) || 'desc',
-});
+const { filters, normalizedFilters, resetFilters } = useMediaFilters(props.filters);
 
 const selectedIds = ref<number[]>([]);
 const viewMode = ref<'gallery' | 'list'>(localStorage.getItem('media.viewMode') === 'list' ? 'list' : 'gallery');
@@ -115,18 +98,8 @@ onBeforeUnmount(() => {
     }
 });
 
-const normalizedFilters = () => ({
-    search: filters.value.search || undefined,
-    tag_ids: filters.value.tag_ids && filters.value.tag_ids.length > 0 ? filters.value.tag_ids : undefined,
-    file_type: filters.value.file_type !== 'all' ? filters.value.file_type : undefined,
-    date_from: filters.value.date_from || undefined,
-    date_to: filters.value.date_to || undefined,
-    sort_by: filters.value.sort_by,
-    sort_dir: filters.value.sort_dir,
-});
-
 const applyFilters = () => {
-    router.get('/media', normalizedFilters(), {
+    router.get('/media', normalizedFilters.value, {
         preserveScroll: true,
         preserveState: true,
         replace: true,
@@ -140,16 +113,13 @@ const scheduleFilters = () => {
     debounceTimer = setTimeout(applyFilters, 350);
 };
 
+const applyFilterChanges = (nextFilters: MediaFiltersState) => {
+    Object.assign(filters, nextFilters);
+    scheduleFilters();
+};
+
 const clearFilters = () => {
-    filters.value = {
-        search: '',
-        tag_ids: [],
-        file_type: 'all',
-        date_from: null,
-        date_to: null,
-        sort_by: 'uploaded_at',
-        sort_dir: 'desc',
-    };
+    resetFilters();
     applyFilters();
 };
 
@@ -179,23 +149,23 @@ const togglePageSelection = () => {
     }
 };
 
-const sortBy = (column: Filters['sort_by']) => {
-    if (filters.value.sort_by === column) {
-        filters.value.sort_dir = filters.value.sort_dir === 'asc' ? 'desc' : 'asc';
+const sortBy = (column: MediaFiltersState['sort_by']) => {
+    if (filters.sort_by === column) {
+        filters.sort_dir = filters.sort_dir === 'asc' ? 'desc' : 'asc';
     } else {
-        filters.value.sort_by = column;
-        filters.value.sort_dir = column === 'filename' ? 'asc' : 'desc';
+        filters.sort_by = column;
+        filters.sort_dir = column === 'filename' ? 'asc' : 'desc';
     }
 
     applyFilters();
 };
 
-const sortIcon = (column: Filters['sort_by']) => {
-    if (filters.value.sort_by !== column) {
+const sortIcon = (column: MediaFiltersState['sort_by']) => {
+    if (filters.sort_by !== column) {
         return '';
     }
 
-    return filters.value.sort_dir === 'asc' ? '↑' : '↓';
+    return filters.sort_dir === 'asc' ? '↑' : '↓';
 };
 
 const openPreview = (media: MediaItem) => {
@@ -335,7 +305,7 @@ const onUploaded = () => {
                 </div>
             </div>
 
-            <MediaFilters v-model="filters" :tags="availableTags" @clear="clearFilters" @change="scheduleFilters" />
+            <MediaFilters :filters="filters" :tags="availableTags" @clear="clearFilters" @change="applyFilterChanges" />
 
             <div v-if="media.data.length === 0" class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 p-10 text-center dark:border-gray-800">
                 <p class="text-lg font-semibold text-gray-800 dark:text-gray-100">No media yet</p>

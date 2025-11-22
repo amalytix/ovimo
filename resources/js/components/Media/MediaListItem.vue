@@ -3,8 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { MediaItem } from '@/types/media';
-import { Download, Eye, FileText } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Download, Eye, FileText, RefreshCw } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
+import axios from 'axios';
 
 const props = defineProps<{
     media: MediaItem;
@@ -17,6 +18,33 @@ const emit = defineEmits<{
 }>();
 
 const isImage = computed(() => props.media.mime_type.startsWith('image/'));
+
+const tempUrl = ref(props.media.temporary_url ?? null);
+const isRefreshing = ref(false);
+
+watch(
+    () => props.media.temporary_url,
+    (value) => {
+        tempUrl.value = value ?? null;
+    }
+);
+
+const refreshUrl = async () => {
+    if (isRefreshing.value) {
+        return;
+    }
+
+    isRefreshing.value = true;
+
+    try {
+        const response = await axios.get(`/media/${props.media.id}/temporary`);
+        tempUrl.value = response.data?.temporary_url ?? null;
+    } catch (error) {
+        console.error(error);
+    } finally {
+        isRefreshing.value = false;
+    }
+};
 
 const formattedSize = computed(() => {
     const size = props.media.file_size;
@@ -43,17 +71,18 @@ const createdDisplay = computed(() => {
             <Checkbox :model-value="selected" @update:model-value="emit('toggle', $event === true)" />
         </td>
         <td class="px-4 py-3">
-            <div class="flex items-center gap-3">
-                <button
-                    type="button"
-                    class="flex h-12 w-16 items-center justify-center overflow-hidden rounded-md bg-gray-50 transition hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-gray-800"
-                    @click="emit('preview')"
-                >
+                <div class="flex items-center gap-3">
+                    <button
+                        type="button"
+                        class="flex h-12 w-16 items-center justify-center overflow-hidden rounded-md bg-gray-50 transition hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-gray-800"
+                        @click="emit('preview')"
+                    >
                     <img
-                        v-if="isImage && media.temporary_url"
-                        :src="media.temporary_url"
+                        v-if="isImage && tempUrl"
+                        :src="tempUrl"
                         :alt="media.filename"
                         class="h-full w-full object-cover"
+                        @error="refreshUrl"
                     />
                     <FileText v-else class="h-6 w-6 text-gray-500" />
                 </button>
@@ -84,13 +113,24 @@ const createdDisplay = computed(() => {
                     View
                 </Button>
                 <Button
-                    v-if="media.download_url || media.temporary_url"
+                    v-if="isImage && !tempUrl"
+                    variant="outline"
+                    size="sm"
+                    class="flex items-center gap-2"
+                    :disabled="isRefreshing"
+                    @click="refreshUrl"
+                >
+                    <RefreshCw class="h-4 w-4" />
+                    {{ isRefreshing ? 'Refreshing…' : 'Refresh link' }}
+                </Button>
+                <Button
+                    v-if="media.download_url || tempUrl"
                     variant="outline"
                     size="sm"
                     class="flex items-center gap-2"
                     as-child
                 >
-                    <a :href="media.download_url || media.temporary_url" download>
+                    <a :href="media.download_url || tempUrl" download>
                         <Download class="h-4 w-4" />
                         Download
                     </a>
