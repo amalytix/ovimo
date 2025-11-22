@@ -3,11 +3,10 @@ import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 type Prompt = {
     id: number;
@@ -40,19 +39,6 @@ const emit = defineEmits<{
     (event: 'generate'): void;
 }>();
 
-const postSearch = ref('');
-
-const filteredPosts = computed(() => {
-    if (!postSearch.value) {
-        return props.posts;
-    }
-    const q = postSearch.value.toLowerCase();
-    return props.posts.filter((post) => {
-        const title = post.external_title || post.internal_title || post.uri;
-        return title.toLowerCase().includes(q) || (post.summary || '').toLowerCase().includes(q);
-    });
-});
-
 const promptOptions = computed(() => props.prompts ?? []);
 
 const isGenerating = computed(() => {
@@ -69,8 +55,10 @@ const togglePost = (postId: number, checked: boolean) => {
 </script>
 
 <template>
-    <div class="space-y-6">
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3 items-start">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <!-- Left Column: 1/3 width -->
+        <div class="space-y-6">
+            <!-- Prompt Template -->
             <div class="space-y-2">
                 <Label for="prompt_id">Prompt template</Label>
                 <Select v-model="form.prompt_id">
@@ -86,7 +74,8 @@ const togglePost = (postId: number, checked: boolean) => {
                 <InputError :message="form.errors.prompt_id" />
             </div>
 
-            <div class="space-y-2 md:col-span-1 md:col-start-2 md:col-end-3">
+            <!-- Briefing -->
+            <div class="space-y-2">
                 <Label for="briefing_text">Briefing</Label>
                 <textarea
                     id="briefing_text"
@@ -98,44 +87,41 @@ const togglePost = (postId: number, checked: boolean) => {
                 <InputError :message="form.errors.briefing_text" />
             </div>
 
-            <div class="flex flex-col justify-start gap-2">
-                <Label class="invisible">Generate</Label>
-                <Button type="button" class="self-start" :disabled="!form.prompt_id || isGenerating" @click="emit('generate')">
-                    <Spinner v-if="isGenerating" class="mr-2" />
-                    {{ isGenerating ? 'Generating...' : 'Generate Content' }}
-                </Button>
-            </div>
-        </div>
-
-        <div class="space-y-3">
-            <div class="flex items-center justify-between">
+            <!-- Source Posts -->
+            <div class="space-y-3">
                 <div class="flex items-center gap-2">
                     <Label>Source posts</Label>
                     <Badge variant="outline">{{ form.post_ids?.length || 0 }} selected</Badge>
                 </div>
-                <Input v-model="postSearch" class="w-64" placeholder="Search posts..." />
-            </div>
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div
-                    v-for="post in filteredPosts"
-                    :key="post.id"
-                    class="rounded-lg border bg-card p-3 shadow-sm transition hover:border-border/80"
-                >
-                    <div class="flex items-start gap-2">
-                        <Checkbox :id="`post-${post.id}`" :model-value="form.post_ids.includes(post.id)" @update:model-value="(v: boolean) => togglePost(post.id, v)" />
-                        <div class="space-y-1">
-                            <label :for="`post-${post.id}`" class="block text-sm font-semibold">
-                                {{ post.external_title || post.internal_title || post.uri }}
-                            </label>
-                            <p class="line-clamp-2 text-xs text-muted-foreground">{{ post.summary }}</p>
+                <div class="space-y-2">
+                    <div
+                        v-for="post in posts"
+                        :key="post.id"
+                        class="rounded-lg border bg-card p-3 shadow-sm transition hover:border-border/80"
+                    >
+                        <div class="flex items-start gap-2">
+                            <Checkbox :id="`post-${post.id}`" :model-value="form.post_ids.includes(post.id)" @update:model-value="(v: boolean) => togglePost(post.id, v)" />
+                            <div class="space-y-1">
+                                <label :for="`post-${post.id}`" class="block text-sm font-semibold">
+                                    {{ post.external_title || post.internal_title || post.uri }}
+                                </label>
+                                <p class="line-clamp-2 text-xs text-muted-foreground">{{ post.summary }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <InputError :message="form.errors.post_ids" />
             </div>
-            <InputError :message="form.errors.post_ids" />
+
+            <!-- Generate Button -->
+            <Button type="button" class="w-full" :disabled="!form.prompt_id || isGenerating" @click="emit('generate')">
+                <Spinner v-if="isGenerating" class="mr-2" />
+                {{ isGenerating ? 'Generating...' : 'Generate Content' }}
+            </Button>
         </div>
 
-        <div class="space-y-2">
+        <!-- Right Column: 2/3 width -->
+        <div class="space-y-2 md:col-span-2">
             <div class="flex items-center justify-between">
                 <div class="space-y-1">
                     <Label for="research_text">Research text</Label>
@@ -162,7 +148,7 @@ const togglePost = (postId: number, checked: boolean) => {
             <textarea
                 id="research_text"
                 v-model="form.research_text"
-                rows="12"
+                rows="24"
                 class="w-full rounded-lg border border-input bg-background p-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 readonly
                 placeholder="Start generation to populate research text."
