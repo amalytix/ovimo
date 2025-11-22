@@ -8,12 +8,14 @@ import TiptapEditor from './TiptapEditor.vue';
 const props = defineProps<{
     form: Record<string, any>;
     selectedMedia: MediaItem[];
+    contentType: 'html' | 'markdown';
 }>();
 
 const emit = defineEmits<{
     (event: 'open-media-picker'): void;
     (event: 'remove-media', id: number): void;
     (event: 'request-image'): void;
+    (event: 'content-type-change', value: 'html' | 'markdown'): void;
 }>();
 
 const editorRef = ref<InstanceType<typeof TiptapEditor> | null>(null);
@@ -42,7 +44,14 @@ defineExpose({
             </div>
         </div>
 
-        <TiptapEditor ref="editorRef" v-model="form.edited_text" placeholder="Start editing..." @request-image="emit('request-image')" />
+        <TiptapEditor
+            ref="editorRef"
+            v-model="form.edited_text"
+            :content-type="contentType"
+            placeholder="Start editing..."
+            @request-image="emit('request-image')"
+            @content-type-change="emit('content-type-change', $event)"
+        />
 
         <div class="space-y-3">
             <div class="flex items-center justify-between">

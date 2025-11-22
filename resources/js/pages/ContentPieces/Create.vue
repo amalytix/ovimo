@@ -84,6 +84,7 @@ const selectedMedia = ref<MediaItem[]>([]);
 const attachmentsOpen = ref(false);
 const imagePickerOpen = ref(false);
 const pickerMode = ref<'attachments' | 'insert'>('attachments');
+const editingContentType = ref<'html' | 'markdown'>('html');
 
 const editingTabRef = ref<InstanceType<typeof EditingTab> | null>(null);
 
@@ -165,6 +166,7 @@ const openCopyDialog = () => {
         showCopyDialog.value = true;
     } else {
         form.edited_text = form.research_text;
+        editingContentType.value = 'markdown';
         activeTab.value = 'editing';
     }
 };
@@ -175,6 +177,7 @@ const confirmCopy = (mode: 'replace' | 'append') => {
     } else {
         form.edited_text = [form.edited_text, form.research_text].filter(Boolean).join('\n\n');
     }
+    editingContentType.value = 'markdown';
     activeTab.value = 'editing';
 };
 
@@ -279,9 +282,11 @@ const cancel = () => {
                         ref="editingTabRef"
                         :form="form"
                         :selected-media="selectedMedia"
+                        :content-type="editingContentType"
                         @open-media-picker="openMediaPicker"
                         @remove-media="removeMedia"
                         @request-image="openImagePicker"
+                        @content-type-change="(value) => (editingContentType.value = value)"
                     />
                 </TabsContent>
             </Tabs>

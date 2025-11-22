@@ -10,7 +10,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { MediaItem, MediaTag } from '@/types/media';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { status } from '@/routes/content-pieces';
 
 type Prompt = {
@@ -95,7 +95,25 @@ const form = useForm({
     published_at: formatDateTimeLocal(props.contentPiece.published_at),
 });
 
-const activeTab = ref<'research' | 'editing'>('research');
+const currentUrl = new URL(usePage().url, window.location.origin);
+const initialTab = currentUrl.searchParams.get('tab');
+const activeTab = ref<'research' | 'editing'>(initialTab === 'edit' || initialTab === 'editing' ? 'editing' : 'research');
+const updateTabInUrl = (tab: 'research' | 'editing') => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`);
+};
+
+onMounted(() => {
+    updateTabInUrl(activeTab.value);
+});
+
+watch(
+    () => activeTab.value,
+    (value) => {
+        updateTabInUrl(value);
+    }
+);
 const showCopyDialog = ref(false);
 const generation = ref<{ status: string | null; error: string | null }>({
     status: null,
@@ -106,6 +124,7 @@ const selectedMedia = ref<MediaItem[]>([...props.contentPiece.media]);
 const attachmentsOpen = ref(false);
 const imagePickerOpen = ref(false);
 const pickerMode = ref<'attachments' | 'insert'>('attachments');
+const editingContentType = ref<'html' | 'markdown'>('html');
 
 const editingTabRef = ref<InstanceType<typeof EditingTab> | null>(null);
 
@@ -187,6 +206,7 @@ const openCopyDialog = () => {
         showCopyDialog.value = true;
     } else {
         form.edited_text = form.research_text;
+        editingContentType.value = 'markdown';
         activeTab.value = 'editing';
     }
 };
@@ -197,6 +217,7 @@ const confirmCopy = (mode: 'replace' | 'append') => {
     } else {
         form.edited_text = [form.edited_text, form.research_text].filter(Boolean).join('\n\n');
     }
+    editingContentType.value = 'markdown';
     activeTab.value = 'editing';
 };
 
@@ -249,7 +270,7 @@ const save = () => {
             ...data,
             published_at: serializePublishedAt(form.published_at),
         }))
-        .put(`/content-pieces/${props.contentPiece.id}`, {
+        .put(`/content-pieces/${props.contentPiece.id}?tab=${activeTab.value}`, {
             preserveScroll: true,
             onFinish: () => form.transform((data) => data),
         });
@@ -261,14 +282,14 @@ const saveAndClose = () => {
             ...data,
             published_at: serializePublishedAt(form.published_at),
         }))
-        .put(`/content-pieces/${props.contentPiece.id}`, {
+        .put(`/content-pieces/${props.contentPiece.id}?tab=${activeTab.value}`, {
             onSuccess: () => router.visit('/content-pieces'),
             onFinish: () => form.transform((data) => data),
         });
 };
 
 const generateContent = () => {
-    router.post(`/content-pieces/${props.contentPiece.id}/generate`, {}, { preserveScroll: true });
+    router.post(`/content-pieces/${props.contentPiece.id}/generate?tab=${activeTab.value}`, {}, { preserveScroll: true });
 };
 </script>
 
@@ -301,9 +322,11 @@ const generateContent = () => {
                         ref="editingTabRef"
                         :form="form"
                         :selected-media="selectedMedia"
+                        :content-type="editingContentType"
                         @open-media-picker="openMediaPicker"
                         @remove-media="removeMedia"
                         @request-image="openImagePicker"
+                        @content-type-change="(value) => (editingContentType.value = value)"
                     />
                 </TabsContent>
             </Tabs>

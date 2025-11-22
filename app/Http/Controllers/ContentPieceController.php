@@ -281,7 +281,10 @@ class ContentPieceController extends Controller
             $contentPiece->media()->sync($validated['media_ids']);
         }
 
-        return redirect()->route('content-pieces.edit', $contentPiece)
+        return redirect()->route('content-pieces.edit', [
+            'content_piece' => $contentPiece,
+            'tab' => $request->query('tab'),
+        ])
             ->with('success', 'Content piece updated successfully.');
     }
 
@@ -293,18 +296,21 @@ class ContentPieceController extends Controller
             return back()->with('error', 'Please select a prompt template first.');
         }
 
-        return $this->generateContentForPiece($contentPiece);
+        return $this->generateContentForPiece($contentPiece, $request->query('tab'));
     }
 
-    private function generateContentForPiece(ContentPiece $contentPiece): RedirectResponse
+    private function generateContentForPiece(ContentPiece $contentPiece, ?string $tab = null): RedirectResponse
     {
         // Use database transaction with pessimistic locking for concurrency protection
-        return DB::transaction(function () use ($contentPiece) {
+        return DB::transaction(function () use ($contentPiece, $tab) {
             $locked = ContentPiece::lockForUpdate()->find($contentPiece->id);
 
             // Check if generation is already in progress
             if (in_array($locked->generation_status, ['QUEUED', 'PROCESSING'])) {
-                return back()->with('error', 'Generation already in progress. Please wait for it to complete.');
+                return redirect()->route('content-pieces.edit', [
+                    'content_piece' => $locked,
+                    'tab' => $tab,
+                ])->with('error', 'Generation already in progress. Please wait for it to complete.');
             }
 
             // Update status and dispatch job
@@ -312,7 +318,10 @@ class ContentPieceController extends Controller
             GenerateContentPiece::dispatch($locked);
 
             // Return with polling metadata
-            return back()->with([
+            return redirect()->route('content-pieces.edit', [
+                'content_piece' => $locked,
+                'tab' => $tab,
+            ])->with([
                 'success' => 'Content generation started. This may take 1-3 minutes.',
                 'polling' => [
                     'content_piece_id' => $locked->id,
@@ -332,7 +341,10 @@ class ContentPieceController extends Controller
 
         $contentPiece->update(['status' => $request->status]);
 
-        return back()->with('success', 'Status updated successfully.');
+        return redirect()->route('content-pieces.edit', [
+            'content_piece' => $contentPiece,
+            'tab' => $request->query('tab'),
+        ])->with('success', 'Status updated successfully.');
     }
 
     public function status(ContentPiece $contentPiece): JsonResponse

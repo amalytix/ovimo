@@ -5,17 +5,21 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import StarterKit from '@tiptap/starter-kit';
+import { Markdown } from '@tiptap/markdown';
+import Typography from '@tiptap/extension-typography';
 import { Bold, Code, Heading1, Heading2, Heading3, Image as ImageIcon, Italic, Link2, ListOrdered, List, Quote, Strikethrough, WrapText, Type } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps<{
     modelValue: string;
     placeholder?: string;
+    contentType?: 'html' | 'markdown';
 }>();
 
 const emit = defineEmits<{
     (event: 'update:modelValue', value: string): void;
     (event: 'request-image'): void;
+    (event: 'content-type-change', value: 'html' | 'markdown'): void;
 }>();
 
 const isMarkdownMode = ref(false);
@@ -23,10 +27,12 @@ const markdownValue = ref(props.modelValue ?? '');
 
 const editor = useEditor({
     content: props.modelValue || '',
+    contentType: props.contentType === 'markdown' ? 'markdown' : 'html',
     extensions: [
         StarterKit.configure({
             codeBlock: true,
         }),
+        Typography,
         Link.configure({
             openOnClick: false,
             autolink: true,
@@ -35,6 +41,9 @@ const editor = useEditor({
         Image,
         Placeholder.configure({
             placeholder: props.placeholder || 'Start writing...',
+        }),
+        Markdown.configure({
+            html: true,
         }),
     ],
     onUpdate: ({ editor }) => {
@@ -52,10 +61,13 @@ const isActive = (name: string, attrs: Record<string, unknown> = {}) => {
 const toggleMarkdownMode = () => {
     isMarkdownMode.value = !isMarkdownMode.value;
     if (isMarkdownMode.value) {
-        markdownValue.value = editor?.value?.getText() ?? '';
+        markdownValue.value = editor?.value?.getMarkdown?.() ?? editor?.value?.getText() ?? '';
     } else {
-        editor?.value?.commands.setContent(markdownValue.value || '', false);
+        editor?.value?.commands.setContent(markdownValue.value || '', {
+            contentType: 'markdown',
+        });
         emit('update:modelValue', editor?.value?.getHTML() ?? '');
+        emit('content-type-change', 'html');
     }
 };
 
@@ -86,8 +98,8 @@ defineExpose({
 });
 
 watch(
-    () => props.modelValue,
-    (value) => {
+    () => [props.modelValue, props.contentType],
+    ([value, type]) => {
         if (!editor?.value) {
             return;
         }
@@ -99,7 +111,14 @@ watch(
 
         const current = editor.value.getHTML();
         if ((value || '') !== current) {
-            editor.value.commands.setContent(value || '', false);
+            if (type === 'markdown') {
+                editor.value.commands.setContent(value || '', {
+                    contentType: 'markdown',
+                });
+                emit('content-type-change', 'html');
+            } else {
+                editor.value.commands.setContent(value || '', false);
+            }
         }
     }
 );
@@ -246,7 +265,94 @@ onBeforeUnmount(() => {
                     placeholder="Write in markdown..."
                 />
             </div>
-            <EditorContent v-else :editor="editor" class="prose prose-slate max-w-none min-h-[320px] p-4 dark:prose-invert" />
+            <EditorContent v-else :editor="editor" class="tiptap prose prose-slate max-w-none min-h-[320px] p-4 dark:prose-invert" />
         </div>
     </div>
 </template>
+
+<style scoped>
+:deep(.tiptap) {
+    min-height: 320px;
+}
+
+:deep(.tiptap :first-child) {
+    margin-top: 0;
+}
+
+:deep(.tiptap h1) {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    margin: 1.5rem 0 0.75rem;
+    font-weight: 700;
+}
+
+:deep(.tiptap h2) {
+    font-size: 1.25rem;
+    line-height: 1.2;
+    margin: 1.25rem 0 0.6rem;
+    font-weight: 700;
+}
+
+:deep(.tiptap h3) {
+    font-size: 1.1rem;
+    line-height: 1.2;
+    margin: 1rem 0 0.5rem;
+    font-weight: 600;
+}
+
+:deep(.tiptap p) {
+    margin: 0.5rem 0;
+    line-height: 1.6;
+}
+
+:deep(.tiptap ul),
+:deep(.tiptap ol) {
+    padding-left: 1.25rem;
+    margin: 0.75rem 0;
+    list-style-position: outside;
+}
+
+:deep(.tiptap ul) {
+    list-style-type: disc;
+}
+
+:deep(.tiptap ol) {
+    list-style-type: decimal;
+}
+
+:deep(.tiptap li p) {
+    margin: 0.25rem 0;
+}
+
+:deep(.tiptap blockquote) {
+    border-left: 3px solid rgb(226 232 240);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: rgb(71 85 105);
+}
+
+:deep(.tiptap pre) {
+    background: rgb(15 23 42);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+}
+
+:deep(.tiptap code) {
+    background: rgb(241 245 249);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.3rem;
+}
+
+:deep(.tiptap a) {
+    color: rgb(37 99 235);
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+}
+
+:deep(.tiptap:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+</style>
