@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pencil } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 type StatusOption = {
     value: string;
@@ -35,16 +35,41 @@ const defaultChannels: ChannelOption[] = [
     { value: 'YOUTUBE_SCRIPT', label: 'YouTube script' },
 ];
 
-const title = computed(() => props.contentPieceTitle || props.form.internal_name || 'New Content Piece');
-
-const publishedAtLabel = computed(() => (props.form.published_at ? 'Scheduled' : 'Schedule'));
+const placeholderTitle = 'New Content Piece';
+const publishedAtLabel = () => (props.form.published_at ? 'Scheduled' : 'Schedule');
 
 const titleRef = ref<HTMLElement | null>(null);
 
 const handleTitleInput = () => {
-    const value = titleRef.value?.innerText ?? '';
-    props.form.internal_name = value.trim();
+    const value = titleRef.value?.textContent ?? '';
+    props.form.internal_name = value;
 };
+
+const handleTitleFocus = () => {
+    if (!titleRef.value) return;
+
+    // Move cursor to the end of the content
+    const range = document.createRange();
+    const selection = window.getSelection();
+
+    if (titleRef.value.childNodes.length > 0) {
+        range.selectNodeContents(titleRef.value);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+    }
+};
+
+const initializeTitle = () => {
+    if (!titleRef.value) return;
+
+    const initialValue = props.contentPieceTitle || props.form.internal_name || '';
+    titleRef.value.textContent = initialValue;
+};
+
+onMounted(() => {
+    initializeTitle();
+});
 </script>
 
 <template>
@@ -57,10 +82,14 @@ const handleTitleInput = () => {
                         ref="titleRef"
                         class="min-w-[200px] rounded-md px-2 py-1 text-2xl font-semibold leading-tight text-foreground hover:bg-muted focus-visible:outline-none"
                         contenteditable="true"
+                        :data-placeholder="placeholderTitle"
+                        dir="ltr"
+                        style="unicode-bidi: plaintext;"
                         role="textbox"
                         aria-label="Content piece title"
                         @input="handleTitleInput"
-                        v-text="title"
+                        @focus="handleTitleFocus"
+                        @keydown.enter.prevent
                     />
                     <Pencil class="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -110,10 +139,17 @@ const handleTitleInput = () => {
             </div>
 
             <div class="space-y-2">
-                <Label for="published_at">{{ publishedAtLabel }}</Label>
+                <Label for="published_at">{{ publishedAtLabel() }}</Label>
                 <Input id="published_at" v-model="form.published_at" type="datetime-local" />
                 <InputError :message="form.errors.published_at" />
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+:deep([data-placeholder]:empty)::before {
+    content: attr(data-placeholder);
+    color: rgb(148 163 184);
+}
+</style>
