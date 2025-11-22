@@ -61,7 +61,7 @@ defineExpose({
                 </div>
                 <span class="text-xs text-muted-foreground">{{ selectedMedia.length }} files</span>
             </div>
-            <div v-if="selectedMedia.length" class="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div v-if="selectedMedia.length" class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
                 <MediaCard
                     v-for="media in selectedMedia"
                     :key="media.id"

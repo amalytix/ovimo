@@ -305,6 +305,7 @@ const cancel = () => {
         :selected-ids="form.media_ids"
         :media="media"
         :tags="mediaTags"
+        :multi-select="true"
         @update:open="attachmentsOpen = $event"
         @select="applyMediaSelection"
     />

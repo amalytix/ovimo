@@ -52,6 +52,13 @@ const editor = useEditor({
         }
         emit('update:modelValue', editor.getHTML());
     },
+    onCreate({ editor }) {
+        if (props.contentType === 'markdown') {
+            const html = editor.getHTML();
+            emit('update:modelValue', html);
+            emit('content-type-change', 'html');
+        }
+    },
 });
 
 const isActive = (name: string, attrs: Record<string, unknown> = {}) => {
@@ -115,6 +122,8 @@ watch(
                 editor.value.commands.setContent(value || '', {
                     contentType: 'markdown',
                 });
+                const html = editor.value.getHTML();
+                emit('update:modelValue', html);
                 emit('content-type-change', 'html');
             } else {
                 editor.value.commands.setContent(value || '', false);

@@ -13,6 +13,7 @@ const props = defineProps<{
     media: MediaItem[];
     tags: MediaTag[];
     multiSelect?: boolean;
+    maxSelection?: number;
 }>();
 
 const emit = defineEmits<{
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const multiSelect = computed(() => props.multiSelect !== false);
+const maxSelection = computed(() => props.maxSelection ?? 100);
 
 const { filters, resetFilters } = useMediaFilters();
 
@@ -63,6 +65,9 @@ const totalPages = computed(() => Math.max(1, Math.ceil(filteredMedia.value.leng
 const toggleSelection = (mediaId: number, value: boolean) => {
     if (value) {
         if (multiSelect.value) {
+            if (!selection.value.includes(mediaId) && selection.value.length >= maxSelection.value) {
+                return;
+            }
             selection.value = Array.from(new Set([...selection.value, mediaId]));
         } else {
             selection.value = [mediaId];
