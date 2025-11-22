@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Spinner from '@/components/ui/spinner/Spinner.vue';
 import { computed, ref } from 'vue';
 
 type Prompt = {
@@ -54,6 +55,10 @@ const filteredPosts = computed(() => {
 
 const promptOptions = computed(() => props.prompts ?? []);
 
+const isGenerating = computed(() => {
+    return props.generationStatus.status === 'PROCESSING' || props.generationStatus.status === 'QUEUED';
+});
+
 const togglePost = (postId: number, checked: boolean) => {
     if (checked) {
         props.form.post_ids = [...props.form.post_ids, postId];
@@ -95,8 +100,9 @@ const togglePost = (postId: number, checked: boolean) => {
 
             <div class="flex flex-col justify-start gap-2">
                 <Label class="invisible">Generate</Label>
-                <Button type="button" class="self-start" :disabled="!form.prompt_id" @click="emit('generate')">
-                    Generate Content
+                <Button type="button" class="self-start" :disabled="!form.prompt_id || isGenerating" @click="emit('generate')">
+                    <Spinner v-if="isGenerating" class="mr-2" />
+                    {{ isGenerating ? 'Generating...' : 'Generate Content' }}
                 </Button>
             </div>
         </div>
