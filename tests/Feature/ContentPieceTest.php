@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ContentPiece;
+use App\Models\Media;
 use App\Models\Prompt;
 
 test('guests cannot access content pieces', function () {
@@ -122,6 +123,10 @@ test('authenticated users can view create content piece form', function () {
 test('authenticated users can create a content piece', function () {
     [$user, $team] = createUserWithTeam();
     $prompt = Prompt::factory()->create(['team_id' => $team->id]);
+    $media = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+    ]);
 
     $response = $this->actingAs($user)->post('/content-pieces', [
         'internal_name' => 'Test Content Piece',
@@ -129,6 +134,7 @@ test('authenticated users can create a content piece', function () {
         'briefing_text' => 'Some briefing text',
         'channel' => 'BLOG_POST',
         'target_language' => 'ENGLISH',
+        'media_ids' => [$media->id],
     ]);
 
     $contentPiece = ContentPiece::where('internal_name', 'Test Content Piece')->first();
@@ -141,6 +147,11 @@ test('authenticated users can create a content piece', function () {
         'channel' => 'BLOG_POST',
         'target_language' => 'ENGLISH',
         'status' => 'NOT_STARTED',
+    ]);
+
+    $this->assertDatabaseHas('content_piece_media', [
+        'content_piece_id' => $contentPiece->id,
+        'media_id' => $media->id,
     ]);
 });
 
@@ -214,12 +225,17 @@ test('authenticated users can update their content pieces', function () {
         'team_id' => $team->id,
         'prompt_id' => $prompt->id,
     ]);
+    $media = Media::factory()->create([
+        'team_id' => $team->id,
+        'uploaded_by' => $user->id,
+    ]);
 
     $response = $this->actingAs($user)->put("/content-pieces/{$contentPiece->id}", [
         'internal_name' => 'Updated Content Name',
         'briefing_text' => 'Updated briefing',
         'channel' => 'LINKEDIN_POST',
         'target_language' => 'GERMAN',
+        'media_ids' => [$media->id],
     ]);
 
     $response->assertRedirect("/content-pieces/{$contentPiece->id}/edit");
@@ -228,6 +244,11 @@ test('authenticated users can update their content pieces', function () {
     expect($contentPiece->internal_name)->toBe('Updated Content Name');
     expect($contentPiece->channel)->toBe('LINKEDIN_POST');
     expect($contentPiece->target_language)->toBe('GERMAN');
+
+    $this->assertDatabaseHas('content_piece_media', [
+        'content_piece_id' => $contentPiece->id,
+        'media_id' => $media->id,
+    ]);
 });
 
 test('users cannot update content pieces from other teams', function () {

@@ -21,7 +21,8 @@ class ContentPiece extends Model
         'channel',
         'target_language',
         'status',
-        'full_text',
+        'research_text',
+        'edited_text',
         'generation_status',
         'generation_error',
         'generation_error_occurred_at',
@@ -57,5 +58,13 @@ class ContentPiece extends Model
     public function posts(): BelongsToMany
     {
         return $this->belongsToMany(Post::class);
+    }
+
+    public function media(): BelongsToMany
+    {
+        return $this->belongsToMany(Media::class)
+            ->withTimestamps()
+            ->withPivot('sort_order')
+            ->orderByPivot('sort_order');
     }
 }

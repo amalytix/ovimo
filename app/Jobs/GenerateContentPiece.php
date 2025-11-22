@@ -50,7 +50,7 @@ class GenerateContentPiece implements ShouldQueue
 
             // 4. Update content piece - SUCCESS
             $this->contentPiece->update([
-                'full_text' => $result['content'],
+                'research_text' => $result['content'],
                 'status' => 'DRAFT',
                 'generation_status' => 'COMPLETED',
             ]);

@@ -28,7 +28,7 @@ test('content generation job stops when team is over limit', function () {
         'prompt_id' => $prompt->id,
         'status' => 'NOT_STARTED',
         'generation_status' => 'NOT_STARTED',
-        'full_text' => null,
+        'research_text' => null,
     ]);
 
     TokenUsageLog::create([

@@ -22,7 +22,8 @@ class ContentPieceFactory extends Factory
             'channel' => fake()->randomElement(['BLOG_POST', 'LINKEDIN_POST', 'YOUTUBE_SCRIPT']),
             'target_language' => fake()->randomElement(['ENGLISH', 'GERMAN']),
             'status' => fake()->randomElement(['NOT_STARTED', 'DRAFT', 'FINAL']),
-            'full_text' => null,
+            'research_text' => null,
+            'edited_text' => null,
             'published_at' => fake()->optional(0.3)->dateTimeBetween('now', '+30 days'),
         ];
     }

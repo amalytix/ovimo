@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateContentPieceRequest extends FormRequest
 {
@@ -27,10 +29,15 @@ class UpdateContentPieceRequest extends FormRequest
             'briefing_text' => ['nullable', 'string', 'max:5000'],
             'channel' => ['required', 'in:BLOG_POST,LINKEDIN_POST,YOUTUBE_SCRIPT'],
             'target_language' => ['required', 'in:ENGLISH,GERMAN'],
-            'full_text' => ['nullable', 'string'],
+            'research_text' => ['nullable', 'string'],
+            'edited_text' => ['nullable', 'string'],
             'post_ids' => ['nullable', 'array'],
             'post_ids.*' => ['exists:posts,id'],
             'published_at' => ['nullable', 'date', 'after_or_equal:now'],
+            'media_ids' => ['nullable', 'array'],
+            'media_ids.*' => [
+                Rule::exists('media', 'id')->where(fn (Builder $query) => $query->where('team_id', auth()->user()->current_team_id)),
+            ],
         ];
     }
 

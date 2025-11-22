@@ -6,12 +6,15 @@ use App\Http\Requests\StoreContentPieceRequest;
 use App\Http\Requests\UpdateContentPieceRequest;
 use App\Jobs\GenerateContentPiece;
 use App\Models\ContentPiece;
+use App\Models\Media;
+use App\Models\MediaTag;
 use App\Models\Prompt;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -149,33 +152,51 @@ class ContentPieceController extends Controller
             }
         }
 
+        $availableMedia = Media::query()
+            ->where('team_id', $teamId)
+            ->with('tags')
+            ->latest()
+            ->take(24)
+            ->get();
+        $mediaTags = MediaTag::where('team_id', $teamId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('ContentPieces/Create', [
             'prompts' => $prompts,
             'availablePosts' => $availablePosts,
             'preselectedPostIds' => $preselectedPostIds,
             'initialTitle' => $firstPostTitle,
+            'media' => $availableMedia->map(fn (Media $media) => $this->transformMedia($media)),
+            'mediaTags' => $mediaTags,
         ]);
     }
 
     public function store(StoreContentPieceRequest $request): RedirectResponse
     {
         $teamId = auth()->user()->current_team_id;
+        $validated = $request->validated();
 
         $contentPiece = ContentPiece::create([
             'team_id' => $teamId,
-            ...$request->validated(),
+            ...Arr::except($validated, ['post_ids', 'media_ids']),
             'status' => 'NOT_STARTED',
-            'full_text' => null,
+            'research_text' => $validated['research_text'] ?? null,
+            'edited_text' => $validated['edited_text'] ?? null,
         ]);
 
         // Attach selected posts
-        if ($request->has('post_ids')) {
-            $contentPiece->posts()->attach($request->post_ids);
+        if (array_key_exists('post_ids', $validated)) {
+            $contentPiece->posts()->attach($validated['post_ids']);
+        }
+
+        if (array_key_exists('media_ids', $validated)) {
+            $contentPiece->media()->sync($validated['media_ids']);
         }
 
         // Check if we should generate content immediately
         if ($request->boolean('generate_content') && $contentPiece->prompt_id) {
-            $contentPiece->load('prompt', 'posts');
+            $contentPiece->load('prompt', 'posts', 'media');
 
             return $this->generateContentForPiece($contentPiece);
         }
@@ -188,7 +209,7 @@ class ContentPieceController extends Controller
     {
         $this->authorize('view', $contentPiece);
 
-        $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary']);
+        $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary,external_title,internal_title', 'media.tags']);
 
         $teamId = auth()->user()->current_team_id;
 
@@ -205,6 +226,16 @@ class ContentPieceController extends Controller
             ->take(100)
             ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
 
+        $availableMedia = Media::query()
+            ->where('team_id', $teamId)
+            ->with('tags')
+            ->latest()
+            ->take(24)
+            ->get();
+        $mediaTags = MediaTag::where('team_id', $teamId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('ContentPieces/Edit', [
             'contentPiece' => [
                 'id' => $contentPiece->id,
@@ -213,14 +244,23 @@ class ContentPieceController extends Controller
                 'channel' => $contentPiece->channel,
                 'target_language' => $contentPiece->target_language,
                 'status' => $contentPiece->status,
-                'full_text' => $contentPiece->full_text,
+                'research_text' => $contentPiece->research_text,
+                'edited_text' => $contentPiece->edited_text,
                 'prompt_id' => $contentPiece->prompt_id,
                 'prompt' => $contentPiece->prompt,
                 'posts' => $contentPiece->posts,
+                'media' => $contentPiece->media->map(fn (Media $media) => [
+                    ...$this->transformMedia($media),
+                    'pivot' => [
+                        'sort_order' => $media->pivot->sort_order,
+                    ],
+                ]),
                 'published_at' => $contentPiece->published_at?->toIso8601String(),
             ],
             'prompts' => $prompts,
             'availablePosts' => $availablePosts,
+            'media' => $availableMedia->map(fn (Media $media) => $this->transformMedia($media)),
+            'mediaTags' => $mediaTags,
         ]);
     }
 
@@ -228,11 +268,17 @@ class ContentPieceController extends Controller
     {
         $this->authorize('update', $contentPiece);
 
-        $contentPiece->update($request->validated());
+        $validated = $request->validated();
+
+        $contentPiece->update(Arr::except($validated, ['post_ids', 'media_ids']));
 
         // Sync selected posts
-        if ($request->has('post_ids')) {
-            $contentPiece->posts()->sync($request->post_ids);
+        if (array_key_exists('post_ids', $validated)) {
+            $contentPiece->posts()->sync($validated['post_ids']);
+        }
+
+        if (array_key_exists('media_ids', $validated)) {
+            $contentPiece->media()->sync($validated['media_ids']);
         }
 
         return redirect()->route('content-pieces.edit', $contentPiece)
@@ -295,7 +341,8 @@ class ContentPieceController extends Controller
 
         return response()->json([
             'generation_status' => $contentPiece->generation_status,
-            'full_text' => $contentPiece->full_text,
+            'research_text' => $contentPiece->research_text,
+            'edited_text' => $contentPiece->edited_text,
             'status' => $contentPiece->status,
             'error' => $contentPiece->generation_error,
             'error_occurred_at' => $contentPiece->generation_error_occurred_at,
@@ -360,5 +407,23 @@ class ContentPieceController extends Controller
 
         return redirect()->route('content-pieces.index')
             ->with('success', 'Content piece deleted successfully.');
+    }
+
+    private function transformMedia(Media $media): array
+    {
+        return [
+            'id' => $media->id,
+            'filename' => $media->filename,
+            'mime_type' => $media->mime_type,
+            'file_size' => $media->file_size,
+            'created_at' => $media->created_at?->toDateTimeString(),
+            'metadata' => $media->metadata,
+            'tags' => $media->tags->map(fn (MediaTag $tag) => [
+                'id' => $tag->id,
+                'name' => $tag->name,
+            ]),
+            'temporary_url' => $media->getTemporaryUrl(),
+            'download_url' => route('media.download', $media),
+        ];
     }
 }

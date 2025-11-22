@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreContentPieceRequest extends FormRequest
 {
@@ -30,6 +32,12 @@ class StoreContentPieceRequest extends FormRequest
             'post_ids' => ['nullable', 'array'],
             'post_ids.*' => ['exists:posts,id'],
             'published_at' => ['nullable', 'date', 'after_or_equal:now'],
+            'research_text' => ['nullable', 'string'],
+            'edited_text' => ['nullable', 'string'],
+            'media_ids' => ['nullable', 'array'],
+            'media_ids.*' => [
+                Rule::exists('media', 'id')->where(fn (Builder $query) => $query->where('team_id', auth()->user()->current_team_id)),
+            ],
         ];
     }
 

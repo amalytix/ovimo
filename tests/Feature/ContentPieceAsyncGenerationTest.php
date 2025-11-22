@@ -66,7 +66,7 @@ test('status endpoint returns content when completed', function () {
         'team_id' => $team->id,
         'prompt_id' => $prompt->id,
         'generation_status' => 'COMPLETED',
-        'full_text' => 'Generated content here',
+        'research_text' => 'Generated content here',
         'status' => 'DRAFT',
     ]);
 
@@ -75,7 +75,7 @@ test('status endpoint returns content when completed', function () {
     $response->assertSuccessful();
     $response->assertJson([
         'generation_status' => 'COMPLETED',
-        'full_text' => 'Generated content here',
+        'research_text' => 'Generated content here',
         'status' => 'DRAFT',
     ]);
 });

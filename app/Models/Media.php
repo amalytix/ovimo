@@ -65,6 +65,12 @@ class Media extends Model
         return $this->belongsToMany(MediaTag::class);
     }
 
+    public function contentPieces(): BelongsToMany
+    {
+        return $this->belongsToMany(ContentPiece::class)
+            ->withTimestamps();
+    }
+
     public function generateS3Key(): string
     {
         $uuid = Str::uuid();
