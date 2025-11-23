@@ -100,6 +100,8 @@ class MonitorSource implements ShouldQueue
                 'next_check_at' => $nextCheck,
                 'consecutive_failures' => 0,
                 'failed_at' => null,
+                'last_run_status' => 'success',
+                'last_run_error' => null,
             ]);
 
             Log::info("Monitored source {$this->source->id}: found {$newPostsCount} new posts", [
@@ -138,6 +140,8 @@ class MonitorSource implements ShouldQueue
                 'failed_at' => now(),
                 'is_active' => $isActive,
                 'next_check_at' => $nextCheck,
+                'last_run_status' => 'error',
+                'last_run_error' => $e->getMessage(),
             ]);
 
             Log::error("Failed to monitor source {$this->source->id}: {$e->getMessage()}", [

@@ -31,6 +31,8 @@ class Source extends Model
         'consecutive_failures',
         'failed_at',
         'next_check_at',
+        'last_run_status',
+        'last_run_error',
     ];
 
     protected function casts(): array

@@ -6,7 +6,7 @@ import { Pagination } from '@/components/ui/pagination';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Pencil, RefreshCw, Trash2 } from 'lucide-vue-next';
+import { AlertCircle, Pencil, RefreshCw, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import { toast } from '@/components/ui/sonner';
 
@@ -27,6 +27,8 @@ interface Source {
     bypass_keyword_filter: boolean;
     last_checked_at: string | null;
     next_check_at: string | null;
+    last_run_status: string | null;
+    last_run_error: string | null;
     posts_count: number;
     posts_last_7_days_count: number;
     tags: Tag[];
@@ -268,7 +270,14 @@ watch(selectedTagIds, applyFilters, { deep: true });
                                 {{ source.posts_last_7_days_count }}
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                {{ source.last_checked_at || 'Never' }}
+                                <div class="flex items-center gap-2">
+                                    <span>{{ source.last_checked_at || 'Never' }}</span>
+                                    <AlertCircle
+                                        v-if="source.last_run_status === 'error'"
+                                        v-tooltip="source.last_run_error || 'An error occurred during the last check'"
+                                        class="size-4 flex-shrink-0 text-red-500"
+                                    />
+                                </div>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
                                 <span

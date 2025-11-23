@@ -74,6 +74,8 @@ class SourceController extends Controller
                     'bypass_keyword_filter' => $source->bypass_keyword_filter,
                     'last_checked_at' => $source->last_checked_at?->diffForHumans(),
                     'next_check_at' => $source->next_check_at?->diffForHumans(),
+                    'last_run_status' => $source->last_run_status,
+                    'last_run_error' => $source->last_run_error,
                     'posts_count' => $source->posts_count,
                     'posts_last_7_days_count' => $source->posts_last_7_days_count,
                     'tags' => $source->tags->map(fn (Tag $tag) => [
