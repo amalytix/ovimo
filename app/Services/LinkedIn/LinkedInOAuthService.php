@@ -65,8 +65,6 @@ class LinkedInOAuthService
             'grant_type' => 'authorization_code',
             'code' => $code,
             'redirect_uri' => $this->redirectUri(),
-            'client_id' => $this->clientId(),
-            'client_secret' => $this->clientSecret(),
             'code_verifier' => $codeVerifier,
         ];
 
@@ -74,9 +72,8 @@ class LinkedInOAuthService
             'code_length' => strlen($code),
             'code_prefix' => substr($code, 0, 10).'...',
             'redirect_uri' => $payload['redirect_uri'],
-            'client_id' => $payload['client_id'],
-            'client_secret_length' => strlen($payload['client_secret']),
-            'client_secret_preview' => substr($payload['client_secret'], 0, 10).'...'.substr($payload['client_secret'], -4),
+            'client_id' => $this->clientId(),
+            'auth_method' => 'basic_auth',
             'code_verifier_length' => strlen($codeVerifier),
             'grant_type' => $payload['grant_type'],
         ]);
@@ -91,8 +88,6 @@ class LinkedInOAuthService
         $payload = [
             'grant_type' => 'refresh_token',
             'refresh_token' => $refreshToken,
-            'client_id' => $this->clientId(),
-            'client_secret' => $this->clientSecret(),
         ];
 
         $response = $this->postToken($payload);
@@ -218,8 +213,8 @@ class LinkedInOAuthService
             'url' => self::TOKEN_URL,
             'grant_type' => $payload['grant_type'] ?? null,
             'redirect_uri' => $payload['redirect_uri'] ?? null,
-            'client_id' => $payload['client_id'] ?? null,
-            'has_client_secret' => isset($payload['client_secret']),
+            'client_id' => $this->clientId(),
+            'auth_method' => 'basic_auth',
             'has_code' => isset($payload['code']),
             'has_code_verifier' => isset($payload['code_verifier']),
             'has_refresh_token' => isset($payload['refresh_token']),
@@ -227,6 +222,7 @@ class LinkedInOAuthService
 
         // Use retry but don't throw on failure - we want to inspect the error response
         $response = Http::retry(2, 200, throw: false)
+            ->withBasicAuth($this->clientId(), $this->clientSecret())
             ->asForm()
             ->post(self::TOKEN_URL, $payload);
 
@@ -249,12 +245,11 @@ class LinkedInOAuthService
                 'body' => $errorBody,
                 'headers' => $response->headers(),
                 'redirect_uri' => $payload['redirect_uri'] ?? null,
-                'client_id' => $payload['client_id'] ?? null,
+                'client_id' => $this->clientId(),
                 'grant_type' => $payload['grant_type'] ?? null,
                 'code_length' => isset($payload['code']) ? strlen($payload['code']) : null,
                 'code_verifier_length' => isset($payload['code_verifier']) ? strlen($payload['code_verifier']) : null,
-                'client_secret_set' => isset($payload['client_secret']),
-                'client_secret_length' => isset($payload['client_secret']) ? strlen($payload['client_secret']) : null,
+                'auth_method' => 'basic_auth',
             ]);
 
             $response->throw();
