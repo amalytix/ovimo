@@ -27,8 +27,14 @@ class MonitorSource implements ShouldQueue
     public function handle(SourceParser $parser, KeywordFilterService $keywordFilter, TokenLimitService $tokenLimitService): void
     {
         if (! $this->source->is_active) {
+            Log::info("MonitorSource job skipped: source {$this->source->id} is inactive");
+
             return;
         }
+
+        Log::info("MonitorSource job started for source {$this->source->id}", [
+            'current_next_check_at' => $this->source->next_check_at?->toDateTimeString(),
+        ]);
 
         $canSummarize = true;
 
@@ -85,15 +91,20 @@ class MonitorSource implements ShouldQueue
                 }
             }
 
+            // Calculate next check time once
+            $nextCheck = $this->source->calculateNextCheckTime();
+
             // Update source timestamps and reset failure tracking
             $this->source->update([
                 'last_checked_at' => now(),
-                'next_check_at' => $this->source->calculateNextCheckTime(),
+                'next_check_at' => $nextCheck,
                 'consecutive_failures' => 0,
                 'failed_at' => null,
             ]);
 
-            Log::info("Monitored source {$this->source->id}: found {$newPostsCount} new posts");
+            Log::info("Monitored source {$this->source->id}: found {$newPostsCount} new posts", [
+                'next_check_at' => $nextCheck->toDateTimeString(),
+            ]);
 
             // Send webhook notification if enabled and new posts found
             if ($this->source->should_notify && $newPostsCount > 0) {
@@ -119,13 +130,19 @@ class MonitorSource implements ShouldQueue
                 Log::warning("Source {$this->source->id} disabled after {$consecutiveFailures} consecutive failures");
             }
 
+            // Calculate next check time even on failure to prevent infinite retries
+            $nextCheck = $this->source->calculateNextCheckTime();
+
             $this->source->update([
                 'consecutive_failures' => $consecutiveFailures,
                 'failed_at' => now(),
                 'is_active' => $isActive,
+                'next_check_at' => $nextCheck,
             ]);
 
-            Log::error("Failed to monitor source {$this->source->id}: {$e->getMessage()}");
+            Log::error("Failed to monitor source {$this->source->id}: {$e->getMessage()}", [
+                'next_check_at' => $nextCheck->toDateTimeString(),
+            ]);
 
             // Dispatch source monitoring failed event
             event(new \App\Events\SourceMonitoringFailed($this->source, $e->getMessage()));
