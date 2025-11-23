@@ -87,12 +87,72 @@ app/
 
 ### Background Jobs
 
-| Job | Trigger | Purpose |
-|-----|---------|---------|
-| `MonitorSource` | Scheduled via `ScheduleSourceMonitoring` | Parses source URL, creates new Posts |
-| `SummarizePost` | When auto_summarize enabled | Uses AI to analyze and summarize post |
-| `SendWebhookNotification` | On events (NEW_POSTS, etc.) | Delivers webhook payloads |
-| `PruneOldActivityLogs` | Scheduled daily at midnight | Deletes activity logs older than 30 days |
+| Job | Trigger | Purpose | Deduplication |
+|-----|---------|---------|---------------|
+| `MonitorSource` | Scheduled via `ScheduleSourceMonitoring` | Parses source URL, creates new Posts | Database lock |
+| `SummarizePost` | When auto_summarize enabled | Uses AI to analyze and summarize post | None |
+| `SendWebhookNotification` | On events (NEW_POSTS, etc.) | Delivers webhook payloads | None |
+| `PruneOldActivityLogs` | Scheduled daily at midnight | Deletes activity logs older than 30 days | None |
+
+#### Queue Job Deduplication Pattern
+
+When running multiple queue workers in parallel (e.g., `numprocs=4` in Laravel Forge), jobs can be processed by multiple workers simultaneously. For jobs that must only run once per entity, use **database-level pessimistic locking** instead of Laravel's `ShouldBeUnique` interface (which requires Redis/Memcached for atomic locks).
+
+**Implementation Pattern** (see `MonitorSource` job):
+
+```php
+public function handle(...)
+{
+    // Acquire exclusive lock at start of job execution
+    $locked = DB::transaction(function () {
+        $entity = Model::where('id', $this->entity->id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$entity) {
+            return false;
+        }
+
+        // Check if already processed recently (deduplication window)
+        if ($entity->last_checked_at && $entity->last_checked_at->gt(now()->subSeconds(30))) {
+            Log::info("Job skipped: entity {$entity->id} was recently processed");
+            return false;
+        }
+
+        // Mark as processing to prevent other workers
+        $entity->update(['last_checked_at' => now()]);
+
+        return true;
+    });
+
+    if (!$locked) {
+        return; // Skip - another worker is handling this
+    }
+
+    // Reload entity and proceed with actual work
+    $this->entity->refresh();
+
+    // ... rest of job logic ...
+}
+```
+
+**Key Points**:
+- Uses `lockForUpdate()` for database-level row locking (works with any cache driver)
+- Checks recent processing timestamp (30-second window) to catch duplicate jobs
+- Updates timestamp immediately to prevent other workers from proceeding
+- Returns early if another worker already processed the entity
+- Works with multiple parallel workers without Redis/Memcached dependency
+
+**When to Use**:
+- Jobs that process specific entities (sources, posts, users)
+- High-frequency scheduled jobs (every minute)
+- Multiple queue workers running in parallel
+- Database cache driver (not Redis/Memcached)
+
+**When NOT to Use**:
+- Jobs that should run multiple times concurrently
+- Jobs without specific entity ownership
+- Single queue worker deployments
 
 ### Services Layer
 
@@ -104,13 +164,26 @@ app/
 
 1. **Source Monitoring Flow**:
    ```
-   ScheduleSourceMonitoring (cron)
-   → Dispatches MonitorSource for due sources
-   → Parses feed/website
-   → Creates Post records
-   → Optionally triggers SummarizePost
-   → Sends webhook notifications
+   ScheduleSourceMonitoring (cron, every minute)
+   → Queries active sources with next_check_at <= now()
+   → Locks each source in transaction (lockForUpdate)
+   → Updates next_check_at to reserve (prevents duplicate dispatch)
+   → Dispatches MonitorSource job for each source
+
+   MonitorSource job (in queue worker)
+   → Acquires database lock on source
+   → Checks if recently processed (30-second deduplication window)
+   → Skips if another worker already processed
+   → Parses feed/website and creates Post records
+   → Updates source: last_checked_at, next_check_at, status tracking
+   → Optionally triggers SummarizePost (if auto_summarize enabled)
+   → Sends webhook notifications (if new posts found)
    ```
+
+   **Scheduler Configuration** (`routes/console.php`):
+   - Runs every minute with `withoutOverlapping()` to prevent concurrent scheduler instances
+   - Limits to 500 sources per run to prevent catch-up storms
+   - Uses `limit(500)->get()->each()` instead of `chunkById()` for better performance
 
 2. **Content Generation Flow**:
    ```
