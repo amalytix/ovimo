@@ -48,10 +48,10 @@ return [
         'client_secret' => env('LINKEDIN_CLIENT_SECRET'),
         'redirect_uri' => env('LINKEDIN_CLIENT_REDIRECT_URL', env('APP_URL').'/integrations/linkedin/callback-member'),
         'scopes' => [
-            'openid',
-            'profile',
+            // 'openid',
+            // 'profile',
             'w_member_social',
-            'r_basicprofile',
+            // 'r_basicprofile',
         ],
     ],
 
