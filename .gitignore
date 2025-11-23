@@ -26,3 +26,4 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+docs/bugs/linkedin-oauth-401-invalid-client.md
