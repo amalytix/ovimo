@@ -76,7 +76,6 @@ class LinkedInOAuthService
             'redirect_uri' => $payload['redirect_uri'],
             'client_id_in_body' => $payload['client_id'],
             'client_secret_in_body' => '****', // Mask client secret in logs
-            'auth_method' => 'basic_auth',
             'code_verifier_length' => strlen($codeVerifier),
             'grant_type' => $payload['grant_type'],
         ]);
@@ -218,11 +217,9 @@ class LinkedInOAuthService
             'url' => self::TOKEN_URL,
             'grant_type' => $payload['grant_type'] ?? null,
             'redirect_uri' => $payload['redirect_uri'] ?? null,
-            'client_id_in_header' => $this->clientId(),
-            'client_secret_in_header' => '****', // Mask client secret in logs
             'client_id_in_body' => $payload['client_id'] ?? null,
             'client_secret_in_body' => isset($payload['client_secret']) ? '****' : null, // Mask client secret in logs
-            'auth_method' => 'basic_auth',
+            'auth_method' => 'body',
             'has_code' => isset($payload['code']),
             'has_code_verifier' => isset($payload['code_verifier']),
             'has_refresh_token' => isset($payload['refresh_token']),
@@ -230,7 +227,6 @@ class LinkedInOAuthService
 
         // Use retry but don't throw on failure - we want to inspect the error response
         $response = Http::retry(2, 200, throw: false)
-            ->withBasicAuth($this->clientId(), $this->clientSecret())
             ->asForm()
             ->post(self::TOKEN_URL, $payload);
 
@@ -253,11 +249,11 @@ class LinkedInOAuthService
                 'body' => $errorBody,
                 'headers' => $response->headers(),
                 'redirect_uri' => $payload['redirect_uri'] ?? null,
-                'client_id' => $this->clientId(),
+                'client_id' => $payload['client_id'] ?? null,
                 'grant_type' => $payload['grant_type'] ?? null,
                 'code_length' => isset($payload['code']) ? strlen($payload['code']) : null,
                 'code_verifier_length' => isset($payload['code_verifier']) ? strlen($payload['code_verifier']) : null,
-                'auth_method' => 'basic_auth',
+                'auth_method' => 'body',
             ]);
 
             $response->throw();
