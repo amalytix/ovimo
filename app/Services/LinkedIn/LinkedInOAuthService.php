@@ -225,6 +225,10 @@ class LinkedInOAuthService
             'has_refresh_token' => isset($payload['refresh_token']),
         ]);
 
+        // TEMPORARY DEBUGGING: Log the exact payload.
+        // WARNING: This will log the client secret. Revert this change immediately after debugging.
+        Log::debug('LinkedIn OAuth: Full payload for debugging', ['payload' => $payload]);
+
         // Use retry but don't throw on failure - we want to inspect the error response
         $response = Http::retry(2, 200, throw: false)
             ->asForm()
