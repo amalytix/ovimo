@@ -214,32 +214,38 @@ class LinkedInOAuthService
 
     private function postToken(array $payload): array
     {
+        // Extract client credentials for Basic Auth
+        $clientId = $payload['client_id'];
+        $clientSecret = $payload['client_secret'];
+
+        // Remove client credentials from payload since they'll be in the Authorization header
+        unset($payload['client_id'], $payload['client_secret']);
+
         // PRIORITY 1: Inspect credentials for invisible characters and encoding issues
         Log::info('LinkedIn OAuth: Credential inspection', [
-            'client_id_value' => $payload['client_id'] ?? null,
-            'client_id_length' => isset($payload['client_id']) ? strlen($payload['client_id']) : null,
-            'client_secret_length' => isset($payload['client_secret']) ? strlen($payload['client_secret']) : null,
-            'client_secret_first_4' => isset($payload['client_secret']) ? substr($payload['client_secret'], 0, 4) : null,
-            'client_secret_last_4' => isset($payload['client_secret']) ? substr($payload['client_secret'], -4) : null,
-            'client_secret_hex_dump' => isset($payload['client_secret']) ? bin2hex($payload['client_secret']) : null,
-            'has_trailing_whitespace' => isset($payload['client_secret']) ? ($payload['client_secret'] !== trim($payload['client_secret'])) : null,
+            'client_id_value' => $clientId,
+            'client_id_length' => strlen($clientId),
+            'client_secret_length' => strlen($clientSecret),
+            'client_secret_first_4' => substr($clientSecret, 0, 4),
+            'client_secret_last_4' => substr($clientSecret, -4),
+            'client_secret_hex_dump' => bin2hex($clientSecret),
+            'has_trailing_whitespace' => $clientSecret !== trim($clientSecret),
         ]);
 
         Log::info('LinkedIn OAuth: About to POST to token endpoint', [
             'url' => self::TOKEN_URL,
             'grant_type' => $payload['grant_type'] ?? null,
             'redirect_uri' => $payload['redirect_uri'] ?? null,
-            'client_id_in_body' => $payload['client_id'] ?? null,
-            'client_secret_in_body' => isset($payload['client_secret']) ? '****' : null,
-            'auth_method' => 'asForm',
+            'auth_method' => 'HTTP Basic Auth',
             'has_code' => isset($payload['code']),
             'has_code_verifier' => isset($payload['code_verifier']),
             'has_refresh_token' => isset($payload['refresh_token']),
         ]);
 
-        // PRIORITY 3: Use Laravel's idiomatic asForm() method
-        // PRIORITY 4: Remove retry logic to prevent consuming auth code on timeout
-        $response = Http::asForm()
+        // Use HTTP Basic Authentication instead of sending credentials in body
+        // This is LinkedIn's preferred authentication method for confidential clients
+        $response = Http::withBasicAuth($clientId, $clientSecret)
+            ->asForm()
             ->post(self::TOKEN_URL, $payload);
 
         Log::info('LinkedIn OAuth: Received response from token endpoint', [
