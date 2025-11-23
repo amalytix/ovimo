@@ -35,15 +35,26 @@ class LinkedInOAuthService
 
     public function generateAuthUrl(string $state, string $codeVerifier): string
     {
+        $codeChallenge = $this->codeChallenge($codeVerifier);
+
         $params = [
             'response_type' => 'code',
             'client_id' => $this->clientId(),
             'redirect_uri' => $this->redirectUri(),
             'state' => $state,
             'scope' => implode(' ', $this->scopes()),
-            'code_challenge' => $this->codeChallenge($codeVerifier),
+            'code_challenge' => $codeChallenge,
             'code_challenge_method' => 'S256',
         ];
+
+        Log::info('LinkedIn OAuth: Generating authorization URL', [
+            'redirect_uri' => $params['redirect_uri'],
+            'client_id_tail' => substr($params['client_id'], -4),
+            'scopes' => $params['scope'],
+            'code_verifier_length' => strlen($codeVerifier),
+            'code_challenge_length' => strlen($codeChallenge),
+            'state_length' => strlen($state),
+        ]);
 
         return self::AUTHORIZE_URL.'?'.http_build_query($params, '', '&', PHP_QUERY_RFC3986);
     }
@@ -58,6 +69,16 @@ class LinkedInOAuthService
             'client_secret' => $this->clientSecret(),
             'code_verifier' => $codeVerifier,
         ];
+
+        Log::info('LinkedIn OAuth: Exchanging code for token', [
+            'code_length' => strlen($code),
+            'code_prefix' => substr($code, 0, 10).'...',
+            'redirect_uri' => $payload['redirect_uri'],
+            'client_id' => $payload['client_id'],
+            'client_secret_length' => strlen($payload['client_secret']),
+            'code_verifier_length' => strlen($codeVerifier),
+            'grant_type' => $payload['grant_type'],
+        ]);
 
         $response = $this->postToken($payload);
 
@@ -192,18 +213,41 @@ class LinkedInOAuthService
 
     private function postToken(array $payload): array
     {
+        Log::info('LinkedIn OAuth: About to POST to token endpoint', [
+            'url' => self::TOKEN_URL,
+            'grant_type' => $payload['grant_type'] ?? null,
+            'redirect_uri' => $payload['redirect_uri'] ?? null,
+            'client_id' => $payload['client_id'] ?? null,
+            'has_client_secret' => isset($payload['client_secret']),
+            'has_code' => isset($payload['code']),
+            'has_code_verifier' => isset($payload['code_verifier']),
+            'has_refresh_token' => isset($payload['refresh_token']),
+        ]);
+
         $response = $this->http()->asForm()->post(self::TOKEN_URL, $payload);
 
         if ($response->failed()) {
             Log::error('LinkedIn token request failed', [
                 'status' => $response->status(),
                 'body' => $response->json() ?? $response->body(),
+                'headers' => $response->headers(),
                 'redirect_uri' => $payload['redirect_uri'] ?? null,
-                'client_id_tail' => isset($payload['client_id']) ? substr((string) $payload['client_id'], -4) : null,
+                'client_id' => $payload['client_id'] ?? null,
+                'grant_type' => $payload['grant_type'] ?? null,
+                'code_length' => isset($payload['code']) ? strlen($payload['code']) : null,
+                'code_verifier_length' => isset($payload['code_verifier']) ? strlen($payload['code_verifier']) : null,
+                'client_secret_set' => isset($payload['client_secret']),
+                'client_secret_length' => isset($payload['client_secret']) ? strlen($payload['client_secret']) : null,
             ]);
 
             $response->throw();
         }
+
+        Log::info('LinkedIn OAuth: Token request successful', [
+            'has_access_token' => isset($response->json()['access_token']),
+            'has_refresh_token' => isset($response->json()['refresh_token']),
+            'expires_in' => $response->json()['expires_in'] ?? null,
+        ]);
 
         return $response->json();
     }

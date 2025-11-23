@@ -74,8 +74,13 @@ class LinkedInController extends Controller
             'debug_id' => $debugId,
             'state' => $request->input('state'),
             'code_present' => $request->filled('code'),
+            'code_length' => $request->filled('code') ? strlen($request->string('code')->toString()) : 0,
             'session_state' => $sessionData['state'] ?? null,
             'session_team' => $sessionData['team_id'] ?? null,
+            'session_has_verifier' => isset($sessionData['code_verifier']),
+            'session_verifier_length' => isset($sessionData['code_verifier']) ? strlen($sessionData['code_verifier']) : 0,
+            'request_url' => $request->fullUrl(),
+            'all_query_params' => $request->query(),
         ]);
 
         try {
