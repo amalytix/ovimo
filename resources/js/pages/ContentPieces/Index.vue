@@ -1,16 +1,28 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Pagination } from '@/components/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import CalendarMonth from '@/pages/ContentPieces/CalendarMonth.vue';
 import CalendarWeek from '@/pages/ContentPieces/CalendarWeek.vue';
+import ContentPieceBulkActions from '@/components/ContentPiece/ContentPieceBulkActions.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { Pencil, Trash2 } from 'lucide-vue-next';
+import { toast } from '@/components/ui/sonner';
+import axios from 'axios';
 
 interface ContentPiece {
     id: number;
@@ -61,8 +73,15 @@ const view = ref<Props['filters']['view']>(props.filters.view || 'list');
 const sortBy = ref(props.filters.sort_by || 'published_at');
 const sortDirection = ref<Props['filters']['sort_direction']>(props.filters.sort_direction || 'asc');
 const selectedDate = ref<string>(props.filters?.date || new Date().toISOString().slice(0, 10));
+const selectedIds = ref<number[]>([]);
+const statusDialogOpen = ref(false);
+const bulkStatus = ref<'NOT_STARTED' | 'DRAFT' | 'FINAL'>('DRAFT');
 
 const showListView = computed(() => view.value === 'list');
+
+const allSelected = computed(() => {
+    return props.contentPieces.data.length > 0 && selectedIds.value.length === props.contentPieces.data.length;
+});
 
 const applyFilters = (overrides: Record<string, unknown> = {}) => {
     router.get(
@@ -167,6 +186,107 @@ const togglePublishSort = () => {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
     applyFilters();
 };
+
+const toggleSelection = (id: number, checked: boolean) => {
+    if (checked) {
+        if (!selectedIds.value.includes(id)) {
+            selectedIds.value.push(id);
+        }
+    } else {
+        selectedIds.value = selectedIds.value.filter((selectedId) => selectedId !== id);
+    }
+};
+
+const toggleAll = (checked: boolean) => {
+    if (checked) {
+        selectedIds.value = props.contentPieces.data.map((item) => item.id);
+    } else {
+        selectedIds.value = [];
+    }
+};
+
+const togglePageSelection = () => {
+    if (allSelected.value) {
+        selectedIds.value = [];
+    } else {
+        toggleAll(true);
+    }
+};
+
+const refreshContentPieces = () => {
+    router.get('/content-pieces', {
+        search: search.value || undefined,
+        status: status.value === 'all' ? undefined : status.value,
+        channel: channel.value === 'all' ? undefined : channel.value,
+        view: view.value,
+        sort_by: sortBy.value,
+        sort_direction: sortDirection.value,
+        date: selectedDate.value,
+    }, { preserveState: true, replace: true, preserveScroll: true });
+};
+
+const handleBulkDelete = async () => {
+    if (selectedIds.value.length === 0) {
+        return;
+    }
+    if (!confirm(`Are you sure you want to delete ${selectedIds.value.length} content piece(s)? This action cannot be undone.`)) {
+        return;
+    }
+    try {
+        await axios.post('/content-pieces/bulk-delete', { content_piece_ids: selectedIds.value });
+        toast.success('Content pieces deleted');
+        selectedIds.value = [];
+        refreshContentPieces();
+    } catch (error) {
+        console.error(error);
+        toast.error('Unable to delete content pieces right now.');
+    }
+};
+
+const handleBulkUnsetPublishDate = async () => {
+    if (selectedIds.value.length === 0) {
+        return;
+    }
+    try {
+        await axios.post('/content-pieces/bulk-unset-publish-date', { content_piece_ids: selectedIds.value });
+        toast.success('Publish dates removed');
+        refreshContentPieces();
+    } catch (error) {
+        console.error(error);
+        toast.error('Unable to update publish dates right now.');
+    }
+};
+
+const openBulkStatusDialog = () => {
+    statusDialogOpen.value = true;
+};
+
+const confirmBulkStatusUpdate = async () => {
+    if (selectedIds.value.length === 0) {
+        toast.info('Select content pieces to update.');
+        return;
+    }
+    try {
+        await axios.post('/content-pieces/bulk-update-status', {
+            content_piece_ids: selectedIds.value,
+            status: bulkStatus.value,
+        });
+        toast.success('Status updated');
+        statusDialogOpen.value = false;
+        refreshContentPieces();
+    } catch (error) {
+        console.error(error);
+        toast.error('Unable to update status.');
+    }
+};
+
+watch(
+    () => props.contentPieces.data,
+    (items) => {
+        const availableIds = items.map((item) => item.id);
+        selectedIds.value = selectedIds.value.filter((id) => availableIds.includes(id));
+    }
+);
 </script>
 
 <template>
@@ -238,6 +358,9 @@ const togglePublishSort = () => {
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-800">
                             <tr>
+                                <th class="px-4 py-3 align-middle">
+                                    <Checkbox :model-value="allSelected" @update:model-value="toggleAll($event === true)" />
+                                </th>
                                 <th class="w-1/2 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 md:w-1/3">
                                     Name
                                 </th>
@@ -274,6 +397,9 @@ const togglePublishSort = () => {
                         </thead>
                         <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
                             <tr v-for="piece in contentPieces.data" :key="piece.id">
+                                <td class="px-4 py-4">
+                                    <Checkbox :model-value="selectedIds.includes(piece.id)" @update:model-value="(checked: boolean) => toggleSelection(piece.id, checked)" />
+                                </td>
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                                     <div class="max-w-xs md:max-w-sm">
                                         <Link
@@ -336,7 +462,7 @@ const togglePublishSort = () => {
                                 </td>
                             </tr>
                             <tr v-if="contentPieces.data.length === 0">
-                                <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                     No content pieces found. Click "Create Content" to start generating content.
                                 </td>
                             </tr>
@@ -360,4 +486,38 @@ const togglePublishSort = () => {
             </div>
         </div>
     </AppLayout>
+
+    <ContentPieceBulkActions
+        :count="selectedIds.length"
+        @delete="handleBulkDelete"
+        @unset-publish-date="handleBulkUnsetPublishDate"
+        @update-status="openBulkStatusDialog"
+        @clear="selectedIds = []"
+    />
+
+    <Dialog v-model:open="statusDialogOpen">
+        <DialogContent class="max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Update Status</DialogTitle>
+                <DialogDescription>Select the new status for the selected content pieces.</DialogDescription>
+            </DialogHeader>
+            <div class="space-y-2">
+                <Label>Status</Label>
+                <Select v-model="bulkStatus">
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="NOT_STARTED">Not Started</SelectItem>
+                        <SelectItem value="DRAFT">Draft</SelectItem>
+                        <SelectItem value="FINAL">Final</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <DialogFooter>
+                <Button variant="ghost" @click="statusDialogOpen = false">Cancel</Button>
+                <Button type="button" @click="confirmBulkStatusUpdate">Update</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>

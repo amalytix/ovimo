@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Pagination } from '@/components/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PostBulkActions from '@/components/Post/PostBulkActions.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
@@ -253,21 +254,6 @@ watch(
                 <Button size="sm" variant="outline" @click="clearFilters" class="h-9">Clear</Button>
             </div>
 
-            <!-- Bulk Actions -->
-            <div class="mb-4 flex items-center gap-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                <span class="text-sm font-medium">{{ selectedPosts.length }} selected</span>
-                <Button size="sm" :disabled="selectedPosts.length === 0" @click="createContentPiece">
-                    <WandSparkles class="mr-2 h-4 w-4 text-gray-700 dark:text-gray-200" />
-                    Create Content Piece
-                </Button>
-                <Button size="sm" variant="outline" :disabled="selectedPosts.length === 0" @click="bulkHide">
-                    <EyeOff class="mr-2 h-4 w-4" />
-                    Hide
-                </Button>
-                <Button size="sm" variant="outline" @click="hideNotRelevant">Hide not relevant</Button>
-                <Button size="sm" variant="destructive" :disabled="selectedPosts.length === 0" @click="bulkDelete">Delete</Button>
-            </div>
-
             <!-- Posts Table -->
             <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -382,4 +368,13 @@ watch(
             <Pagination :links="posts.links" :from="posts.meta?.from" :to="posts.meta?.to" :total="posts.meta?.total" />
         </div>
     </AppLayout>
+
+    <PostBulkActions
+        :count="selectedPosts.length"
+        @create-content="createContentPiece"
+        @hide="bulkHide"
+        @hide-not-relevant="hideNotRelevant"
+        @delete="bulkDelete"
+        @clear="selectedPosts = []"
+    />
 </template>

@@ -39,6 +39,9 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::get('content-pieces/calendar', [ContentPieceController::class, 'calendar'])->name('content-pieces.calendar');
     Route::get('content-pieces/{content_piece}/status', [ContentPieceController::class, 'status'])->name('content-pieces.status');
     Route::patch('content-pieces/{content_piece}/status', [ContentPieceController::class, 'updateStatus'])->name('content-pieces.update-status');
+    Route::post('content-pieces/bulk-delete', [ContentPieceController::class, 'bulkDelete'])->name('content-pieces.bulk-delete');
+    Route::post('content-pieces/bulk-unset-publish-date', [ContentPieceController::class, 'bulkUnsetPublishDate'])->name('content-pieces.bulk-unset-publish-date');
+    Route::post('content-pieces/bulk-update-status', [ContentPieceController::class, 'bulkUpdateStatus'])->name('content-pieces.bulk-update-status');
 
     Route::resource('webhooks', WebhookController::class)->except(['show']);
     Route::post('webhooks/{webhook}/test', [WebhookController::class, 'test'])->name('webhooks.test');

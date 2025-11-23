@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContentPiece\BulkActionRequest;
 use App\Http\Requests\StoreContentPieceRequest;
 use App\Http\Requests\UpdateContentPieceRequest;
 use App\Jobs\GenerateContentPiece;
@@ -419,6 +420,58 @@ class ContentPieceController extends Controller
 
         return redirect()->route('content-pieces.index')
             ->with('success', 'Content piece deleted successfully.');
+    }
+
+    public function bulkDelete(BulkActionRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $teamId = auth()->user()->current_team_id;
+
+        $contentPieces = ContentPiece::where('team_id', $teamId)
+            ->whereIn('id', $validated['content_piece_ids'])
+            ->get();
+
+        foreach ($contentPieces as $contentPiece) {
+            $this->authorize('delete', $contentPiece);
+            $contentPiece->posts()->detach();
+            $contentPiece->delete();
+        }
+
+        return response()->json(['message' => 'Content pieces deleted successfully.']);
+    }
+
+    public function bulkUnsetPublishDate(BulkActionRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $teamId = auth()->user()->current_team_id;
+
+        $contentPieces = ContentPiece::where('team_id', $teamId)
+            ->whereIn('id', $validated['content_piece_ids'])
+            ->get();
+
+        foreach ($contentPieces as $contentPiece) {
+            $this->authorize('update', $contentPiece);
+            $contentPiece->update(['published_at' => null]);
+        }
+
+        return response()->json(['message' => 'Publish dates removed successfully.']);
+    }
+
+    public function bulkUpdateStatus(BulkActionRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $teamId = auth()->user()->current_team_id;
+
+        $contentPieces = ContentPiece::where('team_id', $teamId)
+            ->whereIn('id', $validated['content_piece_ids'])
+            ->get();
+
+        foreach ($contentPieces as $contentPiece) {
+            $this->authorize('update', $contentPiece);
+            $contentPiece->update(['status' => $validated['status']]);
+        }
+
+        return response()->json(['message' => 'Status updated successfully.']);
     }
 
     private function transformMedia(Media $media): array

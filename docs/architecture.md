@@ -683,6 +683,347 @@ Use `OpenAIService` for all AI operations, which automatically:
 - Respects team/user token limits
 - Handles API errors
 
+### Bulk Actions UI Pattern
+
+The application uses a consistent bottom action bar pattern for list views that support bulk operations (delete, update status, etc.). This pattern provides a unified user experience across Content Pieces, Posts, and Media Gallery pages.
+
+#### When to Use
+
+Use this pattern for any list/table view where users need to perform operations on multiple items:
+- Multi-select with checkboxes
+- Bulk delete, update, or modify operations
+- Actions that apply to 1+ selected items
+
+#### Architecture Components
+
+**1. Frontend State Management**
+
+```vue
+<script setup lang="ts">
+// Selection state
+const selectedIds = ref<number[]>([]);
+
+// Computed select-all state
+const allSelected = computed(() => {
+    return props.items.data.length > 0 &&
+           selectedIds.value.length === props.items.data.length;
+});
+
+// Toggle individual item
+const toggleSelection = (id: number, checked: boolean) => {
+    if (checked) {
+        if (!selectedIds.value.includes(id)) {
+            selectedIds.value.push(id);
+        }
+    } else {
+        selectedIds.value = selectedIds.value.filter((selectedId) => selectedId !== id);
+    }
+};
+
+// Toggle all items on current page
+const toggleAll = (checked: boolean) => {
+    if (checked) {
+        selectedIds.value = props.items.data.map((item) => item.id);
+    } else {
+        selectedIds.value = [];
+    }
+};
+
+// Clear selection when data changes (e.g., pagination)
+watch(() => props.items.data, () => {
+    selectedIds.value = [];
+});
+</script>
+```
+
+**2. Template Structure**
+
+```vue
+<template>
+    <!-- Table/Grid with checkboxes -->
+    <table>
+        <thead>
+            <tr>
+                <!-- Select-all checkbox in header -->
+                <th class="px-4 py-3">
+                    <Checkbox
+                        :model-value="allSelected"
+                        @update:model-value="toggleAll($event === true)"
+                    />
+                </th>
+                <!-- Other columns... -->
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="item in items.data" :key="item.id">
+                <!-- Individual checkbox in row -->
+                <td class="px-4 py-4">
+                    <Checkbox
+                        :model-value="selectedIds.includes(item.id)"
+                        @update:model-value="(checked: boolean) => toggleSelection(item.id, checked)"
+                    />
+                </td>
+                <!-- Other columns... -->
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Bottom action bar component -->
+    <BulkActionsComponent
+        :count="selectedIds.length"
+        @action="handleAction"
+        @clear="selectedIds = []"
+    />
+</template>
+```
+
+**3. Bottom Action Bar Component**
+
+Create a dedicated component (e.g., `ContentPieceBulkActions.vue`, `PostBulkActions.vue`):
+
+```vue
+<script setup lang="ts">
+defineProps<{
+    count: number;
+}>();
+
+const emit = defineEmits<{
+    (event: 'delete'): void;
+    (event: 'update-status'): void;
+    (event: 'clear'): void;
+    // Add other actions as needed
+}>();
+</script>
+
+<template>
+    <div
+        v-if="count > 0"
+        class="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white/90 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90"
+    >
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+            <div class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                {{ count }} item{{ count === 1 ? '' : 's' }} selected
+            </div>
+            <div class="flex items-center gap-3">
+                <Button variant="outline" size="sm" @click="emit('update-status')">
+                    Update Status
+                </Button>
+                <Button variant="destructive" size="sm" @click="emit('delete')">
+                    Delete Selected
+                </Button>
+                <Button variant="ghost" size="sm" @click="emit('clear')">
+                    Clear
+                </Button>
+            </div>
+        </div>
+    </div>
+</template>
+```
+
+**4. Action Handlers**
+
+```vue
+<script setup lang="ts">
+import axios from 'axios';
+import { toast } from 'vue-sonner';
+
+const handleBulkDelete = async () => {
+    if (selectedIds.value.length === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${selectedIds.value.length} item(s)?`)) {
+        return;
+    }
+
+    try {
+        await axios.post('/endpoint/bulk-delete', {
+            item_ids: selectedIds.value
+        });
+
+        toast.success('Items deleted successfully');
+        selectedIds.value = [];
+
+        // Refresh data (use Inertia router or reload)
+        router.reload({ only: ['items'] });
+    } catch (error) {
+        console.error(error);
+        toast.error('Unable to delete items right now.');
+    }
+};
+</script>
+```
+
+**5. Backend Routes**
+
+```php
+// routes/web.php
+Route::post('items/bulk-delete', [ItemController::class, 'bulkDelete'])
+    ->name('items.bulk-delete');
+Route::post('items/bulk-update-status', [ItemController::class, 'bulkUpdateStatus'])
+    ->name('items.bulk-update-status');
+```
+
+**6. Backend Controller Methods**
+
+```php
+// app/Http/Controllers/ItemController.php
+public function bulkDelete(BulkActionRequest $request): JsonResponse
+{
+    $validated = $request->validated();
+    $teamId = auth()->user()->current_team_id;
+
+    // Get only items belonging to the current team
+    $items = Item::where('team_id', $teamId)
+        ->whereIn('id', $validated['item_ids'])
+        ->get();
+
+    // Authorize each item (respects policies)
+    foreach ($items as $item) {
+        $this->authorize('delete', $item);
+        $item->delete();
+    }
+
+    return response()->json([
+        'message' => 'Items deleted successfully.'
+    ]);
+}
+
+public function bulkUpdateStatus(BulkActionRequest $request): JsonResponse
+{
+    $validated = $request->validated();
+    $teamId = auth()->user()->current_team_id;
+
+    $items = Item::where('team_id', $teamId)
+        ->whereIn('id', $validated['item_ids'])
+        ->get();
+
+    foreach ($items as $item) {
+        $this->authorize('update', $item);
+        $item->update(['status' => $validated['status']]);
+    }
+
+    return response()->json([
+        'message' => 'Status updated successfully.'
+    ]);
+}
+```
+
+**7. Form Request Validation**
+
+```php
+// app/Http/Requests/BulkActionRequest.php
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class BulkActionRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true; // Authorization handled in controller
+    }
+
+    public function rules(): array
+    {
+        $rules = [
+            'item_ids' => ['required', 'array', 'min:1'],
+            'item_ids.*' => ['integer', 'exists:items,id'],
+        ];
+
+        // Add conditional validation based on route
+        if ($this->routeIs('items.bulk-update-status')) {
+            $rules['status'] = ['required', 'in:DRAFT,FINAL,NOT_STARTED'];
+        }
+
+        return $rules;
+    }
+}
+```
+
+**8. Test Coverage**
+
+```php
+// tests/Feature/ItemBulkActionsTest.php
+it('allows bulk delete of multiple items', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $item1 = Item::factory()->for($team)->create();
+    $item2 = Item::factory()->for($team)->create();
+    $item3 = Item::factory()->for($team)->create();
+
+    $response = $this->actingAs($user)->postJson('/items/bulk-delete', [
+        'item_ids' => [$item1->id, $item2->id],
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['message' => 'Items deleted successfully.']);
+
+    expect(Item::find($item1->id))->toBeNull();
+    expect(Item::find($item2->id))->toBeNull();
+    expect(Item::find($item3->id))->not->toBeNull();
+});
+
+it('prevents deleting items from another team', function () {
+    [$user, $team] = createUserWithTeam();
+    [$otherUser, $otherTeam] = createUserWithTeam();
+
+    $item = Item::factory()->for($team)->create();
+    $otherItem = Item::factory()->for($otherTeam)->create();
+
+    $response = $this->actingAs($user)->postJson('/items/bulk-delete', [
+        'item_ids' => [$item->id, $otherItem->id],
+    ]);
+
+    // Should succeed for team item but skip other team's item
+    $response->assertOk();
+    expect(Item::find($item->id))->toBeNull();
+    expect(Item::find($otherItem->id))->not->toBeNull();
+});
+
+it('validates bulk delete requires array of IDs', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $response = $this->actingAs($user)->postJson('/items/bulk-delete', [
+        'item_ids' => 'invalid',
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['item_ids']);
+});
+```
+
+#### Key Design Decisions
+
+**Bottom vs. Top Action Bar**
+- **Bottom** (preferred): Stays visible while scrolling, better use of screen real estate
+- Only appears when items are selected (conditional `v-if="count > 0"`)
+
+**Selection State**
+- Checkboxes use Reka UI `Checkbox` component with `modelValue`/`update:modelValue`
+- Select-all only affects current page (not all pages in pagination)
+- Selection clears on page change to avoid confusion
+
+**Authorization**
+- Backend always validates team ownership via `where('team_id', $teamId)`
+- Each item authorized individually via policies before operation
+- Silently skips items user can't modify (doesn't fail entire operation)
+
+**User Feedback**
+- Toast notifications for success/error (via `vue-sonner`)
+- Confirmation dialogs for destructive actions (delete)
+- Count display shows number of selected items
+
+**Styling**
+- Fixed positioning: `fixed inset-x-0 bottom-0 z-50`
+- Backdrop blur: `bg-white/90 backdrop-blur` for frosted glass effect
+- Dark mode support: `dark:border-gray-800 dark:bg-gray-900/90`
+- Max width container: `mx-auto max-w-6xl` matches main content width
+
+#### Examples in Codebase
+
+- **Content Pieces**: `resources/js/pages/ContentPieces/Index.vue` + `resources/js/components/ContentPiece/ContentPieceBulkActions.vue`
+- **Posts**: `resources/js/pages/Posts/Index.vue` + `resources/js/components/Post/PostBulkActions.vue`
+- **Media Gallery**: `resources/js/pages/Media/Index.vue` (inline implementation)
+
 ### Testing
 
 - Use Pest (not PHPUnit directly)
