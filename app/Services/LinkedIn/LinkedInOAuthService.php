@@ -224,15 +224,10 @@ class LinkedInOAuthService
             'has_refresh_token' => isset($payload['refresh_token']),
         ]);
 
-        try {
-            $response = $this->http()->asForm()->post(self::TOKEN_URL, $payload);
-        } catch (\Throwable $e) {
-            Log::error('LinkedIn token request threw exception during HTTP call', [
-                'exception' => $e->getMessage(),
-                'code' => $e->getCode(),
-            ]);
-            throw $e;
-        }
+        // Use retry but don't throw on failure - we want to inspect the error response
+        $response = Http::retry(2, 200, throw: false)
+            ->asForm()
+            ->post(self::TOKEN_URL, $payload);
 
         Log::info('LinkedIn OAuth: Received response from token endpoint', [
             'status' => $response->status(),
