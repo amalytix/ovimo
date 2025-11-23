@@ -214,38 +214,30 @@ class LinkedInOAuthService
 
     private function postToken(array $payload): array
     {
-        // Extract client credentials for Basic Auth
-        $clientId = $payload['client_id'];
-        $clientSecret = $payload['client_secret'];
-
-        // Remove client_secret from payload (LinkedIn wants client_id in body + both in Basic Auth header)
-        unset($payload['client_secret']);
-
-        // PRIORITY 1: Inspect credentials for invisible characters and encoding issues
+        // Inspect credentials for invisible characters and encoding issues
         Log::info('LinkedIn OAuth: Credential inspection', [
-            'client_id_value' => $clientId,
-            'client_id_length' => strlen($clientId),
-            'client_secret_length' => strlen($clientSecret),
-            'client_secret_first_4' => substr($clientSecret, 0, 4),
-            'client_secret_last_4' => substr($clientSecret, -4),
-            'client_secret_hex_dump' => bin2hex($clientSecret),
-            'has_trailing_whitespace' => $clientSecret !== trim($clientSecret),
+            'client_id_value' => $payload['client_id'] ?? null,
+            'client_id_length' => isset($payload['client_id']) ? strlen($payload['client_id']) : null,
+            'client_secret_length' => isset($payload['client_secret']) ? strlen($payload['client_secret']) : null,
+            'client_secret_first_4' => isset($payload['client_secret']) ? substr($payload['client_secret'], 0, 4) : null,
+            'client_secret_last_4' => isset($payload['client_secret']) ? substr($payload['client_secret'], -4) : null,
+            'client_secret_hex_dump' => isset($payload['client_secret']) ? bin2hex($payload['client_secret']) : null,
+            'has_trailing_whitespace' => isset($payload['client_secret']) ? ($payload['client_secret'] !== trim($payload['client_secret'])) : null,
         ]);
 
         Log::info('LinkedIn OAuth: About to POST to token endpoint', [
             'url' => self::TOKEN_URL,
             'grant_type' => $payload['grant_type'] ?? null,
             'redirect_uri' => $payload['redirect_uri'] ?? null,
-            'auth_method' => 'HTTP Basic Auth + client_id in body',
+            'auth_method' => 'Form body (client_id + client_secret)',
             'has_code' => isset($payload['code']),
             'has_code_verifier' => isset($payload['code_verifier']),
             'has_refresh_token' => isset($payload['refresh_token']),
-            'client_id_in_body' => $payload['client_id'] ?? null,
+            'payload_keys' => array_keys($payload),
         ]);
 
-        // LinkedIn requires client_id in POST body AND both credentials in Basic Auth header
-        $response = Http::withBasicAuth($clientId, $clientSecret)
-            ->asForm()
+        // LinkedIn requires both client_id and client_secret in POST body (not Basic Auth)
+        $response = Http::asForm()
             ->post(self::TOKEN_URL, $payload);
 
         Log::info('LinkedIn OAuth: Received response from token endpoint', [
