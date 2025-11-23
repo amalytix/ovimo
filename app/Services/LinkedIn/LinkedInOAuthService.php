@@ -198,6 +198,8 @@ class LinkedInOAuthService
             Log::error('LinkedIn token request failed', [
                 'status' => $response->status(),
                 'body' => $response->json() ?? $response->body(),
+                'redirect_uri' => $payload['redirect_uri'] ?? null,
+                'client_id_tail' => isset($payload['client_id']) ? substr((string) $payload['client_id'], -4) : null,
             ]);
 
             $response->throw();
