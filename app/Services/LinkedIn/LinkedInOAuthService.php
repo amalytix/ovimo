@@ -66,6 +66,7 @@ class LinkedInOAuthService
             'code' => $code,
             'redirect_uri' => $this->redirectUri(),
             'client_id' => $this->clientId(),
+            'client_secret' => $this->clientSecret(),
             'code_verifier' => $codeVerifier,
         ];
 
@@ -74,6 +75,7 @@ class LinkedInOAuthService
             'code_prefix' => substr($code, 0, 10).'...',
             'redirect_uri' => $payload['redirect_uri'],
             'client_id_in_body' => $payload['client_id'],
+            'client_secret_in_body' => '****', // Mask client secret in logs
             'auth_method' => 'basic_auth',
             'code_verifier_length' => strlen($codeVerifier),
             'grant_type' => $payload['grant_type'],
@@ -90,6 +92,7 @@ class LinkedInOAuthService
             'grant_type' => 'refresh_token',
             'refresh_token' => $refreshToken,
             'client_id' => $this->clientId(),
+            'client_secret' => $this->clientSecret(),
         ];
 
         $response = $this->postToken($payload);
@@ -216,7 +219,9 @@ class LinkedInOAuthService
             'grant_type' => $payload['grant_type'] ?? null,
             'redirect_uri' => $payload['redirect_uri'] ?? null,
             'client_id_in_header' => $this->clientId(),
+            'client_secret_in_header' => '****', // Mask client secret in logs
             'client_id_in_body' => $payload['client_id'] ?? null,
+            'client_secret_in_body' => isset($payload['client_secret']) ? '****' : null, // Mask client secret in logs
             'auth_method' => 'basic_auth',
             'has_code' => isset($payload['code']),
             'has_code_verifier' => isset($payload['code_verifier']),
