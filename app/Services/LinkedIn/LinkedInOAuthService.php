@@ -49,6 +49,7 @@ class LinkedInOAuthService
 
         Log::info('LinkedIn OAuth: Generating authorization URL', [
             'redirect_uri' => $params['redirect_uri'],
+            'client_id_full' => $params['client_id'],
             'client_id_tail' => substr($params['client_id'], -4),
             'scopes' => $params['scope'],
             'code_verifier_length' => strlen($codeVerifier),
@@ -213,24 +214,34 @@ class LinkedInOAuthService
 
     private function postToken(array $payload): array
     {
+        // PRIORITY 1: Inspect credentials for invisible characters and encoding issues
+        Log::info('LinkedIn OAuth: Credential inspection', [
+            'client_id_value' => $payload['client_id'] ?? null,
+            'client_id_length' => isset($payload['client_id']) ? strlen($payload['client_id']) : null,
+            'client_secret_length' => isset($payload['client_secret']) ? strlen($payload['client_secret']) : null,
+            'client_secret_first_4' => isset($payload['client_secret']) ? substr($payload['client_secret'], 0, 4) : null,
+            'client_secret_last_4' => isset($payload['client_secret']) ? substr($payload['client_secret'], -4) : null,
+            'client_secret_hex_dump' => isset($payload['client_secret']) ? bin2hex($payload['client_secret']) : null,
+            'has_trailing_whitespace' => isset($payload['client_secret']) ? ($payload['client_secret'] !== trim($payload['client_secret'])) : null,
+        ]);
+
         Log::info('LinkedIn OAuth: About to POST to token endpoint', [
             'url' => self::TOKEN_URL,
             'grant_type' => $payload['grant_type'] ?? null,
             'redirect_uri' => $payload['redirect_uri'] ?? null,
             'client_id_in_body' => $payload['client_id'] ?? null,
-            'client_secret_in_body' => isset($payload['client_secret']) ? '****' : null, // Mask client secret in logs
-            'auth_method' => 'body',
+            'client_secret_in_body' => isset($payload['client_secret']) ? '****' : null,
+            'auth_method' => 'asForm',
             'has_code' => isset($payload['code']),
             'has_code_verifier' => isset($payload['code_verifier']),
             'has_refresh_token' => isset($payload['refresh_token']),
         ]);
 
-        $body = http_build_query($payload, '', '&', PHP_QUERY_RFC3986);
-
-        // Use retry but don't throw on failure - we want to inspect the error response
-        $response = Http::retry(2, 200, throw: false)
-            ->withBody($body, 'application/x-www-form-urlencoded')
-            ->post(self::TOKEN_URL);
+        // PRIORITY 3: Use Laravel's idiomatic asForm() method
+        // PRIORITY 4: Remove retry logic to prevent consuming auth code on timeout
+        $response = Http::throw(false)
+            ->asForm()
+            ->post(self::TOKEN_URL, $payload);
 
         Log::info('LinkedIn OAuth: Received response from token endpoint', [
             'status' => $response->status(),
