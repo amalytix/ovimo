@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Monitor sources every minute (the command checks which sources actually need monitoring)
-Schedule::command('sources:monitor')->everyMinute();
+Schedule::command('sources:monitor')->everyMinute()->withoutOverlapping();
 
 // Prune old activity logs daily at midnight
 Schedule::job(new \App\Jobs\PruneOldActivityLogs)->dailyAt('00:00');

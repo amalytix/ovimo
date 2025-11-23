@@ -6,11 +6,12 @@ use App\Models\Source;
 use App\Services\KeywordFilterService;
 use App\Services\SourceParser;
 use App\Services\TokenLimitService;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class MonitorSource implements ShouldQueue
+class MonitorSource implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
@@ -23,6 +24,14 @@ class MonitorSource implements ShouldQueue
     public function __construct(
         public Source $source
     ) {}
+
+    /**
+     * Get the unique ID for the job.
+     */
+    public function uniqueId(): string
+    {
+        return (string) $this->source->id;
+    }
 
     public function handle(SourceParser $parser, KeywordFilterService $keywordFilter, TokenLimitService $tokenLimitService): void
     {
