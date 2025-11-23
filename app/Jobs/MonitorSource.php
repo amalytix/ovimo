@@ -93,6 +93,8 @@ class MonitorSource implements ShouldQueue
                 'failed_at' => null,
             ]);
 
+            Log::info("Monitored source {$this->source->id}: found {$newPostsCount} new posts");
+
             // Send webhook notification if enabled and new posts found
             if ($this->source->should_notify && $newPostsCount > 0) {
                 SendWebhookNotification::dispatchForEvent(
