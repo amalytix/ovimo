@@ -80,3 +80,5 @@ php artisan migrate:fresh --seed
 
 Or to just run seeders (without resetting migrations):
 php artisan db:seed
+
+PDT
