@@ -6,12 +6,11 @@ use App\Models\Source;
 use App\Services\KeywordFilterService;
 use App\Services\SourceParser;
 use App\Services\TokenLimitService;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class MonitorSource implements ShouldBeUnique, ShouldQueue
+class MonitorSource implements ShouldQueue
 {
     use Queueable;
 
@@ -25,16 +24,41 @@ class MonitorSource implements ShouldBeUnique, ShouldQueue
         public Source $source
     ) {}
 
-    /**
-     * Get the unique ID for the job.
-     */
-    public function uniqueId(): string
-    {
-        return (string) $this->source->id;
-    }
-
     public function handle(SourceParser $parser, KeywordFilterService $keywordFilter, TokenLimitService $tokenLimitService): void
     {
+        // Acquire exclusive lock on this source to prevent duplicate processing
+        // This works even with database cache driver and multiple queue workers
+        $locked = \DB::transaction(function () {
+            $source = Source::where('id', $this->source->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $source) {
+                return false;
+            }
+
+            // Check if another worker already processed this in the last 30 seconds
+            if ($source->last_checked_at && $source->last_checked_at->gt(now()->subSeconds(30))) {
+                Log::info("MonitorSource job skipped: source {$source->id} was recently checked by another worker", [
+                    'last_checked_at' => $source->last_checked_at->toDateTimeString(),
+                ]);
+
+                return false;
+            }
+
+            // Mark as being checked now to prevent other workers from processing
+            $source->update(['last_checked_at' => now()]);
+
+            return true;
+        });
+
+        if (! $locked) {
+            return;
+        }
+
+        // Reload source to get fresh data after transaction commit
+        $this->source->refresh();
+
         if (! $this->source->is_active) {
             Log::info("MonitorSource job skipped: source {$this->source->id} is inactive");
 
