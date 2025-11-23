@@ -6,6 +6,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class LinkedInOAuthService
@@ -58,7 +59,7 @@ class LinkedInOAuthService
             'code_verifier' => $codeVerifier,
         ];
 
-        $response = $this->http()->asForm()->post(self::TOKEN_URL, $payload)->throw()->json();
+        $response = $this->postToken($payload);
 
         return $this->normalizeTokenResponse($response);
     }
@@ -72,7 +73,7 @@ class LinkedInOAuthService
             'client_secret' => $this->clientSecret(),
         ];
 
-        $response = $this->http()->asForm()->post(self::TOKEN_URL, $payload)->throw()->json();
+        $response = $this->postToken($payload);
 
         return $this->normalizeTokenResponse($response);
     }
@@ -187,5 +188,21 @@ class LinkedInOAuthService
     private function http(): PendingRequest
     {
         return Http::retry(2, 200);
+    }
+
+    private function postToken(array $payload): array
+    {
+        $response = $this->http()->asForm()->post(self::TOKEN_URL, $payload);
+
+        if ($response->failed()) {
+            Log::error('LinkedIn token request failed', [
+                'status' => $response->status(),
+                'body' => $response->json() ?? $response->body(),
+            ]);
+
+            $response->throw();
+        }
+
+        return $response->json();
     }
 }
