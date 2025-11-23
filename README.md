@@ -5,7 +5,20 @@ Relevant infos here.
 ## Local development
 
 php artisan config:clear
+
+php artisan config:clear && php artisan route:clear && php artisan cache:clear
+
 npm run build
+
+### Ngrok
+
+brew install ngrok
+ngrok http http://ovimo.test
+ngrok http http://ovimo.test --host-header=ovimo.test
+
+Note the URL, e.g.: https://ceb7121560af.ngrok-free.app
+
+
 
 ### Worker
 

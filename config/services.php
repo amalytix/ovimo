@@ -43,4 +43,16 @@ return [
         'max_entries' => env('XML_MAX_ENTRIES', 500),
     ],
 
+    'linkedin' => [
+        'client_id' => env('LINKEDIN_CLIENT_ID'),
+        'client_secret' => env('LINKEDIN_CLIENT_SECRET'),
+        'redirect_uri' => env('LINKEDIN_CLIENT_REDIRECT_URL', env('APP_URL').'/integrations/linkedin/callback-member'),
+        'scopes' => [
+            'openid',
+            'profile',
+            'w_member_social',
+            'r_basicprofile',
+        ],
+    ],
+
 ];

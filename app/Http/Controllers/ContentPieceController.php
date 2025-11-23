@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ContentPiece\BulkActionRequest;
+use App\Http\Requests\ContentPiece\PublishContentPieceRequest;
 use App\Http\Requests\StoreContentPieceRequest;
 use App\Http\Requests\UpdateContentPieceRequest;
 use App\Jobs\GenerateContentPiece;
+use App\Jobs\PublishContentToLinkedIn;
 use App\Models\ContentPiece;
 use App\Models\Media;
 use App\Models\MediaTag;
 use App\Models\Prompt;
+use App\Models\SocialIntegration;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
@@ -237,6 +241,22 @@ class ContentPieceController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $linkedinIntegrations = SocialIntegration::query()
+            ->active()
+            ->where('team_id', $teamId)
+            ->orderByDesc('created_at')
+            ->get([
+                'id',
+                'platform',
+                'platform_user_id',
+                'platform_username',
+                'profile_data',
+                'scopes',
+                'is_active',
+                'created_at',
+                'token_expires_at',
+            ]);
+
         return Inertia::render('ContentPieces/Edit', [
             'contentPiece' => [
                 'id' => $contentPiece->id,
@@ -257,11 +277,18 @@ class ContentPieceController extends Controller
                     ],
                 ]),
                 'published_at' => $contentPiece->published_at?->toIso8601String(),
+                'publish_status' => $contentPiece->publish_status,
+                'publish_to_platforms' => $contentPiece->publish_to_platforms,
+                'published_platforms' => $contentPiece->published_platforms,
+                'scheduled_publish_at' => $contentPiece->scheduled_publish_at?->toIso8601String(),
             ],
             'prompts' => $prompts,
             'availablePosts' => $availablePosts,
             'media' => $availableMedia->map(fn (Media $media) => $this->transformMedia($media)),
             'mediaTags' => $mediaTags,
+            'integrations' => [
+                'linkedin' => $linkedinIntegrations,
+            ],
         ]);
     }
 
@@ -287,6 +314,47 @@ class ContentPieceController extends Controller
             'tab' => $request->query('tab'),
         ])
             ->with('success', 'Content piece updated successfully.');
+    }
+
+    public function publish(PublishContentPieceRequest $request, ContentPiece $contentPiece): RedirectResponse
+    {
+        $this->authorize('update', $contentPiece);
+
+        $validated = $request->validated();
+        $teamId = auth()->user()->current_team_id;
+
+        $integration = SocialIntegration::query()
+            ->active()
+            ->where('team_id', $teamId)
+            ->findOrFail($validated['integration_id']);
+
+        $publishTo = $contentPiece->publish_to_platforms ?? [];
+        $publishTo['linkedin'] = $integration->id;
+
+        if (! empty($validated['schedule_at'])) {
+            $contentPiece->update([
+                'publish_to_platforms' => $publishTo,
+                'scheduled_publish_at' => Carbon::parse($validated['schedule_at']),
+                'publish_status' => 'scheduled',
+            ]);
+
+            return redirect()->route('content-pieces.edit', [
+                'content_piece' => $contentPiece,
+                'tab' => $request->query('tab'),
+            ])->with('success', 'Publishing scheduled.');
+        }
+
+        $contentPiece->update([
+            'publish_to_platforms' => $publishTo,
+            'publish_status' => 'publishing',
+        ]);
+
+        PublishContentToLinkedIn::dispatch($contentPiece, $integration);
+
+        return redirect()->route('content-pieces.edit', [
+            'content_piece' => $contentPiece,
+            'tab' => $request->query('tab'),
+        ])->with('success', 'Publishing started.');
     }
 
     public function generate(Request $request, ContentPiece $contentPiece): RedirectResponse
@@ -359,6 +427,9 @@ class ContentPieceController extends Controller
             'status' => $contentPiece->status,
             'error' => $contentPiece->generation_error,
             'error_occurred_at' => $contentPiece->generation_error_occurred_at,
+            'publish_status' => $contentPiece->publish_status,
+            'published_platforms' => $contentPiece->published_platforms,
+            'scheduled_publish_at' => $contentPiece->scheduled_publish_at,
         ]);
     }
 

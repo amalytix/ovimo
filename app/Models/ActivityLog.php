@@ -27,10 +27,14 @@ class ActivityLog extends Model
         'source.updated' => 'Source Updated',
         'source.deleted' => 'Source Deleted',
         'content_piece.generated' => 'Content Piece Generated',
+        'integration.linkedin_connected' => 'LinkedIn Connected',
+        'integration.linkedin_disconnected' => 'LinkedIn Disconnected',
+        'content.published_to_linkedin' => 'Content Published to LinkedIn',
 
         // Error/Warning events
         'source.monitoring_failed' => 'Source Monitoring Failed',
         'content_piece.generation_failed' => 'Content Generation Failed',
+        'content.linkedin_publish_failed' => 'LinkedIn Publish Failed',
         'openai.request_failed' => 'OpenAI Request Failed',
         'webhook.delivery_failed' => 'Webhook Delivery Failed',
         'token.limit_exceeded' => 'Token Limit Exceeded',

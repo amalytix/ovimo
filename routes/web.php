@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ContentPieceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Integrations\LinkedInController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MediaTagController;
 use App\Http\Controllers\PostController;
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('content-pieces/bulk-delete', [ContentPieceController::class, 'bulkDelete'])->name('content-pieces.bulk-delete');
     Route::post('content-pieces/bulk-unset-publish-date', [ContentPieceController::class, 'bulkUnsetPublishDate'])->name('content-pieces.bulk-unset-publish-date');
     Route::post('content-pieces/bulk-update-status', [ContentPieceController::class, 'bulkUpdateStatus'])->name('content-pieces.bulk-update-status');
+    Route::post('content-pieces/{content_piece}/publish', [ContentPieceController::class, 'publish'])->name('content-pieces.publish');
 
     Route::resource('webhooks', WebhookController::class)->except(['show']);
     Route::post('webhooks/{webhook}/test', [WebhookController::class, 'test'])->name('webhooks.test');
@@ -78,6 +80,14 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('media-tags', [MediaTagController::class, 'store'])->name('media-tags.store');
     Route::patch('media-tags/{mediaTag}', [MediaTagController::class, 'update'])->name('media-tags.update');
     Route::delete('media-tags/{mediaTag}', [MediaTagController::class, 'destroy'])->name('media-tags.destroy');
+
+    Route::prefix('integrations/linkedin')->name('integrations.linkedin.')->group(function () {
+        Route::get('/', [LinkedInController::class, 'index'])->name('index');
+        Route::get('/connect', [LinkedInController::class, 'redirect'])->name('connect');
+        Route::get('/callback', [LinkedInController::class, 'callback'])->name('callback');
+        Route::get('/callback-member', [LinkedInController::class, 'callback'])->name('callback-member');
+        Route::delete('/{integration}', [LinkedInController::class, 'disconnect'])->name('disconnect');
+    });
 });
 
 require __DIR__.'/settings.php';

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ImportSourcesRequest;
 use App\Http\Requests\UpdateTeamSettingsRequest;
+use App\Models\SocialIntegration;
 use App\Models\Source;
 use App\Models\Tag;
 use App\Models\Team;
@@ -30,6 +31,22 @@ class SettingsController extends Controller
             ],
             'webhooks' => [
                 'data' => $team->webhooks,
+            ],
+            'integrations' => [
+                'linkedin' => SocialIntegration::query()
+                    ->where('team_id', $team->id)
+                    ->orderByDesc('created_at')
+                    ->get([
+                        'id',
+                        'platform',
+                        'platform_user_id',
+                        'platform_username',
+                        'profile_data',
+                        'scopes',
+                        'is_active',
+                        'created_at',
+                        'token_expires_at',
+                    ]),
             ],
         ]);
     }

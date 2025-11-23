@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
+use App\Events\ContentPublishedToLinkedIn;
+use App\Events\LinkedInIntegrationConnected;
+use App\Events\LinkedInIntegrationDisconnected;
+use App\Events\LinkedInPublishingFailed;
 use App\Events\MediaBulkDeleted;
 use App\Events\MediaDeleted;
 use App\Events\MediaUpdated;
@@ -61,6 +65,9 @@ class AppServiceProvider extends ServiceProvider
             MediaUpdated::class,
             MediaDeleted::class,
             MediaBulkDeleted::class,
+            LinkedInIntegrationConnected::class,
+            LinkedInIntegrationDisconnected::class,
+            ContentPublishedToLinkedIn::class,
 
             // Error/Warning events
             SourceMonitoringFailed::class,
@@ -69,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
             OpenAIRequestFailed::class,
             WebhookDeliveryFailed::class,
             TokenLimitExceeded::class,
+            LinkedInPublishingFailed::class,
         ], LogActivityToDatabase::class);
     }
 }

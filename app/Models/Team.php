@@ -76,6 +76,11 @@ class Team extends Model
         return $this->hasMany(TokenUsageLog::class);
     }
 
+    public function socialIntegrations(): HasMany
+    {
+        return $this->hasMany(SocialIntegration::class);
+    }
+
     public function webhooks(): HasMany
     {
         return $this->hasMany(Webhook::class);

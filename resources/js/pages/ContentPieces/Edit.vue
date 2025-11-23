@@ -4,14 +4,18 @@ import EditingTab from '@/components/ContentPiece/EditingTab.vue';
 import GeneralInfoHeader from '@/components/ContentPiece/GeneralInfoHeader.vue';
 import MediaGalleryPicker from '@/components/ContentPiece/MediaGalleryPicker.vue';
 import ResearchTab from '@/components/ContentPiece/ResearchTab.vue';
+import LinkedInIntegrationSelector from '@/components/Publishing/LinkedInIntegrationSelector.vue';
+import PublishingScheduler from '@/components/Publishing/PublishingScheduler.vue';
+import PublishingStatus from '@/components/Publishing/PublishingStatus.vue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { MediaItem, MediaTag } from '@/types/media';
+import type { SocialIntegration } from '@/types/social';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import { status } from '@/routes/content-pieces';
+import { publish, status } from '@/routes/content-pieces';
 import { view as mediaView } from '@/routes/media';
 
 type Prompt = {
@@ -42,6 +46,10 @@ type ContentPiece = {
     posts: Post[];
     media: MediaItem[];
     published_at: string | null;
+    publish_status?: string | null;
+    publish_to_platforms?: Record<string, any> | null;
+    published_platforms?: Record<string, any> | null;
+    scheduled_publish_at?: string | null;
 };
 
 interface Props {
@@ -50,9 +58,13 @@ interface Props {
     availablePosts: Post[];
     media: MediaItem[];
     mediaTags: MediaTag[];
+    integrations: {
+        linkedin: SocialIntegration[];
+    };
 }
 
 const props = defineProps<Props>();
+const integrations = props.integrations;
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Content Pieces', href: '/content-pieces' },
@@ -98,8 +110,8 @@ const form = useForm({
 
 const currentUrl = new URL(usePage().url, window.location.origin);
 const initialTab = currentUrl.searchParams.get('tab');
-const activeTab = ref<'research' | 'editing'>(initialTab === 'edit' || initialTab === 'editing' ? 'editing' : 'research');
-const updateTabInUrl = (tab: 'research' | 'editing') => {
+const activeTab = ref<'research' | 'editing' | 'publishing'>(initialTab === 'edit' || initialTab === 'editing' ? 'editing' : initialTab === 'publishing' ? 'publishing' : 'research');
+const updateTabInUrl = (tab: 'research' | 'editing' | 'publishing') => {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
     window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`);
@@ -133,6 +145,24 @@ const page = usePage();
 const isPolling = ref(false);
 let pollingInterval: number | null = null;
 let successTimeout: number | null = null;
+
+const publishingForm = useForm({
+    integration_id: props.integrations.linkedin[0]?.id ?? null,
+    schedule_at: props.contentPiece.scheduled_publish_at ? formatDateTimeLocal(props.contentPiece.scheduled_publish_at) : '',
+});
+
+const publishNow = () => {
+    publishingForm.schedule_at = '';
+    publishingForm.post(publish.url(props.contentPiece.id), {
+        preserveScroll: true,
+    });
+};
+
+const schedulePublish = () => {
+    publishingForm.post(publish.url(props.contentPiece.id), {
+        preserveScroll: true,
+    });
+};
 
 const serializePublishedAt = (value: string | null) => {
     if (!value) {
@@ -303,6 +333,7 @@ const generateContent = () => {
                 <TabsList>
                     <TabsTrigger value="research">Research</TabsTrigger>
                     <TabsTrigger value="editing">Editing</TabsTrigger>
+                    <TabsTrigger value="publishing">Publishing</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="research" class="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
@@ -327,6 +358,60 @@ const generateContent = () => {
                         @request-image="openImagePicker"
                         @content-type-change="(value) => (editingContentType.value = value)"
                     />
+                </TabsContent>
+
+                <TabsContent value="publishing" class="space-y-6 rounded-xl border bg-card p-4 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div class="space-y-1">
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Publishing status</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Manage LinkedIn publishing for this content piece.
+                            </p>
+                        </div>
+                        <PublishingStatus :status="contentPiece.publish_status || 'not_published'" />
+                    </div>
+
+                    <div class="grid gap-6 md:grid-cols-2">
+                        <div class="space-y-4 rounded-lg border border-dashed p-4">
+                            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">Destination</h3>
+                            <LinkedInIntegrationSelector
+                                :integrations="integrations.linkedin"
+                                v-model="publishingForm.integration_id"
+                            />
+                            <p v-if="!integrations.linkedin.length" class="text-xs text-amber-600 dark:text-amber-400">
+                                Connect a LinkedIn profile in Team Settings to enable publishing.
+                            </p>
+                        </div>
+
+                        <div class="space-y-4 rounded-lg border border-dashed p-4">
+                            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">Schedule</h3>
+                            <PublishingScheduler v-model="publishingForm.schedule_at" />
+                            <div class="flex gap-3">
+                                <Button
+                                    class="w-full"
+                                    variant="secondary"
+                                    :disabled="publishingForm.processing || !publishingForm.integration_id"
+                                    @click="publishNow"
+                                >
+                                    {{ publishingForm.processing ? 'Starting…' : 'Publish now' }}
+                                </Button>
+                                <Button
+                                    class="w-full"
+                                    :disabled="publishingForm.processing || !publishingForm.integration_id"
+                                    @click="schedulePublish"
+                                >
+                                    {{ publishingForm.processing ? 'Scheduling…' : 'Schedule' }}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="contentPiece.published_platforms?.linkedin" class="rounded-lg border bg-muted/30 p-4">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Last published to LinkedIn</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            URN: {{ contentPiece.published_platforms.linkedin.urn || 'n/a' }}
+                        </p>
+                    </div>
                 </TabsContent>
             </Tabs>
 

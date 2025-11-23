@@ -4,6 +4,10 @@ namespace App\Listeners;
 
 use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
+use App\Events\ContentPublishedToLinkedIn;
+use App\Events\LinkedInIntegrationConnected;
+use App\Events\LinkedInIntegrationDisconnected;
+use App\Events\LinkedInPublishingFailed;
 use App\Events\MediaBulkDeleted;
 use App\Events\MediaDeleted;
 use App\Events\MediaUpdated;
@@ -255,6 +259,57 @@ class LogActivityToDatabase implements ShouldQueue
                     'limit' => $event->limit,
                     'current_usage' => $event->currentUsage,
                     'operation' => $event->operation,
+                ],
+            ],
+
+            $event instanceof LinkedInIntegrationConnected => [
+                'team_id' => $event->integration->team_id,
+                'user_id' => $event->user->id,
+                'event_type' => 'integration.linkedin_connected',
+                'level' => 'info',
+                'description' => "LinkedIn profile '{$event->integration->platform_username}' connected",
+                'metadata' => [
+                    'integration_id' => $event->integration->id,
+                    'platform_user_id' => $event->integration->platform_user_id,
+                ],
+            ],
+
+            $event instanceof LinkedInIntegrationDisconnected => [
+                'team_id' => $event->integration->team_id,
+                'user_id' => $event->user->id,
+                'event_type' => 'integration.linkedin_disconnected',
+                'level' => 'info',
+                'description' => "LinkedIn profile '{$event->integration->platform_username}' disconnected",
+                'metadata' => [
+                    'integration_id' => $event->integration->id,
+                    'platform_user_id' => $event->integration->platform_user_id,
+                ],
+            ],
+
+            $event instanceof ContentPublishedToLinkedIn => [
+                'team_id' => $event->integration->team_id,
+                'user_id' => $event->integration->user_id,
+                'event_type' => 'content.published_to_linkedin',
+                'level' => 'info',
+                'description' => "Content piece '{$event->contentPiece->internal_name}' published to LinkedIn",
+                'metadata' => [
+                    'content_piece_id' => $event->contentPiece->id,
+                    'integration_id' => $event->integration->id,
+                    'result' => $event->publishResult,
+                ],
+            ],
+
+            $event instanceof LinkedInPublishingFailed => [
+                'team_id' => $event->integration->team_id,
+                'user_id' => $event->integration->user_id,
+                'event_type' => 'content.linkedin_publish_failed',
+                'level' => 'error',
+                'description' => "LinkedIn publishing failed for '{$event->contentPiece->internal_name}'",
+                'metadata' => [
+                    'content_piece_id' => $event->contentPiece->id,
+                    'integration_id' => $event->integration->id,
+                    'error_message' => $event->exception->getMessage(),
+                    'error_type' => get_class($event->exception),
                 ],
             ],
 

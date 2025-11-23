@@ -13,3 +13,6 @@ Schedule::command('sources:monitor')->everyMinute();
 
 // Prune old activity logs daily at midnight
 Schedule::job(new \App\Jobs\PruneOldActivityLogs)->dailyAt('00:00');
+
+// Process scheduled publishing every minute
+Schedule::job(new \App\Jobs\ProcessScheduledPublishing)->everyMinute();

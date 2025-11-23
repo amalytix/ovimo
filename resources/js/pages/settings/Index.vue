@@ -9,9 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
+import type { SocialIntegration } from '@/types/social';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { Pencil, PlayCircle, Trash2 } from 'lucide-vue-next';
+import LinkedInConnectButton from '@/components/Integrations/LinkedInConnectButton.vue';
+import { disconnect as disconnectLinkedIn } from '@/routes/integrations/linkedin';
 
 interface Team {
     id: number;
@@ -39,6 +42,9 @@ interface Props {
     webhooks: {
         data: Webhook[];
     };
+    integrations: {
+        linkedin: SocialIntegration[];
+    };
 }
 
 const props = defineProps<Props>();
@@ -46,6 +52,7 @@ const props = defineProps<Props>();
 const page = usePage();
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Team Settings', href: '/team-settings' }];
+const linkedinIntegrations = computed(() => props.integrations.linkedin || []);
 
 // Get tab from URL query parameter
 const urlParams = new URLSearchParams(window.location.search);
@@ -149,6 +156,16 @@ const sendTestWebhook = (webhookId: number) => {
     });
 };
 
+const disconnectIntegration = (integrationId: number) => {
+    if (!confirm('Disconnect this LinkedIn profile?')) {
+        return;
+    }
+
+    router.delete(disconnectLinkedIn.url(integrationId), {
+        preserveScroll: true,
+    });
+};
+
 const formatEvent = (event: string) => {
     const map: Record<string, string> = {
         NEW_POSTS: 'New Posts Found',
@@ -156,6 +173,14 @@ const formatEvent = (event: string) => {
         CONTENT_GENERATED: 'Content Generated',
     };
     return map[event] || event;
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value).toLocaleString();
 };
 
 const modalTitle = computed(() => editingWebhook.value ? 'Edit Webhook' : 'Create Webhook');
@@ -254,6 +279,7 @@ const submitImport = () => {
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="keywords">Keyword Filters</TabsTrigger>
                     <TabsTrigger value="ai">AI</TabsTrigger>
+                    <TabsTrigger value="integrations">Integrations</TabsTrigger>
                     <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
                     <TabsTrigger value="import-export">Import / Export</TabsTrigger>
                 </TabsList>
@@ -384,6 +410,64 @@ const submitImport = () => {
                             </Button>
                         </div>
                     </form>
+                </TabsContent>
+
+                <!-- Integrations Tab -->
+                <TabsContent value="integrations">
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-medium">LinkedIn Integrations</h2>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    Connect LinkedIn profiles to publish content directly from Ovimo.
+                                </p>
+                            </div>
+                            <LinkedInConnectButton />
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div
+                                v-for="integration in linkedinIntegrations"
+                                :key="integration.id"
+                                class="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+                            >
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {{ integration.platform_username || integration.platform_user_id }}
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            Connected {{ formatDateTime(integration.created_at) }}
+                                        </p>
+                                    </div>
+                                    <span
+                                        class="rounded-full px-3 py-1 text-xs font-medium"
+                                        :class="integration.is_active
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+                                    >
+                                        {{ integration.is_active ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </div>
+                                <div class="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                                    <p>Scopes: {{ integration.scopes?.join(', ') || 'n/a' }}</p>
+                                    <p>Token expires: {{ formatDateTime(integration.token_expires_at) }}</p>
+                                </div>
+                                <div class="mt-4 flex justify-end">
+                                    <Button variant="destructive" size="sm" @click="disconnectIntegration(integration.id)">
+                                        Disconnect
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="!linkedinIntegrations.length"
+                                class="rounded-lg border border-dashed p-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                            >
+                                No LinkedIn profiles connected yet. Click "Connect LinkedIn" to get started.
+                            </div>
+                        </div>
+                    </div>
                 </TabsContent>
 
                 <!-- Webhooks Tab -->

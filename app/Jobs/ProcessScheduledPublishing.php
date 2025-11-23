@@ -1,0 +1,57 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\ContentPiece;
+use App\Models\SocialIntegration;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+
+class ProcessScheduledPublishing implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * Create a new job instance.
+     */
+    public function __construct()
+    {
+        //
+    }
+
+    /**
+     * Execute the job.
+     */
+    public function handle(): void
+    {
+        $duePieces = ContentPiece::query()
+            ->where('publish_status', 'scheduled')
+            ->whereNotNull('scheduled_publish_at')
+            ->where('scheduled_publish_at', '<=', now())
+            ->with('team')
+            ->get();
+
+        foreach ($duePieces as $contentPiece) {
+            $publishTo = $contentPiece->publish_to_platforms ?? [];
+            $integrationId = $publishTo['linkedin'] ?? null;
+
+            if (! $integrationId) {
+                continue;
+            }
+
+            $integration = SocialIntegration::query()
+                ->active()
+                ->where('id', $integrationId)
+                ->where('team_id', $contentPiece->team_id)
+                ->first();
+
+            if (! $integration) {
+                continue;
+            }
+
+            $contentPiece->update(['publish_status' => 'publishing']);
+
+            PublishContentToLinkedIn::dispatch($contentPiece, $integration);
+        }
+    }
+}

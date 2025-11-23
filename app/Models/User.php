@@ -75,4 +75,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(TokenUsageLog::class);
     }
+
+    public function socialIntegrations(): HasMany
+    {
+        return $this->hasMany(SocialIntegration::class);
+    }
 }
