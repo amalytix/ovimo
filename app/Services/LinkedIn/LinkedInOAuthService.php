@@ -239,8 +239,7 @@ class LinkedInOAuthService
 
         // PRIORITY 3: Use Laravel's idiomatic asForm() method
         // PRIORITY 4: Remove retry logic to prevent consuming auth code on timeout
-        $response = Http::throw(false)
-            ->asForm()
+        $response = Http::asForm()
             ->post(self::TOKEN_URL, $payload);
 
         Log::info('LinkedIn OAuth: Received response from token endpoint', [
