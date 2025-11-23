@@ -218,8 +218,8 @@ class LinkedInOAuthService
         $clientId = $payload['client_id'];
         $clientSecret = $payload['client_secret'];
 
-        // Remove client credentials from payload since they'll be in the Authorization header
-        unset($payload['client_id'], $payload['client_secret']);
+        // Remove client_secret from payload (LinkedIn wants client_id in body + both in Basic Auth header)
+        unset($payload['client_secret']);
 
         // PRIORITY 1: Inspect credentials for invisible characters and encoding issues
         Log::info('LinkedIn OAuth: Credential inspection', [
@@ -236,14 +236,14 @@ class LinkedInOAuthService
             'url' => self::TOKEN_URL,
             'grant_type' => $payload['grant_type'] ?? null,
             'redirect_uri' => $payload['redirect_uri'] ?? null,
-            'auth_method' => 'HTTP Basic Auth',
+            'auth_method' => 'HTTP Basic Auth + client_id in body',
             'has_code' => isset($payload['code']),
             'has_code_verifier' => isset($payload['code_verifier']),
             'has_refresh_token' => isset($payload['refresh_token']),
+            'client_id_in_body' => $payload['client_id'] ?? null,
         ]);
 
-        // Use HTTP Basic Authentication instead of sending credentials in body
-        // This is LinkedIn's preferred authentication method for confidential clients
+        // LinkedIn requires client_id in POST body AND both credentials in Basic Auth header
         $response = Http::withBasicAuth($clientId, $clientSecret)
             ->asForm()
             ->post(self::TOKEN_URL, $payload);
