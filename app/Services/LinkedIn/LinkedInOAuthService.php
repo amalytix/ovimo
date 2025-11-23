@@ -225,6 +225,9 @@ class LinkedInOAuthService
             'has_trailing_whitespace' => isset($payload['client_secret']) ? ($payload['client_secret'] !== trim($payload['client_secret'])) : null,
         ]);
 
+        // Build the exact body that will be sent
+        $formBody = http_build_query($payload, '', '&', PHP_QUERY_RFC3986);
+
         Log::info('LinkedIn OAuth: About to POST to token endpoint', [
             'url' => self::TOKEN_URL,
             'grant_type' => $payload['grant_type'] ?? null,
@@ -234,6 +237,8 @@ class LinkedInOAuthService
             'has_code_verifier' => isset($payload['code_verifier']),
             'has_refresh_token' => isset($payload['refresh_token']),
             'payload_keys' => array_keys($payload),
+            'form_body_length' => strlen($formBody),
+            'form_body_preview' => substr($formBody, 0, 200).'...', // First 200 chars
         ]);
 
         // LinkedIn requires both client_id and client_secret in POST body (not Basic Auth)
