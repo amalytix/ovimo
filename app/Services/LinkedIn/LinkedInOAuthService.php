@@ -76,6 +76,7 @@ class LinkedInOAuthService
             'redirect_uri' => $payload['redirect_uri'],
             'client_id' => $payload['client_id'],
             'client_secret_length' => strlen($payload['client_secret']),
+            'client_secret_preview' => substr($payload['client_secret'], 0, 10).'...'.substr($payload['client_secret'], -4),
             'code_verifier_length' => strlen($codeVerifier),
             'grant_type' => $payload['grant_type'],
         ]);
