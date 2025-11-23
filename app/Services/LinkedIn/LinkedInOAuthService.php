@@ -224,12 +224,33 @@ class LinkedInOAuthService
             'has_refresh_token' => isset($payload['refresh_token']),
         ]);
 
-        $response = $this->http()->asForm()->post(self::TOKEN_URL, $payload);
+        try {
+            $response = $this->http()->asForm()->post(self::TOKEN_URL, $payload);
+        } catch (\Throwable $e) {
+            Log::error('LinkedIn token request threw exception during HTTP call', [
+                'exception' => $e->getMessage(),
+                'code' => $e->getCode(),
+            ]);
+            throw $e;
+        }
+
+        Log::info('LinkedIn OAuth: Received response from token endpoint', [
+            'status' => $response->status(),
+            'successful' => $response->successful(),
+            'failed' => $response->failed(),
+        ]);
 
         if ($response->failed()) {
+            $errorBody = null;
+            try {
+                $errorBody = $response->json();
+            } catch (\Throwable $e) {
+                $errorBody = $response->body();
+            }
+
             Log::error('LinkedIn token request failed', [
                 'status' => $response->status(),
-                'body' => $response->json() ?? $response->body(),
+                'body' => $errorBody,
                 'headers' => $response->headers(),
                 'redirect_uri' => $payload['redirect_uri'] ?? null,
                 'client_id' => $payload['client_id'] ?? null,
