@@ -65,6 +65,7 @@ class Source extends Model
     {
         $interval = $interval ?? $this->monitoring_interval;
 
+        // Always calculate from now() to avoid queueing up missed historical runs
         return match ($interval) {
             'EVERY_10_MIN' => now()->addMinutes(10),
             'EVERY_30_MIN' => now()->addMinutes(30),

@@ -48,34 +48,31 @@ class ScheduleSourceMonitoring extends Command
                     ->orWhere('next_check_at', '<=', $now);
             })
             ->orderBy('next_check_at')
-            ->chunkById(200, function ($chunk) use ($reservationUntil, &$processed) {
-                // Claim a limited batch inside a transaction to avoid double-dispatching
-                $claimed = DB::transaction(function () use ($chunk, $reservationUntil) {
-                    $claimedSources = collect();
+            ->limit(500) // Process max 500 sources per run to prevent infinite catch-up
+            ->get()
+            ->each(function ($source) use ($reservationUntil, &$processed) {
+                // Claim source inside a transaction to avoid double-dispatching
+                $claimed = DB::transaction(function () use ($source, $reservationUntil) {
+                    // Re-check inside lock in case another worker updated next_check_at
+                    $fresh = Source::lockForUpdate()->find($source->id);
 
-                    foreach ($chunk as $source) {
-                        // Re-check inside lock in case another worker updated next_check_at
-                        $fresh = Source::lockForUpdate()->find($source->id);
-
-                        if (! $fresh || ! $fresh->is_active) {
-                            continue;
-                        }
-
-                        if ($fresh->next_check_at && $fresh->next_check_at->isFuture()) {
-                            continue;
-                        }
-
-                        $fresh->updateQuietly(['next_check_at' => $reservationUntil]);
-                        $claimedSources->push($fresh);
+                    if (! $fresh || ! $fresh->is_active) {
+                        return null;
                     }
 
-                    return $claimedSources;
+                    if ($fresh->next_check_at && $fresh->next_check_at->isFuture()) {
+                        return null;
+                    }
+
+                    $fresh->updateQuietly(['next_check_at' => $reservationUntil]);
+
+                    return $fresh;
                 });
 
-                foreach ($claimed as $source) {
-                    MonitorSource::dispatch($source);
+                if ($claimed) {
+                    MonitorSource::dispatch($claimed);
                     $processed++;
-                    $this->line("  - Dispatched job for source: {$source->internal_name}");
+                    $this->line("  - Dispatched job for source: {$claimed->internal_name}");
                 }
             });
 
