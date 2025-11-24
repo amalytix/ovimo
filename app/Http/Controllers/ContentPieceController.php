@@ -277,10 +277,10 @@ class ContentPieceController extends Controller
                     ],
                 ]),
                 'published_at' => $contentPiece->published_at?->toIso8601String(),
-                'publish_status' => $contentPiece->publish_status,
+                'publish_state' => $this->derivePublishState($contentPiece),
                 'publish_to_platforms' => $contentPiece->publish_to_platforms,
                 'published_platforms' => $contentPiece->published_platforms,
-                'scheduled_publish_at' => $contentPiece->scheduled_publish_at?->toIso8601String(),
+                'publish_at' => $contentPiece->published_at?->toIso8601String(),
             ],
             'prompts' => $prompts,
             'availablePosts' => $availablePosts,
@@ -334,8 +334,7 @@ class ContentPieceController extends Controller
         if (! empty($validated['schedule_at'])) {
             $contentPiece->update([
                 'publish_to_platforms' => $publishTo,
-                'scheduled_publish_at' => Carbon::parse($validated['schedule_at']),
-                'publish_status' => 'scheduled',
+                'published_at' => Carbon::parse($validated['schedule_at']),
             ]);
 
             return redirect()->route('content-pieces.edit', [
@@ -346,7 +345,7 @@ class ContentPieceController extends Controller
 
         $contentPiece->update([
             'publish_to_platforms' => $publishTo,
-            'publish_status' => 'publishing',
+            'published_at' => now(),
         ]);
 
         PublishContentToLinkedIn::dispatch($contentPiece, $integration);
@@ -427,9 +426,9 @@ class ContentPieceController extends Controller
             'status' => $contentPiece->status,
             'error' => $contentPiece->generation_error,
             'error_occurred_at' => $contentPiece->generation_error_occurred_at,
-            'publish_status' => $contentPiece->publish_status,
+            'publish_state' => $this->derivePublishState($contentPiece),
             'published_platforms' => $contentPiece->published_platforms,
-            'scheduled_publish_at' => $contentPiece->scheduled_publish_at,
+            'publish_at' => $contentPiece->publish_at,
         ]);
     }
 
@@ -543,6 +542,19 @@ class ContentPieceController extends Controller
         }
 
         return response()->json(['message' => 'Status updated successfully.']);
+    }
+
+    private function derivePublishState(ContentPiece $contentPiece): string
+    {
+        if ($contentPiece->published_platforms && count($contentPiece->published_platforms) > 0) {
+            return 'published';
+        }
+
+        if ($contentPiece->published_at) {
+            return $contentPiece->published_at->isFuture() ? 'scheduled' : 'publishing';
+        }
+
+        return 'not_published';
     }
 
     private function transformMedia(Media $media): array

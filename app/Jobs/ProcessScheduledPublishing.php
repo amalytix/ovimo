@@ -25,9 +25,9 @@ class ProcessScheduledPublishing implements ShouldQueue
     public function handle(): void
     {
         $duePieces = ContentPiece::query()
-            ->where('publish_status', 'scheduled')
-            ->whereNotNull('scheduled_publish_at')
-            ->where('scheduled_publish_at', '<=', now())
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->where(fn ($query) => $query->whereNull('published_platforms')->orWhereJsonDoesntContain('published_platforms->linkedin', null), 'and', true)
             ->with('team')
             ->get();
 
@@ -49,7 +49,7 @@ class ProcessScheduledPublishing implements ShouldQueue
                 continue;
             }
 
-            $contentPiece->update(['publish_status' => 'publishing']);
+            $contentPiece->update(['published_at' => $contentPiece->published_at]);
 
             PublishContentToLinkedIn::dispatch($contentPiece, $integration);
         }

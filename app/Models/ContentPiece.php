@@ -29,8 +29,6 @@ class ContentPiece extends Model
         'published_at',
         'publish_to_platforms',
         'published_platforms',
-        'scheduled_publish_at',
-        'publish_status',
     ];
 
     public function casts(): array
@@ -40,8 +38,6 @@ class ContentPiece extends Model
             'generation_error_occurred_at' => 'immutable_datetime',
             'publish_to_platforms' => 'array',
             'published_platforms' => 'array',
-            'scheduled_publish_at' => 'immutable_datetime',
-            'publish_status' => 'string',
         ];
     }
 

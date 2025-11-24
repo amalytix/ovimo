@@ -37,15 +37,12 @@ class PublishContentToLinkedIn implements ShouldQueue
             return;
         }
 
-        $contentPiece->update(['publish_status' => 'publishing']);
-
         $result = $service->publishPost($integration, $contentPiece);
 
         $publishedPlatforms = $contentPiece->published_platforms ?? [];
         $publishedPlatforms['linkedin'] = $result;
 
         $contentPiece->update([
-            'publish_status' => 'published',
             'published_platforms' => $publishedPlatforms,
             'published_at' => $contentPiece->published_at ?? now(),
         ]);
@@ -59,6 +56,8 @@ class PublishContentToLinkedIn implements ShouldQueue
             'error' => $exception->getMessage(),
         ]);
 
-        $this->contentPiece->update(['publish_status' => 'failed']);
+        $this->contentPiece->update([
+            'published_at' => now()->addMinutes(5),
+        ]);
     }
 }

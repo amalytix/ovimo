@@ -46,10 +46,10 @@ type ContentPiece = {
     posts: Post[];
     media: MediaItem[];
     published_at: string | null;
-    publish_status?: string | null;
+    publish_state?: string | null;
     publish_to_platforms?: Record<string, any> | null;
     published_platforms?: Record<string, any> | null;
-    scheduled_publish_at?: string | null;
+    publish_at?: string | null;
 };
 
 interface Props {
@@ -148,7 +148,7 @@ let successTimeout: number | null = null;
 
 const publishingForm = useForm({
     integration_id: props.integrations.linkedin[0]?.id ?? null,
-    schedule_at: props.contentPiece.scheduled_publish_at ? formatDateTimeLocal(props.contentPiece.scheduled_publish_at) : '',
+    schedule_at: props.contentPiece.publish_at ? formatDateTimeLocal(props.contentPiece.publish_at) : '',
 });
 
 const publishNow = () => {
@@ -368,7 +368,7 @@ const generateContent = () => {
                                 Manage LinkedIn publishing for this content piece.
                             </p>
                         </div>
-                        <PublishingStatus :status="contentPiece.publish_status || 'not_published'" />
+                        <PublishingStatus :status="contentPiece.publish_state || 'not_published'" />
                     </div>
 
                     <div class="grid gap-6 md:grid-cols-2">

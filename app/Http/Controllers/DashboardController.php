@@ -6,6 +6,7 @@ use App\Models\ContentPiece;
 use App\Models\Post;
 use App\Models\Source;
 use App\Models\TokenUsageLog;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,11 +50,22 @@ class DashboardController extends Controller
             ->where('created_at', '>=', now()->subDays(30))
             ->sum('total_tokens');
 
-        // Content pieces
         $totalContentPieces = ContentPiece::where('team_id', $teamId)->count();
         $contentPiecesThisMonth = ContentPiece::where('team_id', $teamId)
             ->where('created_at', '>=', now()->startOfMonth())
             ->count();
+
+        /** @var Collection<int, array{id:int,internal_name:string,channel:string,published_at:?\DateTimeInterface,status:string,published_platforms:?array}> */
+        $contentPiecesToday = ContentPiece::query()
+            ->where('team_id', $teamId)
+            ->whereDate('published_at', today())
+            ->where(function ($query) {
+                $query->whereNull('published_platforms')
+                    ->orWhereRaw("json_extract(published_platforms, '$.linkedin') IS NULL");
+            })
+            ->orderBy('published_at')
+            ->orderBy('created_at')
+            ->get(['id', 'internal_name', 'channel', 'published_at', 'status', 'published_platforms']);
 
         return Inertia::render('Dashboard', [
             'stats' => [
@@ -78,6 +90,7 @@ class DashboardController extends Controller
                     'this_month' => $contentPiecesThisMonth,
                 ],
             ],
+            'content_pieces_today' => $contentPiecesToday,
         ]);
     }
 }

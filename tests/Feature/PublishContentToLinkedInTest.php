@@ -25,7 +25,7 @@ test('user can publish content piece immediately', function () {
     $response->assertRedirect();
     $contentPiece->refresh();
 
-    expect($contentPiece->publish_status)->toBe('publishing')
+    expect($contentPiece->published_at)->not->toBeNull()
         ->and($contentPiece->publish_to_platforms['linkedin'])->toBe($integration->id);
 
     Queue::assertPushed(PublishContentToLinkedIn::class);
@@ -54,8 +54,7 @@ test('user can schedule publishing for later', function () {
 
     $contentPiece->refresh();
 
-    expect($contentPiece->publish_status)->toBe('scheduled')
-        ->and($contentPiece->scheduled_publish_at?->toIso8601String())->toBe($scheduleAt)
+    expect($contentPiece->published_at?->toIso8601String())->toBe($scheduleAt)
         ->and($contentPiece->publish_to_platforms['linkedin'])->toBe($integration->id);
 });
 
@@ -70,9 +69,8 @@ test('scheduled publishing job dispatches when due', function () {
 
     $contentPiece = ContentPiece::factory()->create([
         'team_id' => $team->id,
-        'publish_status' => 'scheduled',
         'publish_to_platforms' => ['linkedin' => $integration->id],
-        'scheduled_publish_at' => now()->subMinute(),
+        'published_at' => now()->subMinute(),
     ]);
 
     $job = new \App\Jobs\ProcessScheduledPublishing;
@@ -81,4 +79,7 @@ test('scheduled publishing job dispatches when due', function () {
     Queue::assertPushed(PublishContentToLinkedIn::class, function (PublishContentToLinkedIn $dispatched) use ($contentPiece, $integration) {
         return $dispatched->contentPiece->is($contentPiece) && $dispatched->integration->is($integration);
     });
+
+    $contentPiece->refresh();
+    expect($contentPiece->publish_at)->toBeNull();
 });
