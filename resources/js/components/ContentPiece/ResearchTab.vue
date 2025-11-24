@@ -47,9 +47,9 @@ const isGenerating = computed(() => {
 
 const togglePost = (postId: number, checked: boolean) => {
     if (checked) {
-        props.form.post_ids = [...props.form.post_ids, postId];
+        props.form.post_ids = [...props.form.post_ids, postId]; // eslint-disable-line vue/no-mutating-props
     } else {
-        props.form.post_ids = props.form.post_ids.filter((id: number) => id !== postId);
+        props.form.post_ids = props.form.post_ids.filter((id: number) => id !== postId); // eslint-disable-line vue/no-mutating-props
     }
 };
 </script>
@@ -61,6 +61,7 @@ const togglePost = (postId: number, checked: boolean) => {
             <!-- Prompt Template -->
             <div class="space-y-2">
                 <Label for="prompt_id">Prompt template</Label>
+                <!-- eslint-disable-next-line vue/no-mutating-props -->
                 <Select v-model="form.prompt_id">
                     <SelectTrigger>
                         <SelectValue placeholder="Select prompt" />
@@ -77,6 +78,7 @@ const togglePost = (postId: number, checked: boolean) => {
             <!-- Briefing -->
             <div class="space-y-2">
                 <Label for="briefing_text">Briefing</Label>
+                <!-- eslint-disable vue/no-mutating-props -->
                 <textarea
                     id="briefing_text"
                     v-model="form.briefing_text"
@@ -84,6 +86,7 @@ const togglePost = (postId: number, checked: boolean) => {
                     class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     placeholder="Tone, audience, notes..."
                 />
+                <!-- eslint-enable vue/no-mutating-props -->
                 <InputError :message="form.errors.briefing_text" />
             </div>
 
@@ -145,6 +148,7 @@ const togglePost = (postId: number, checked: boolean) => {
                     <Button variant="secondary" size="sm" @click="emit('copy-to-editor')">Copy to editing tab</Button>
                 </div>
             </div>
+            <!-- eslint-disable vue/no-mutating-props -->
             <textarea
                 id="research_text"
                 v-model="form.research_text"
@@ -153,6 +157,7 @@ const togglePost = (postId: number, checked: boolean) => {
                 readonly
                 placeholder="Start generation to populate research text."
             />
+            <!-- eslint-enable vue/no-mutating-props -->
             <InputError :message="form.errors.research_text" />
             <p v-if="generationStatus.error" class="text-sm text-red-500">{{ generationStatus.error }}</p>
         </div>

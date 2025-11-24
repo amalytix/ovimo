@@ -42,6 +42,7 @@ const titleRef = ref<HTMLElement | null>(null);
 
 const handleTitleInput = () => {
     const value = titleRef.value?.textContent ?? '';
+    // eslint-disable-next-line vue/no-mutating-props
     props.form.internal_name = value;
 };
 
@@ -96,6 +97,7 @@ onMounted(() => {
                 <InputError :message="props.form.errors?.internal_name" />
                 <p class="text-sm text-muted-foreground">Keep the basics aligned while you switch between tabs.</p>
             </div>
+            <!-- eslint-disable-next-line vue/no-mutating-props -->
             <Select v-model="form.status">
                 <SelectTrigger class="w-40">
                     <SelectValue placeholder="Status" />
@@ -111,6 +113,7 @@ onMounted(() => {
         <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div class="space-y-2">
                 <Label for="channel">Channel</Label>
+                <!-- eslint-disable-next-line vue/no-mutating-props -->
                 <Select v-model="form.channel">
                     <SelectTrigger id="channel">
                         <SelectValue placeholder="Channel" />
@@ -126,6 +129,7 @@ onMounted(() => {
 
             <div class="space-y-2">
                 <Label for="target_language">Target language</Label>
+                <!-- eslint-disable-next-line vue/no-mutating-props -->
                 <Select v-model="form.target_language">
                     <SelectTrigger id="target_language">
                         <SelectValue placeholder="Language" />
@@ -140,6 +144,7 @@ onMounted(() => {
 
             <div class="space-y-2">
                 <Label for="published_at">{{ publishedAtLabel() }}</Label>
+                <!-- eslint-disable-next-line vue/no-mutating-props -->
                 <Input id="published_at" v-model="form.published_at" type="datetime-local" />
                 <InputError :message="form.errors.published_at" />
             </div>

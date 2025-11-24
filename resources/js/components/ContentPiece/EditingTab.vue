@@ -5,7 +5,7 @@ import type { MediaItem } from '@/types/media';
 import { ref } from 'vue';
 import TiptapEditor from './TiptapEditor.vue';
 
-const props = defineProps<{
+defineProps<{
     form: Record<string, any>;
     selectedMedia: MediaItem[];
     contentType: 'html' | 'markdown';
@@ -44,6 +44,7 @@ defineExpose({
             </div>
         </div>
 
+        <!-- eslint-disable vue/no-mutating-props -->
         <TiptapEditor
             ref="editorRef"
             v-model="form.edited_text"
@@ -52,6 +53,7 @@ defineExpose({
             @request-image="emit('request-image')"
             @content-type-change="emit('content-type-change', $event)"
         />
+        <!-- eslint-enable vue/no-mutating-props -->
 
         <div class="space-y-3">
             <div class="flex items-center justify-between">

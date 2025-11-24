@@ -1,5 +1,4 @@
 import Image from '@tiptap/extension-image';
-import { mergeAttributes } from '@tiptap/core';
 
 export const ResizableImage = Image.extend({
     name: 'image',

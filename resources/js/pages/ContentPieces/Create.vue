@@ -10,7 +10,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { MediaItem, MediaTag } from '@/types/media';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { onUnmounted, ref, watch } from 'vue';
 import { status } from '@/routes/content-pieces';
 import { view as mediaView } from '@/routes/media';
 
@@ -43,22 +43,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Content Pieces', href: '/content-pieces' },
     { title: 'Create', href: '/content-pieces/create' },
 ];
-
-const formatDateTimeLocal = (value: string | Date | null) => {
-    if (!value) {
-        return '';
-    }
-
-    const date = value instanceof Date ? value : new Date(value);
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
 
 const form = useForm({
     internal_name: props.initialTitle || '',

@@ -2,7 +2,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { SocialIntegration } from '@/types/social';
 
-const props = defineProps<{
+defineProps<{
     integrations: SocialIntegration[];
     modelValue: number | null;
 }>();

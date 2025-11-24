@@ -205,14 +205,6 @@ const toggleAll = (checked: boolean) => {
     }
 };
 
-const togglePageSelection = () => {
-    if (allSelected.value) {
-        selectedIds.value = [];
-    } else {
-        toggleAll(true);
-    }
-};
-
 const refreshContentPieces = () => {
     router.get('/content-pieces', {
         search: search.value || undefined,
