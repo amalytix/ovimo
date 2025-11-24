@@ -174,7 +174,7 @@ const openPreview = (media: MediaItem) => {
 };
 
 const refreshMedia = () => {
-    router.get('/media', normalizedFilters(), {
+    router.get('/media', normalizedFilters.value, {
         preserveScroll: true,
         preserveState: true,
         replace: true,
