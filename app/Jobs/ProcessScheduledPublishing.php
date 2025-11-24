@@ -27,7 +27,10 @@ class ProcessScheduledPublishing implements ShouldQueue
         $duePieces = ContentPiece::query()
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->where(fn ($query) => $query->whereNull('published_platforms')->orWhereJsonDoesntContain('published_platforms->linkedin', null), 'and', true)
+            ->where(function ($query) {
+                $query->whereNull('published_platforms')
+                    ->orWhereRaw("json_extract(published_platforms, '$.linkedin') IS NULL");
+            })
             ->with('team')
             ->get();
 
