@@ -242,8 +242,9 @@ class LinkedInOAuthService
         ]);
 
         // LinkedIn requires both client_id and client_secret in POST body (not Basic Auth)
-        $response = Http::asForm()
-            ->post(self::TOKEN_URL, $payload);
+        // Use withBody() with pre-built form body to ensure exact encoding
+        $response = Http::withBody($formBody, 'application/x-www-form-urlencoded')
+            ->post(self::TOKEN_URL);
 
         Log::info('LinkedIn OAuth: Received response from token endpoint', [
             'status' => $response->status(),
