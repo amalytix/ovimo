@@ -33,7 +33,8 @@ class LinkedInOAuthDebug extends Command
             'exchange' => $this->exchangeCode(),
             'curl' => $this->generateCurlCommand(),
             'test-curl' => $this->testWithCurl(),
-            default => $this->error('Unknown action. Use: auth, exchange, curl, or test-curl') ?? 1,
+            'raw' => $this->exchangeWithRawSecret(),
+            default => $this->error('Unknown action. Use: auth, exchange, curl, test-curl, or raw') ?? 1,
         };
     }
 
@@ -308,5 +309,116 @@ class LinkedInOAuthDebug extends Command
         }
 
         return 0;
+    }
+
+    /**
+     * Test with different encoding strategies to find what LinkedIn actually expects
+     */
+    private function exchangeWithRawSecret(): int
+    {
+        $code = $this->option('code');
+        $verifier = $this->option('verifier');
+
+        if (! $code || ! $verifier) {
+            $this->error('Both --code and --verifier are required');
+
+            return 1;
+        }
+
+        $clientId = config('services.linkedin.client_id');
+        $clientSecret = config('services.linkedin.client_secret');
+        $redirectUri = config('services.linkedin.redirect_uri');
+
+        $this->info('Testing different encoding strategies...');
+        $this->newLine();
+
+        // Strategy 1: Use Guzzle's default form_params (no manual encoding)
+        $this->warn('=== Strategy 1: Guzzle form_params (default) ===');
+        $payload = [
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'redirect_uri' => $redirectUri,
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
+            'code_verifier' => $verifier,
+        ];
+
+        $client = new Client;
+        $response = $client->post(self::TOKEN_URL, [
+            'form_params' => $payload,
+            'http_errors' => false,
+        ]);
+
+        $this->line('Status: '.$response->getStatusCode());
+        $this->line('Body: '.(string) $response->getBody());
+        $this->newLine();
+
+        if ($response->getStatusCode() === 200) {
+            $this->info('SUCCESS with Strategy 1!');
+
+            return 0;
+        }
+
+        // Strategy 2: Don't encode the = signs in the secret
+        $this->warn('=== Strategy 2: Custom encoding (preserve = in secret) ===');
+
+        // Build body manually, encoding everything except = in the secret
+        $parts = [
+            'grant_type=authorization_code',
+            'code='.rawurlencode($code),
+            'redirect_uri='.rawurlencode($redirectUri),
+            'client_id='.rawurlencode($clientId),
+            'client_secret='.$clientSecret, // NOT encoded
+            'code_verifier='.rawurlencode($verifier),
+        ];
+        $rawBody = implode('&', $parts);
+
+        $this->line('Body: '.$rawBody);
+
+        $response = $client->post(self::TOKEN_URL, [
+            'body' => $rawBody,
+            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+            'http_errors' => false,
+        ]);
+
+        $this->line('Status: '.$response->getStatusCode());
+        $this->line('Body: '.(string) $response->getBody());
+        $this->newLine();
+
+        if ($response->getStatusCode() === 200) {
+            $this->info('SUCCESS with Strategy 2!');
+
+            return 0;
+        }
+
+        // Strategy 3: Try without PKCE at all
+        $this->warn('=== Strategy 3: Without PKCE (code_verifier) ===');
+
+        $noPkcePayload = [
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'redirect_uri' => $redirectUri,
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
+        ];
+
+        $response = $client->post(self::TOKEN_URL, [
+            'form_params' => $noPkcePayload,
+            'http_errors' => false,
+        ]);
+
+        $this->line('Status: '.$response->getStatusCode());
+        $this->line('Body: '.(string) $response->getBody());
+        $this->newLine();
+
+        if ($response->getStatusCode() === 200) {
+            $this->info('SUCCESS with Strategy 3 (no PKCE)!');
+
+            return 0;
+        }
+
+        $this->error('All strategies failed.');
+
+        return 1;
     }
 }
