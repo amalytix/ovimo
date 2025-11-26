@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContentPiece extends Model
 {
@@ -70,5 +71,10 @@ class ContentPiece extends Model
             ->withTimestamps()
             ->withPivot('sort_order')
             ->orderByPivot('sort_order');
+    }
+
+    public function imageGenerations(): HasMany
+    {
+        return $this->hasMany(ImageGeneration::class);
     }
 }

@@ -27,3 +27,4 @@ yarn-error.log
 /.vscode
 /.zed
 docs/bugs/linkedin-oauth-401-invalid-client.md
+docs/bugs/linkedin-oauth-invalid-client-comprehensive.md

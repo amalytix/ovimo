@@ -170,6 +170,38 @@ class OpenAIService
         ];
     }
 
+    /**
+     * Generate an image prompt based on content text and a prompt template.
+     *
+     * @return array{prompt: string, input_tokens: int, output_tokens: int, total_tokens: int, model: string}
+     */
+    public function generateImagePrompt(string $contentText, string $promptTemplate): array
+    {
+        $model = 'gpt-5-mini';
+
+        // Replace {{content}} placeholder with actual content
+        $prompt = str_replace('{{content}}', $contentText, $promptTemplate);
+
+        Log::debug('OpenAI API Request - generateImagePrompt', [
+            'model' => $model,
+            'prompt_length' => strlen($prompt),
+        ]);
+
+        $response = $this->client->responses()->create([
+            'model' => $model,
+            'instructions' => 'You are an expert at creating detailed, visually descriptive image prompts for AI image generators. Generate a concise but detailed prompt (2-4 sentences) that describes the image to be created. Focus on visual elements: composition, lighting, colors, mood, style, and key subjects. Do not include any explanatory text - just output the image prompt itself.',
+            'input' => $prompt,
+        ]);
+
+        return [
+            'prompt' => trim($response->outputText),
+            'input_tokens' => $response->usage->inputTokens,
+            'output_tokens' => $response->usage->outputTokens,
+            'total_tokens' => $response->usage->totalTokens,
+            'model' => $model,
+        ];
+    }
+
     public function trackUsage(int $inputTokens, int $outputTokens, int $totalTokens, string $model, ?User $user, Team $team, string $operation): void
     {
         $this->tokenLimitService->assertWithinLimit($team, $totalTokens, $user, $operation);

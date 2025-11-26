@@ -417,7 +417,66 @@ class LinkedInOAuthDebug extends Command
             return 0;
         }
 
+        // Strategy 4: HTTP Basic Auth header (without credentials in body)
+        $this->warn('=== Strategy 4: HTTP Basic Auth header ===');
+
+        $basicAuth = base64_encode($clientId.':'.$clientSecret);
+        $this->line('Authorization: Basic '.$basicAuth);
+
+        $basicPayload = [
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'redirect_uri' => $redirectUri,
+            'code_verifier' => $verifier,
+        ];
+
+        $response = $client->post(self::TOKEN_URL, [
+            'form_params' => $basicPayload,
+            'headers' => [
+                'Authorization' => 'Basic '.$basicAuth,
+            ],
+            'http_errors' => false,
+        ]);
+
+        $this->line('Status: '.$response->getStatusCode());
+        $this->line('Body: '.(string) $response->getBody());
+        $this->newLine();
+
+        if ($response->getStatusCode() === 200) {
+            $this->info('SUCCESS with Strategy 4 (Basic Auth)!');
+
+            return 0;
+        }
+
+        // Strategy 5: Basic Auth header WITH credentials also in body (hybrid)
+        $this->warn('=== Strategy 5: Basic Auth + Body credentials ===');
+
+        $response = $client->post(self::TOKEN_URL, [
+            'form_params' => $payload, // Full payload with client_id and client_secret
+            'headers' => [
+                'Authorization' => 'Basic '.$basicAuth,
+            ],
+            'http_errors' => false,
+        ]);
+
+        $this->line('Status: '.$response->getStatusCode());
+        $this->line('Body: '.(string) $response->getBody());
+        $this->newLine();
+
+        if ($response->getStatusCode() === 200) {
+            $this->info('SUCCESS with Strategy 5 (Basic Auth + Body)!');
+
+            return 0;
+        }
+
         $this->error('All strategies failed.');
+        $this->newLine();
+        $this->warn('Possible causes:');
+        $this->line('1. Client secret is incorrect - verify in LinkedIn Developer Portal');
+        $this->line('2. App needs verification/approval in LinkedIn Developer Portal');
+        $this->line('3. Required Products not enabled: "Share on LinkedIn", "Sign In with LinkedIn"');
+        $this->line('4. App is in restricted/suspended state');
+        $this->line('5. LinkedIn API temporary issue');
 
         return 1;
     }

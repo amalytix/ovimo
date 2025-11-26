@@ -12,8 +12,13 @@ class Prompt extends Model
     /** @use HasFactory<\Database\Factories\PromptFactory> */
     use HasFactory;
 
+    public const TYPE_CONTENT = 'CONTENT';
+
+    public const TYPE_IMAGE = 'IMAGE';
+
     protected $fillable = [
         'team_id',
+        'type',
         'internal_name',
         'channel',
         'prompt_text',
@@ -35,5 +40,10 @@ class Prompt extends Model
     public function contentPieces(): HasMany
     {
         return $this->hasMany(ContentPiece::class);
+    }
+
+    public function imageGenerations(): HasMany
+    {
+        return $this->hasMany(ImageGeneration::class);
     }
 }

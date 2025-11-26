@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ContentPieceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ImageGenerationController;
 use App\Http\Controllers\Integrations\LinkedInController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\MediaTagController;
@@ -44,6 +45,20 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('content-pieces/bulk-unset-publish-date', [ContentPieceController::class, 'bulkUnsetPublishDate'])->name('content-pieces.bulk-unset-publish-date');
     Route::post('content-pieces/bulk-update-status', [ContentPieceController::class, 'bulkUpdateStatus'])->name('content-pieces.bulk-update-status');
     Route::post('content-pieces/{content_piece}/publish', [ContentPieceController::class, 'publish'])->name('content-pieces.publish');
+
+    // Image generation routes for content pieces
+    Route::post('content-pieces/{content_piece}/image-generations', [ImageGenerationController::class, 'store'])
+        ->middleware('token.limit')
+        ->name('content-pieces.image-generations.store');
+    Route::patch('content-pieces/{content_piece}/image-generations/{image_generation}', [ImageGenerationController::class, 'update'])
+        ->name('content-pieces.image-generations.update');
+    Route::post('content-pieces/{content_piece}/image-generations/{image_generation}/generate', [ImageGenerationController::class, 'generate'])
+        ->middleware('token.limit')
+        ->name('content-pieces.image-generations.generate');
+    Route::get('content-pieces/{content_piece}/image-generations/{image_generation}/status', [ImageGenerationController::class, 'status'])
+        ->name('content-pieces.image-generations.status');
+    Route::delete('content-pieces/{content_piece}/image-generations/{image_generation}', [ImageGenerationController::class, 'destroy'])
+        ->name('content-pieces.image-generations.destroy');
 
     Route::resource('webhooks', WebhookController::class)->except(['show']);
     Route::post('webhooks/{webhook}/test', [WebhookController::class, 'test'])->name('webhooks.test');

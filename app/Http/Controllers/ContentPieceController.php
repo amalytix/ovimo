@@ -214,14 +214,21 @@ class ContentPieceController extends Controller
     {
         $this->authorize('view', $contentPiece);
 
-        $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary,external_title,internal_title', 'media.tags']);
+        $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary,external_title,internal_title', 'media.tags', 'imageGenerations.prompt', 'imageGenerations.media']);
 
         $teamId = auth()->user()->current_team_id;
 
         $prompts = Prompt::where('team_id', $teamId)
+            ->where('type', Prompt::TYPE_CONTENT)
             ->orderByDesc('is_default')
             ->orderByDesc('created_at')
             ->get(['id', 'internal_name as name', 'channel']);
+
+        $imagePrompts = Prompt::where('team_id', $teamId)
+            ->where('type', Prompt::TYPE_IMAGE)
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
+            ->get(['id', 'internal_name']);
 
         $availablePosts = \App\Models\Post::query()
             ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
@@ -283,6 +290,28 @@ class ContentPieceController extends Controller
                 'publish_at' => $contentPiece->published_at?->toIso8601String(),
             ],
             'prompts' => $prompts,
+            'imagePrompts' => $imagePrompts,
+            'imageGenerations' => $contentPiece->imageGenerations->map(fn ($gen) => [
+                'id' => $gen->id,
+                'content_piece_id' => $gen->content_piece_id,
+                'prompt_id' => $gen->prompt_id,
+                'prompt' => $gen->prompt ? [
+                    'id' => $gen->prompt->id,
+                    'internal_name' => $gen->prompt->internal_name,
+                ] : null,
+                'generated_text_prompt' => $gen->generated_text_prompt,
+                'aspect_ratio' => $gen->aspect_ratio,
+                'status' => $gen->status,
+                'media_id' => $gen->media_id,
+                'media' => $gen->media ? [
+                    'id' => $gen->media->id,
+                    'filename' => $gen->media->filename,
+                    'mime_type' => $gen->media->mime_type,
+                    'temporary_url' => $gen->media->getTemporaryUrl(),
+                ] : null,
+                'error_message' => $gen->error_message,
+                'created_at' => $gen->created_at?->toIso8601String(),
+            ]),
             'availablePosts' => $availablePosts,
             'media' => $availableMedia->map(fn (Media $media) => $this->transformMedia($media)),
             'mediaTags' => $mediaTags,

@@ -11,6 +11,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 interface Prompt {
     id: number;
     internal_name: string;
+    type: 'CONTENT' | 'IMAGE';
     channel: string;
     prompt_text: string;
 }
@@ -28,6 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const form = useForm({
     internal_name: props.prompt.internal_name,
+    type: props.prompt.type,
     channel: props.prompt.channel,
     prompt_text: props.prompt.prompt_text,
 });
@@ -55,6 +57,23 @@ const submit = () => {
                 </div>
 
                 <div class="space-y-2">
+                    <Label for="type">Type</Label>
+                    <Select v-model="form.type">
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="CONTENT">Content Generation</SelectItem>
+                            <SelectItem value="IMAGE">Image Generation</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Content prompts are used for generating text. Image prompts are used for generating AI images.
+                    </p>
+                    <InputError :message="form.errors.type" />
+                </div>
+
+                <div v-if="form.type === 'CONTENT'" class="space-y-2">
                     <Label for="channel">Channel</Label>
                     <Select v-model="form.channel">
                         <SelectTrigger>
@@ -76,9 +95,18 @@ const submit = () => {
                         v-model="form.prompt_text"
                         rows="12"
                         class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Enter your prompt template..."
+                        :placeholder="
+                            form.type === 'IMAGE'
+                                ? 'Enter your image prompt template. Use {{content}} as a placeholder for the blog content.'
+                                : 'Enter your prompt template...'
+                        "
                     ></textarea>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                    <p v-if="form.type === 'IMAGE'" class="text-xs text-gray-500 dark:text-gray-400">
+                        Use the placeholder
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;content&#125;&#125;</code> which will be
+                        replaced with the blog content when generating image prompts.
+                    </p>
+                    <p v-else class="text-xs text-gray-500 dark:text-gray-400">
                         Use placeholders like
                         <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;context&#125;&#125;</code> or
                         <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;language&#125;&#125;</code> or

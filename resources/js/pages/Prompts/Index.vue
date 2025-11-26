@@ -9,6 +9,7 @@ import { Pencil, Star, Trash2 } from 'lucide-vue-next';
 interface Prompt {
     id: number;
     internal_name: string;
+    type: 'CONTENT' | 'IMAGE';
     prompt_text: string;
     content_pieces_count: number;
     created_at: string;
@@ -63,6 +64,9 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                                 Name
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                Type
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                 Content Preview
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -87,6 +91,18 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                                 <Link :href="`/prompts/${prompt.id}/edit`" class="hover:text-blue-600 dark:hover:text-blue-400">
                                     {{ prompt.internal_name }}
                                 </Link>
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                                <span
+                                    :class="[
+                                        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                                        prompt.type === 'IMAGE'
+                                            ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/50 dark:text-purple-200'
+                                            : 'bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200',
+                                    ]"
+                                >
+                                    {{ prompt.type === 'IMAGE' ? 'Image' : 'Content' }}
+                                </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                 {{ truncateContent(prompt.prompt_text) }}
@@ -137,7 +153,7 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                             </td>
                         </tr>
                         <tr v-if="prompts.data.length === 0">
-                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                                 No prompts found. Click "Add Prompt" to create your first prompt.
                             </td>
                         </tr>

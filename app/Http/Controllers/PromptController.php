@@ -25,6 +25,7 @@ class PromptController extends Controller
                 ->through(fn (Prompt $prompt) => [
                     'id' => $prompt->id,
                     'internal_name' => $prompt->internal_name,
+                    'type' => $prompt->type,
                     'prompt_text' => $prompt->prompt_text,
                     'content_pieces_count' => $prompt->content_pieces_count,
                     'created_at' => $prompt->created_at->diffForHumans(),
@@ -57,6 +58,7 @@ class PromptController extends Controller
             'prompt' => [
                 'id' => $prompt->id,
                 'internal_name' => $prompt->internal_name,
+                'type' => $prompt->type,
                 'channel' => $prompt->channel,
                 'prompt_text' => $prompt->prompt_text,
             ],

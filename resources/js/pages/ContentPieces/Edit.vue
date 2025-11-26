@@ -2,6 +2,7 @@
 import CopyContentDialog from '@/components/ContentPiece/CopyContentDialog.vue';
 import EditingTab from '@/components/ContentPiece/EditingTab.vue';
 import GeneralInfoHeader from '@/components/ContentPiece/GeneralInfoHeader.vue';
+import ImagesTab from '@/components/ContentPiece/ImagesTab.vue';
 import MediaGalleryPicker from '@/components/ContentPiece/MediaGalleryPicker.vue';
 import ResearchTab from '@/components/ContentPiece/ResearchTab.vue';
 import LinkedInIntegrationSelector from '@/components/Publishing/LinkedInIntegrationSelector.vue';
@@ -22,6 +23,32 @@ type Prompt = {
     id: number;
     name: string;
     channel: string;
+};
+
+type ImagePrompt = {
+    id: number;
+    internal_name: string;
+};
+
+type ImageMedia = {
+    id: number;
+    filename: string;
+    mime_type: string;
+    temporary_url: string;
+};
+
+type ImageGeneration = {
+    id: number;
+    content_piece_id: number;
+    prompt_id: number | null;
+    prompt: { id: number; internal_name: string } | null;
+    generated_text_prompt: string | null;
+    aspect_ratio: '16:9' | '1:1' | '4:3' | '9:16';
+    status: 'DRAFT' | 'GENERATING' | 'COMPLETED' | 'FAILED';
+    media_id: number | null;
+    media: ImageMedia | null;
+    error_message: string | null;
+    created_at: string;
 };
 
 type Post = {
@@ -55,6 +82,8 @@ type ContentPiece = {
 interface Props {
     contentPiece: ContentPiece;
     prompts: Prompt[];
+    imagePrompts: ImagePrompt[];
+    imageGenerations: ImageGeneration[];
     availablePosts: Post[];
     media: MediaItem[];
     mediaTags: MediaTag[];
@@ -110,11 +139,25 @@ const form = useForm({
 
 const currentUrl = new URL(usePage().url, window.location.origin);
 const initialTab = currentUrl.searchParams.get('tab');
-const activeTab = ref<'research' | 'editing' | 'publishing'>(initialTab === 'edit' || initialTab === 'editing' ? 'editing' : initialTab === 'publishing' ? 'publishing' : 'research');
-const updateTabInUrl = (tab: 'research' | 'editing' | 'publishing') => {
+const activeTab = ref<'research' | 'editing' | 'images' | 'publishing'>(
+    initialTab === 'edit' || initialTab === 'editing'
+        ? 'editing'
+        : initialTab === 'images'
+          ? 'images'
+          : initialTab === 'publishing'
+            ? 'publishing'
+            : 'research'
+);
+const updateTabInUrl = (tab: 'research' | 'editing' | 'images' | 'publishing') => {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
     window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`);
+};
+
+const imageGenerations = ref<ImageGeneration[]>([...props.imageGenerations]);
+
+const handleGenerationsUpdated = (generations: ImageGeneration[]) => {
+    imageGenerations.value = generations;
 };
 
 onMounted(() => {
@@ -333,6 +376,7 @@ const generateContent = () => {
                 <TabsList>
                     <TabsTrigger value="research">Research</TabsTrigger>
                     <TabsTrigger value="editing">Editing</TabsTrigger>
+                    <TabsTrigger value="images">Images</TabsTrigger>
                     <TabsTrigger value="publishing">Publishing</TabsTrigger>
                 </TabsList>
 
@@ -357,6 +401,16 @@ const generateContent = () => {
                         @remove-media="removeMedia"
                         @request-image="openImagePicker"
                         @content-type-change="(value) => (editingContentType.value = value)"
+                    />
+                </TabsContent>
+
+                <TabsContent value="images" class="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
+                    <ImagesTab
+                        :content-piece-id="contentPiece.id"
+                        :image-prompts="imagePrompts"
+                        :image-generations="imageGenerations"
+                        :has-edited-text="!!form.edited_text && form.edited_text.trim().length > 0"
+                        @generations-updated="handleGenerationsUpdated"
                     />
                 </TabsContent>
 

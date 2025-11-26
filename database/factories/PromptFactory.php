@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Prompt;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,9 +18,19 @@ class PromptFactory extends Factory
     public function definition(): array
     {
         return [
+            'type' => Prompt::TYPE_CONTENT,
             'internal_name' => fake()->words(3, true),
             'channel' => fake()->randomElement(['BLOG_POST', 'LINKEDIN_POST', 'YOUTUBE_SCRIPT']),
             'prompt_text' => fake()->paragraphs(3, true),
         ];
+    }
+
+    public function image(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => Prompt::TYPE_IMAGE,
+            'channel' => null,
+            'prompt_text' => 'Generate a hero image based on: {{content}}',
+        ]);
     }
 }
