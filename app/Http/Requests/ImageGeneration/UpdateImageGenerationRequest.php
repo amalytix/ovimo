@@ -28,6 +28,7 @@ class UpdateImageGenerationRequest extends FormRequest
                     ImageGeneration::ASPECT_RATIO_1_1,
                     ImageGeneration::ASPECT_RATIO_4_3,
                     ImageGeneration::ASPECT_RATIO_9_16,
+                    ImageGeneration::ASPECT_RATIO_4_5,
                 ]),
             ],
         ];

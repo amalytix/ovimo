@@ -432,7 +432,7 @@ const generateContent = () => {
                         @open-media-picker="openMediaPicker"
                         @remove-media="removeMedia"
                         @request-image="openImagePicker"
-                        @content-type-change="(value) => (editingContentType.value = value)"
+                        @content-type-change="(value: 'html' | 'markdown') => (editingContentType = value)"
                     />
                 </TabsContent>
 

@@ -27,6 +27,8 @@ class ImageGeneration extends Model
 
     public const ASPECT_RATIO_9_16 = '9:16';
 
+    public const ASPECT_RATIO_4_5 = '4:5';
+
     protected $fillable = [
         'content_piece_id',
         'prompt_id',
