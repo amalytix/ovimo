@@ -230,13 +230,8 @@ class ContentPieceController extends Controller
             ->orderByDesc('created_at')
             ->get(['id', 'internal_name']);
 
-        $availablePosts = \App\Models\Post::query()
-            ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-            ->where('status', 'CREATE_CONTENT')
-            ->whereNotNull('summary')
-            ->orderByDesc('found_at')
-            ->take(100)
-            ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
+        // Only show posts already associated with this content piece (via contentPiece.posts relationship)
+        $availablePosts = collect();
 
         $availableMedia = Media::query()
             ->where('team_id', $teamId)

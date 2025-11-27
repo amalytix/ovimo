@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,6 +22,12 @@ const props = defineProps<{
     contentPieceTitle?: string | null;
     channels?: ChannelOption[];
     statuses?: StatusOption[];
+    isSaving?: boolean;
+}>();
+
+const emit = defineEmits<{
+    save: [];
+    saveAndClose: [];
 }>();
 
 const defaultStatuses: StatusOption[] = [
@@ -97,17 +104,23 @@ onMounted(() => {
                 <InputError :message="props.form.errors?.internal_name" />
                 <p class="text-sm text-muted-foreground">Keep the basics aligned while you switch between tabs.</p>
             </div>
-            <!-- eslint-disable-next-line vue/no-mutating-props -->
-            <Select v-model="form.status">
-                <SelectTrigger class="w-40">
-                    <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem v-for="status in props.statuses ?? defaultStatuses" :key="status.value" :value="status.value">
-                        {{ status.label }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
+            <div class="flex items-center gap-3">
+                <!-- eslint-disable-next-line vue/no-mutating-props -->
+                <Select v-model="form.status">
+                    <SelectTrigger class="w-40">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem v-for="status in props.statuses ?? defaultStatuses" :key="status.value" :value="status.value">
+                            {{ status.label }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button variant="outline" @click="emit('saveAndClose')">Save &amp; Close</Button>
+                <Button variant="secondary" :disabled="props.isSaving" @click="emit('save')">
+                    {{ props.isSaving ? 'Saving...' : 'Save Changes' }}
+                </Button>
+            </div>
         </div>
 
         <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

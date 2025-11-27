@@ -37,12 +37,20 @@ const props = defineProps<{
     contentPieceId: number;
     imagePrompts: ImagePrompt[];
     imageGenerations: ImageGeneration[];
+    attachedMediaIds: number[];
     hasEditedText: boolean;
 }>();
 
 const emit = defineEmits<{
     (event: 'generations-updated', generations: ImageGeneration[]): void;
+    (event: 'attach-media', media: ImageMedia): void;
+    (event: 'detach-media', mediaId: number): void;
 }>();
+
+const isAttached = (mediaId: number | null) => {
+    if (!mediaId) return false;
+    return props.attachedMediaIds.includes(mediaId);
+};
 
 const generations = ref<ImageGeneration[]>([...props.imageGenerations]);
 const selectedPromptId = ref<number | null>(props.imagePrompts[0]?.id ?? null);
@@ -361,8 +369,18 @@ onUnmounted(() => {
                         class="aspect-video w-full object-cover"
                     />
                     <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap justify-center gap-2">
                             <Button variant="secondary" size="sm" as="a" :href="generation.media?.temporary_url" target="_blank"> View </Button>
+                            <Button
+                                v-if="isAttached(generation.media_id)"
+                                variant="outline"
+                                size="sm"
+                                class="border-green-500 bg-green-500/20 text-white hover:bg-green-500/40"
+                                @click="generation.media_id && emit('detach-media', generation.media_id)"
+                            >
+                                Attached ✓
+                            </Button>
+                            <Button v-else variant="secondary" size="sm" @click="generation.media && emit('attach-media', generation.media)"> Attach </Button>
                             <Button variant="destructive" size="sm" @click="deleteGeneration(generation.id)"> Remove </Button>
                         </div>
                     </div>

@@ -336,6 +336,32 @@ const removeMedia = (id: number) => {
     form.media_ids = selectedMedia.value.map((m) => m.id);
 };
 
+const attachGeneratedImage = (imageMedia: { id: number; filename: string; mime_type: string; temporary_url: string }) => {
+    // Check if already attached
+    if (selectedMedia.value.find((m) => m.id === imageMedia.id)) {
+        return;
+    }
+
+    // Convert to MediaItem format and add to selected media
+    const mediaItem: MediaItem = {
+        id: imageMedia.id,
+        filename: imageMedia.filename,
+        mime_type: imageMedia.mime_type,
+        file_size: 0,
+        created_at: null,
+        temporary_url: imageMedia.temporary_url,
+        tags: [],
+    };
+
+    selectedMedia.value.push(mediaItem);
+    form.media_ids = selectedMedia.value.map((m) => m.id);
+};
+
+const detachGeneratedImage = (mediaId: number) => {
+    selectedMedia.value = selectedMedia.value.filter((m) => m.id !== mediaId);
+    form.media_ids = selectedMedia.value.map((m) => m.id);
+};
+
 const save = () => {
     form
         .transform((data) => ({
@@ -370,7 +396,13 @@ const generateContent = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-6 p-6">
-            <GeneralInfoHeader :form="form" :content-piece-title="contentPiece.internal_name" />
+            <GeneralInfoHeader
+                :form="form"
+                :content-piece-title="contentPiece.internal_name"
+                :is-saving="form.processing || isPolling"
+                @save="save"
+                @save-and-close="saveAndClose"
+            />
 
             <Tabs v-model="activeTab" default-value="research" class="space-y-4">
                 <TabsList>
@@ -409,8 +441,11 @@ const generateContent = () => {
                         :content-piece-id="contentPiece.id"
                         :image-prompts="imagePrompts"
                         :image-generations="imageGenerations"
+                        :attached-media-ids="form.media_ids"
                         :has-edited-text="!!form.edited_text && form.edited_text.trim().length > 0"
                         @generations-updated="handleGenerationsUpdated"
+                        @attach-media="attachGeneratedImage"
+                        @detach-media="detachGeneratedImage"
                     />
                 </TabsContent>
 
