@@ -43,7 +43,7 @@ type ImageGeneration = {
     prompt_id: number | null;
     prompt: { id: number; internal_name: string } | null;
     generated_text_prompt: string | null;
-    aspect_ratio: '16:9' | '1:1' | '4:3' | '9:16';
+    aspect_ratio: '16:9' | '1:1' | '4:3' | '9:16' | '4:5';
     status: 'DRAFT' | 'GENERATING' | 'COMPLETED' | 'FAILED';
     media_id: number | null;
     media: ImageMedia | null;

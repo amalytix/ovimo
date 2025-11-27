@@ -25,7 +25,7 @@ type ImageGeneration = {
     prompt_id: number | null;
     prompt: { id: number; internal_name: string } | null;
     generated_text_prompt: string | null;
-    aspect_ratio: '16:9' | '1:1' | '4:3' | '9:16';
+    aspect_ratio: '16:9' | '1:1' | '4:3' | '9:16' | '4:5';
     status: 'DRAFT' | 'GENERATING' | 'COMPLETED' | 'FAILED';
     media_id: number | null;
     media: ImageMedia | null;
@@ -54,7 +54,7 @@ const isAttached = (mediaId: number | null) => {
 
 const generations = ref<ImageGeneration[]>([...props.imageGenerations]);
 const selectedPromptId = ref<number | null>(props.imagePrompts[0]?.id ?? null);
-const selectedAspectRatio = ref<'16:9' | '1:1' | '4:3' | '9:16'>('16:9');
+const selectedAspectRatio = ref<'16:9' | '1:1' | '4:3' | '9:16' | '4:5'>('4:5');
 const currentTextPrompt = ref<string>('');
 const currentGenerationId = ref<number | null>(null);
 const isGeneratingPrompt = ref(false);
@@ -68,6 +68,7 @@ const aspectRatios = [
     { value: '1:1', label: '1:1 (Square)' },
     { value: '4:3', label: '4:3 (Standard)' },
     { value: '9:16', label: '9:16 (Portrait)' },
+    { value: '4:5', label: '4:5 (Vertical)' },
 ] as const;
 
 const canGeneratePrompt = computed(() => {
