@@ -6,4 +6,5 @@ return [
     // gemini-3-pro-image-preview is higher quality but may timeout
     'image_model' => env('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image'),
     'request_timeout' => (int) env('GEMINI_REQUEST_TIMEOUT', 180),
+    'image_size' => env('GEMINI_IMAGE_SIZE', '1K'),
 ];

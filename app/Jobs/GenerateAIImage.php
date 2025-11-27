@@ -169,6 +169,10 @@ class GenerateAIImage implements ShouldQueue
             return 'Gemini request timed out. Please try again.';
         }
 
+        if (str_contains($message, 'overloaded') || str_contains($message, 'UNAVAILABLE') || str_contains($message, '503')) {
+            return 'Gemini is temporarily overloaded. Please try again shortly.';
+        }
+
         if (str_contains($message, 'rate limit') || str_contains($message, 'Rate limit')) {
             return 'Gemini rate limit exceeded. Please try again later.';
         }

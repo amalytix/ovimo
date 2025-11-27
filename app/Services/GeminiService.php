@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Team;
 use App\Models\TokenUsageLog;
 use App\Models\User;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -17,11 +18,14 @@ class GeminiService
 
     private int $timeout;
 
+    private string $imageSize;
+
     public function __construct(private TokenLimitService $tokenLimitService)
     {
-        $this->apiKey = config('gemini.api_key');
+        $this->apiKey = (string) config('gemini.api_key', '');
         $this->model = config('gemini.image_model', 'gemini-3-pro-image-preview');
         $this->timeout = config('gemini.request_timeout', 120);
+        $this->imageSize = config('gemini.image_size', '1K');
     }
 
     /**
@@ -52,47 +56,94 @@ class GeminiService
         $startTime = microtime(true);
 
         // Build request body based on model
-        $requestBody = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt],
+        $aspect = $this->mapAspectRatio($aspectRatio);
+
+        if (str_contains($this->model, 'gemini-3')) {
+            // gemini-3-pro-image-preview expects generationConfig.imageConfig
+            Log::info('Using gemini-3 request format (simple with imageConfig)');
+            $requestBody = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt],
+                        ],
                     ],
                 ],
-            ],
-            'generationConfig' => [
-                'responseModalities' => ['TEXT', 'IMAGE'],
-            ],
-        ];
-
-        // gemini-2.5-flash-image uses responseModalities, gemini-3-pro-image-preview uses imageConfig
-        if (str_contains($this->model, 'gemini-3')) {
-            $requestBody['generationConfig'] = [
-                'imageConfig' => [
-                    'aspectRatio' => $this->mapAspectRatio($aspectRatio),
-                    'imageSize' => '2K',
+                'generationConfig' => [
+                    'responseModalities' => ['IMAGE'],
+                    'imageConfig' => [
+                        'aspectRatio' => $aspect,
+                        'imageSize' => $this->imageSize,
+                    ],
+                ],
+            ];
+        } else {
+            // gemini-2.x models use responseModalities
+            Log::info('Using gemini-2 request format (with responseModalities)');
+            $requestBody = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt],
+                        ],
+                    ],
+                ],
+                'generationConfig' => [
+                    'responseModalities' => ['TEXT', 'IMAGE'],
+                    'imageConfig' => [
+                        'aspectRatio' => $aspect,
+                    ],
                 ],
             ];
         }
 
-        $response = Http::timeout($this->timeout)
-            ->retry(2, 5000, function ($exception, $request) {
-                Log::warning('Gemini API retry triggered', [
-                    'exception' => $exception->getMessage(),
-                ]);
+        try {
+            $response = Http::timeout($this->timeout)
+                ->retry(2, 5000, function ($exception, $request) {
+                    Log::warning('Gemini API retry triggered', [
+                        'exception' => $exception->getMessage(),
+                    ]);
 
-                return true;
-            })
-            ->post($endpoint, $requestBody);
+                    return true;
+                })
+                ->post($endpoint, $requestBody);
+        } catch (RequestException $e) {
+            $response = $e->response;
+
+            if ($response && $response->status() === 503) {
+                $errorBody = json_decode($response->body(), true);
+                $errorMessage = $errorBody['error']['message'] ?? $response->body();
+
+                if (str_contains(strtolower($errorMessage), 'overloaded')) {
+                    throw new RuntimeException('Gemini model is overloaded. Please try again later.', 0, $e);
+                }
+            }
+
+            throw new RuntimeException($e->getMessage(), 0, $e);
+        }
 
         $elapsed = round(microtime(true) - $startTime, 2);
 
         if ($response->failed()) {
+            $errorBody = json_decode($response->body(), true);
+            $errorMessage = $errorBody['error']['message'] ?? $response->body();
+
+            if ($response->status() === 503 && str_contains(strtolower($errorMessage), 'overloaded')) {
+                Log::warning('Gemini API overloaded', [
+                    'status' => $response->status(),
+                    'message' => $errorMessage,
+                    'elapsed_seconds' => $elapsed,
+                ]);
+
+                throw new RuntimeException('Gemini model is overloaded. Please try again later.');
+            }
+
             Log::error('Gemini API Error', [
                 'status' => $response->status(),
                 'body' => $response->body(),
                 'elapsed_seconds' => $elapsed,
             ]);
+
             throw new RuntimeException('Gemini API request failed: '.$response->body());
         }
 
@@ -111,10 +162,13 @@ class GeminiService
 
         $parts = $candidates[0]['content']['parts'] ?? [];
         foreach ($parts as $part) {
-            if (isset($part['inlineData'])) {
+            // Handle both camelCase (inlineData) and snake_case (inline_data) response formats
+            $inlineData = $part['inlineData'] ?? $part['inline_data'] ?? null;
+
+            if ($inlineData) {
                 return [
-                    'image_data' => $part['inlineData']['data'],
-                    'mime_type' => $part['inlineData']['mimeType'] ?? 'image/png',
+                    'image_data' => $inlineData['data'],
+                    'mime_type' => $inlineData['mimeType'] ?? $inlineData['mime_type'] ?? 'image/png',
                 ];
             }
         }
