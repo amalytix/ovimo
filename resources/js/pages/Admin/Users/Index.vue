@@ -2,7 +2,7 @@
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Pencil, UserCheck } from 'lucide-vue-next';
+import { Pencil, UserCog } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 interface User {
@@ -67,6 +67,12 @@ watch(search, () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(applyFilters, 300);
 });
+
+const impersonate = (userId: number) => {
+    if (confirm('Are you sure you want to impersonate this user?')) {
+        router.post(`/admin/users/${userId}/impersonate`);
+    }
+};
 </script>
 
 <template>
@@ -193,13 +199,14 @@ watch(search, () => {
                                     >
                                         <Pencil class="h-4 w-4" />
                                     </Link>
-                                    <a
-                                        :href="`/admin/impersonate/${user.id}`"
-                                        class="text-gray-600 hover:text-gray-900 dark:text-gray-400"
+                                    <button
+                                        v-if="!user.is_admin"
+                                        @click="impersonate(user.id)"
+                                        class="text-amber-600 hover:text-amber-900 dark:text-amber-400"
                                         title="Impersonate"
                                     >
-                                        <UserCheck class="h-4 w-4" />
-                                    </a>
+                                        <UserCog class="h-4 w-4" />
+                                    </button>
                                 </div>
                             </td>
                         </tr>

@@ -16,6 +16,7 @@ defineProps<{
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
+    accountInactive?: boolean;
 }>();
 </script>
 
@@ -27,7 +28,14 @@ defineProps<{
         <Head title="Log in" />
 
         <div
-            v-if="status"
+            v-if="accountInactive"
+            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400"
+        >
+            Your account has been deactivated. Please contact support for assistance.
+        </div>
+
+        <div
+            v-else-if="status"
             class="mb-4 text-center text-sm font-medium text-green-600"
         >
             {{ status }}

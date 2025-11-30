@@ -40,7 +40,8 @@ class EnsureValidTeamMembership
 
         if (! $belongsToTeam && ! $ownsTeam) {
             // User doesn't belong to this team - reset to their first available team
-            $firstTeam = $user->teams()->first() ?? $user->ownedTeams()->first();
+            $firstTeam = $user->teams()->where('is_active', true)->first()
+                ?? $user->ownedTeams()->where('is_active', true)->first();
 
             if ($firstTeam) {
                 $user->update(['current_team_id' => $firstTeam->id]);
@@ -51,6 +52,25 @@ class EnsureValidTeamMembership
 
             // User has no teams - critical error
             abort(403, 'You do not have access to any team. Please contact support.');
+        }
+
+        // Check if the current team is active
+        $currentTeam = $user->currentTeam;
+        if ($currentTeam && ! $currentTeam->is_active) {
+            // Try to switch to an active team
+            $activeTeam = $user->teams()->where('is_active', true)->first()
+                ?? $user->ownedTeams()->where('is_active', true)->first();
+
+            if ($activeTeam) {
+                $user->update(['current_team_id' => $activeTeam->id]);
+
+                return redirect()->route('dashboard')
+                    ->with('warning', 'Your team has been deactivated. You have been switched to another team.');
+            }
+
+            // All teams are inactive
+            return redirect()->route('dashboard')
+                ->with('error', 'Your team has been deactivated. Please contact support for assistance.');
         }
 
         return $next($request);

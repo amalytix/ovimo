@@ -38,6 +38,8 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        $impersonatorId = $request->session()->get('impersonator_id');
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -52,6 +54,10 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
             ],
             'polling' => $request->session()->get('polling'),
+            'impersonating' => $impersonatorId ? [
+                'isImpersonating' => true,
+                'impersonatedUser' => $request->user()?->name,
+            ] : null,
         ];
     }
 }

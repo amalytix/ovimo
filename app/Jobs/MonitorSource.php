@@ -65,6 +65,13 @@ class MonitorSource implements ShouldQueue
             return;
         }
 
+        // Check if team is inactive
+        if (! $this->source->team->is_active) {
+            Log::info("MonitorSource job skipped: team {$this->source->team_id} is inactive");
+
+            return;
+        }
+
         Log::info("MonitorSource job started for source {$this->source->id}", [
             'current_next_check_at' => $this->source->next_check_at?->toDateTimeString(),
         ]);
