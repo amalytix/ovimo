@@ -13,9 +13,14 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
-import { Activity, BarChart3, FileText, Image, LayoutGrid, MessageSquare, PenTool, Rss, Settings } from 'lucide-vue-next';
+import { Link, usePage } from '@inertiajs/vue3';
+import { Activity, BarChart3, FileText, Image, LayoutGrid, MessageSquare, PenTool, Rss, Settings, Shield } from 'lucide-vue-next';
+import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
+
+const page = usePage();
+
+const isAdmin = computed(() => page.props.auth?.user?.is_admin === true);
 
 const mainNavItems: NavItem[] = [
     {
@@ -55,24 +60,30 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
-    
-    {
-        title: 'Logs',
-        href: '/activity-logs',
-        icon: Activity,
-    },
-    {
-        title: 'Usage',
-        href: '/usage',
-        icon: BarChart3,
-    },
-    // {
-    //     title: 'Documentation',
-    //     href: 'https://laravel.com/docs/starter-kits#vue',
-    //     icon: BookOpen,
-    // },
-];
+const footerNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Logs',
+            href: '/activity-logs',
+            icon: Activity,
+        },
+        {
+            title: 'Usage',
+            href: '/usage',
+            icon: BarChart3,
+        },
+    ];
+
+    if (isAdmin.value) {
+        items.push({
+            title: 'Admin',
+            href: '/admin',
+            icon: Shield,
+        });
+    }
+
+    return items;
+});
 </script>
 
 <template>
