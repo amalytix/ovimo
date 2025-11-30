@@ -47,6 +47,11 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'currentTeam' => $request->user()?->currentTeam,
+                'teams' => $request->user()?->teams()
+                    ->select('teams.id', 'teams.name')
+                    ->get()
+                    ->map(fn ($team) => ['id' => $team->id, 'name' => $team->name])
+                    ->all() ?? [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [

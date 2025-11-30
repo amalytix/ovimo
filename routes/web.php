@@ -11,6 +11,9 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\PromptController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SourceController;
+use App\Http\Controllers\TeamInvitationController;
+use App\Http\Controllers\TeamMemberController;
+use App\Http\Controllers\TeamSwitchController;
 use App\Http\Controllers\UsageController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +25,10 @@ Route::get('/', function () {
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
+
+// Team invitation acceptance (no auth required - will redirect to login if needed)
+Route::get('invitations/{token}/accept', [TeamInvitationController::class, 'accept'])
+    ->name('team-invitations.accept');
 
 Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -103,6 +110,13 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
         Route::get('/callback-member', [LinkedInController::class, 'callback'])->name('callback-member');
         Route::delete('/{integration}', [LinkedInController::class, 'disconnect'])->name('disconnect');
     });
+
+    // Team management
+    Route::post('team-invitations', [TeamInvitationController::class, 'store'])->name('team-invitations.store');
+    Route::delete('team-invitations/{invitation}', [TeamInvitationController::class, 'destroy'])->name('team-invitations.destroy');
+    Route::delete('team-members/{user}', [TeamMemberController::class, 'destroy'])->name('team-members.destroy');
+    Route::post('team-members/leave', [TeamMemberController::class, 'leave'])->name('team-members.leave');
+    Route::post('teams/{team}/switch', TeamSwitchController::class)->name('teams.switch');
 });
 
 require __DIR__.'/settings.php';

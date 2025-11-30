@@ -1,15 +1,20 @@
 <script setup lang="ts">
+import TeamInvitationController from '@/actions/App/Http/Controllers/TeamInvitationController';
+import TeamMemberController from '@/actions/App/Http/Controllers/TeamMemberController';
 import InputError from '@/components/InputError.vue';
 import LinkedInConnectButton from '@/components/Integrations/LinkedInConnectButton.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,18 +30,34 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { disconnect as disconnectLinkedIn } from '@/routes/integrations/linkedin';
 import { type BreadcrumbItem } from '@/types';
 import type { SocialIntegration } from '@/types/social';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Form, Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { Pencil, PlayCircle, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+
+interface TeamUser {
+    id: number;
+    name: string;
+    email: string;
+    two_factor_enabled: boolean;
+}
+
+interface PendingInvitation {
+    id: number;
+    email: string;
+    created_at: string;
+    expires_at: string;
+}
 
 interface Team {
     id: number;
     name: string;
+    owner_id: number;
     post_auto_hide_days: number | null;
     monthly_token_limit: number | null;
     relevancy_prompt: string | null;
     positive_keywords: string | null;
     negative_keywords: string | null;
+    users: TeamUser[];
 }
 
 interface Webhook {
@@ -52,6 +73,8 @@ interface Webhook {
 
 interface Props {
     team: Team;
+    pendingInvitations: PendingInvitation[];
+    isOwner: boolean;
     webhooks: {
         data: Webhook[];
     };
@@ -287,6 +310,60 @@ const submitImport = () => {
         },
     });
 };
+
+// Team Members functionality
+const userToRemove = ref<TeamUser | null>(null);
+const invitationToRevoke = ref<PendingInvitation | null>(null);
+const showLeaveDialog = ref(false);
+
+const removeUser = () => {
+    if (!userToRemove.value) return;
+    router.delete(TeamMemberController.destroy.url(userToRemove.value.id), {
+        onSuccess: () => {
+            userToRemove.value = null;
+        },
+    });
+};
+
+const revokeInvitation = () => {
+    if (!invitationToRevoke.value) return;
+    router.delete(
+        TeamInvitationController.destroy.url(invitationToRevoke.value.id),
+        {
+            onSuccess: () => {
+                invitationToRevoke.value = null;
+            },
+        },
+    );
+};
+
+const leaveTeam = () => {
+    router.post(TeamMemberController.leave.url(), {}, {
+        onSuccess: () => {
+            showLeaveDialog.value = false;
+        },
+    });
+};
+
+const formatExpiry = (expiresAt: string) => {
+    const expiry = new Date(expiresAt);
+    const now = new Date();
+    const diffMs = expiry.getTime() - now.getTime();
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+
+    if (diffHours < 0) {
+        return 'expired';
+    } else if (diffHours < 1) {
+        return 'in less than an hour';
+    } else if (diffHours === 1) {
+        return 'in 1 hour';
+    } else if (diffHours < 24) {
+        return `in ${diffHours} hours`;
+    } else {
+        const diffDays = Math.round(diffHours / 24);
+        return diffDays === 1 ? 'in 1 day' : `in ${diffDays} days`;
+    }
+};
 </script>
 
 <template>
@@ -304,6 +381,7 @@ const submitImport = () => {
             <Tabs v-model="activeTab" class="w-full">
                 <TabsList class="mb-6">
                     <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="members">Members</TabsTrigger>
                     <TabsTrigger value="keywords">Keyword Filters</TabsTrigger>
                     <TabsTrigger value="ai">AI</TabsTrigger>
                     <TabsTrigger value="integrations">Integrations</TabsTrigger>
@@ -380,6 +458,241 @@ const submitImport = () => {
                             </Button>
                         </div>
                     </form>
+                </TabsContent>
+
+                <!-- Members Tab -->
+                <TabsContent value="members">
+                    <div class="max-w-4xl space-y-8">
+                        <!-- Team Members -->
+                        <div>
+                            <div class="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 class="text-lg font-medium">Team Members</h2>
+                                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                        People who have access to this team.
+                                    </p>
+                                </div>
+                                <Dialog v-model:open="showLeaveDialog">
+                                    <DialogTrigger as-child>
+                                        <Button
+                                            v-if="!isOwner && team.users.length > 1"
+                                            variant="outline"
+                                        >
+                                            Leave Team
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Leave team?</DialogTitle>
+                                            <DialogDescription>
+                                                Are you sure you want to leave
+                                                {{ team.name }}? You will no longer have
+                                                access to this team's data.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <DialogFooter>
+                                            <DialogClose as-child>
+                                                <Button variant="outline">Cancel</Button>
+                                            </DialogClose>
+                                            <Button
+                                                variant="destructive"
+                                                @click="leaveTeam"
+                                            >
+                                                Leave Team
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+
+                            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                                Name
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                                Email
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                                2FA
+                                            </th>
+                                            <th v-if="isOwner" class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                                        <tr v-for="user in team.users" :key="user.id">
+                                            <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-white">
+                                                {{ user.name }}
+                                                <Badge v-if="user.id === team.owner_id" variant="secondary" class="ml-2">
+                                                    Owner
+                                                </Badge>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                                                {{ user.email }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <Badge
+                                                    :variant="user.two_factor_enabled ? 'default' : 'outline'"
+                                                    :class="user.two_factor_enabled ? 'bg-green-600' : ''"
+                                                >
+                                                    {{ user.two_factor_enabled ? 'Enabled' : 'Disabled' }}
+                                                </Badge>
+                                            </td>
+                                            <td v-if="isOwner" class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
+                                                <Dialog>
+                                                    <DialogTrigger as-child>
+                                                        <Button
+                                                            v-if="user.id !== team.owner_id"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            class="text-destructive hover:text-destructive"
+                                                            @click="userToRemove = user"
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Remove team member?</DialogTitle>
+                                                            <DialogDescription>
+                                                                Are you sure you want to remove
+                                                                {{ userToRemove?.name }} from the team?
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <DialogFooter>
+                                                            <DialogClose as-child>
+                                                                <Button variant="outline">Cancel</Button>
+                                                            </DialogClose>
+                                                            <Button variant="destructive" @click="removeUser">
+                                                                Remove
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Pending Invitations (Owner only) -->
+                        <div v-if="isOwner && pendingInvitations.length > 0">
+                            <div class="mb-4">
+                                <h2 class="text-lg font-medium">Pending Invitations</h2>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    Invitations that haven't been accepted yet.
+                                </p>
+                            </div>
+
+                            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                                Email
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                                Expires
+                                            </th>
+                                            <th class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                                        <tr v-for="invitation in pendingInvitations" :key="invitation.id">
+                                            <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900 dark:text-white">
+                                                {{ invitation.email }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                                                {{ formatExpiry(invitation.expires_at) }}
+                                            </td>
+                                            <td class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
+                                                <Dialog>
+                                                    <DialogTrigger as-child>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            class="text-destructive hover:text-destructive"
+                                                            @click="invitationToRevoke = invitation"
+                                                        >
+                                                            Revoke
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Revoke invitation?</DialogTitle>
+                                                            <DialogDescription>
+                                                                Are you sure you want to revoke the invitation for
+                                                                {{ invitationToRevoke?.email }}?
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <DialogFooter>
+                                                            <DialogClose as-child>
+                                                                <Button variant="outline">Cancel</Button>
+                                                            </DialogClose>
+                                                            <Button variant="destructive" @click="revokeInvitation">
+                                                                Revoke
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Invite Member (Owner only) -->
+                        <div v-if="isOwner">
+                            <div class="mb-4">
+                                <h2 class="text-lg font-medium">Invite Team Member</h2>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    Send an invitation to join your team.
+                                </p>
+                            </div>
+
+                            <Form
+                                v-bind="TeamInvitationController.store.form()"
+                                class="space-y-4"
+                                v-slot="{ errors, processing, recentlySuccessful }"
+                            >
+                                <div class="flex gap-4">
+                                    <div class="flex-1">
+                                        <Label for="email" class="sr-only">Email address</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            name="email"
+                                            placeholder="colleague@example.com"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="errors.email" />
+                                    </div>
+                                    <Button :disabled="processing">
+                                        Send Invitation
+                                    </Button>
+                                </div>
+
+                                <Transition
+                                    enter-active-class="transition ease-in-out"
+                                    enter-from-class="opacity-0"
+                                    leave-active-class="transition ease-in-out"
+                                    leave-to-class="opacity-0"
+                                >
+                                    <p v-show="recentlySuccessful" class="text-sm text-green-600">
+                                        Invitation sent successfully.
+                                    </p>
+                                </Transition>
+                            </Form>
+                        </div>
+                    </div>
                 </TabsContent>
 
                 <!-- Keyword Filters Tab -->

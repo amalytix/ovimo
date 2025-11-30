@@ -31,6 +31,13 @@ class ActivityLog extends Model
         'integration.linkedin_disconnected' => 'LinkedIn Disconnected',
         'content.published_to_linkedin' => 'Content Published to LinkedIn',
 
+        // Team events
+        'team.invitation_sent' => 'Team Invitation Sent',
+        'team.invitation_accepted' => 'Team Invitation Accepted',
+        'team.invitation_revoked' => 'Team Invitation Revoked',
+        'team.member_removed' => 'Team Member Removed',
+        'team.member_left' => 'Team Member Left',
+
         // Error/Warning events
         'source.monitoring_failed' => 'Source Monitoring Failed',
         'content_piece.generation_failed' => 'Content Generation Failed',

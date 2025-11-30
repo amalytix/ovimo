@@ -5,22 +5,39 @@ import {
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
+import { switchMethod } from '@/routes/teams';
 import type { User } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from 'lucide-vue-next';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { Check, LogOut, Settings, Users } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 interface Props {
     user: User;
 }
 
+defineProps<Props>();
+
+const page = usePage();
+
+const currentTeam = computed(() => page.props.auth.currentTeam);
+const teams = computed(() => page.props.auth.teams as { id: number; name: string }[]);
+const otherTeams = computed(() =>
+    teams.value.filter((team) => team.id !== currentTeam.value?.id),
+);
+
 const handleLogout = () => {
     router.flushAll();
 };
 
-defineProps<Props>();
+const switchTeam = (teamId: number) => {
+    router.post(switchMethod.url(teamId));
+};
 </script>
 
 <template>
@@ -30,6 +47,32 @@ defineProps<Props>();
         </div>
     </DropdownMenuLabel>
     <DropdownMenuSeparator />
+
+    <!-- Team Switcher -->
+    <DropdownMenuGroup v-if="teams.length > 1">
+        <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+                <Users class="mr-2 h-4 w-4" />
+                Switch Team
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent class="min-w-48">
+                <DropdownMenuItem
+                    v-for="team in teams"
+                    :key="team.id"
+                    @click="team.id !== currentTeam?.id && switchTeam(team.id)"
+                    :class="{ 'bg-muted': team.id === currentTeam?.id }"
+                >
+                    <Check
+                        class="mr-2 h-4 w-4"
+                        :class="team.id === currentTeam?.id ? 'opacity-100' : 'opacity-0'"
+                    />
+                    {{ team.name }}
+                </DropdownMenuItem>
+            </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+    </DropdownMenuGroup>
+
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full" :href="edit()" prefetch as="button">

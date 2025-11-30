@@ -20,6 +20,11 @@ use App\Events\SourceCreated;
 use App\Events\SourceDeleted;
 use App\Events\SourceMonitoringFailed;
 use App\Events\SourceUpdated;
+use App\Events\TeamInvitationAccepted;
+use App\Events\TeamInvitationRevoked;
+use App\Events\TeamInvitationSent;
+use App\Events\TeamMemberLeft;
+use App\Events\TeamMemberRemoved;
 use App\Events\TokenLimitExceeded;
 use App\Events\TwoFactorDisabled;
 use App\Events\TwoFactorEnabled;
@@ -68,6 +73,13 @@ class AppServiceProvider extends ServiceProvider
             LinkedInIntegrationConnected::class,
             LinkedInIntegrationDisconnected::class,
             ContentPublishedToLinkedIn::class,
+
+            // Team events
+            TeamInvitationSent::class,
+            TeamInvitationAccepted::class,
+            TeamInvitationRevoked::class,
+            TeamMemberRemoved::class,
+            TeamMemberLeft::class,
 
             // Error/Warning events
             SourceMonitoringFailed::class,

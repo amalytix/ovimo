@@ -17,18 +17,34 @@ class SettingsController extends Controller
 {
     public function index(): Response
     {
-        $team = Team::find(auth()->user()->current_team_id);
+        $user = auth()->user();
+        $team = Team::find($user->current_team_id);
+
+        $team->load(['users' => function ($query) {
+            $query->select('users.id', 'name', 'email', 'two_factor_confirmed_at');
+        }]);
 
         return Inertia::render('settings/Index', [
             'team' => [
                 'id' => $team->id,
                 'name' => $team->name,
+                'owner_id' => $team->owner_id,
                 'post_auto_hide_days' => $team->post_auto_hide_days,
                 'monthly_token_limit' => $team->monthly_token_limit,
                 'relevancy_prompt' => $team->relevancy_prompt,
                 'positive_keywords' => $team->positive_keywords,
                 'negative_keywords' => $team->negative_keywords,
+                'users' => $team->users->map(fn ($u) => [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'two_factor_enabled' => $u->two_factor_confirmed_at !== null,
+                ]),
             ],
+            'pendingInvitations' => $team->pendingInvitations()
+                ->select('id', 'email', 'created_at', 'expires_at')
+                ->get(),
+            'isOwner' => $team->owner_id === $user->id,
             'webhooks' => [
                 'data' => $team->webhooks,
             ],

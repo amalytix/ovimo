@@ -92,4 +92,14 @@ class Team extends Model
     {
         return $this->hasMany(ActivityLog::class);
     }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(TeamInvitation::class);
+    }
+
+    public function pendingInvitations(): HasMany
+    {
+        return $this->invitations()->where('expires_at', '>', now());
+    }
 }

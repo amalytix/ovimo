@@ -20,6 +20,11 @@ use App\Events\SourceCreated;
 use App\Events\SourceDeleted;
 use App\Events\SourceMonitoringFailed;
 use App\Events\SourceUpdated;
+use App\Events\TeamInvitationAccepted;
+use App\Events\TeamInvitationRevoked;
+use App\Events\TeamInvitationSent;
+use App\Events\TeamMemberLeft;
+use App\Events\TeamMemberRemoved;
 use App\Events\TokenLimitExceeded;
 use App\Events\TwoFactorDisabled;
 use App\Events\TwoFactorEnabled;
@@ -310,6 +315,65 @@ class LogActivityToDatabase implements ShouldQueue
                     'integration_id' => $event->integration->id,
                     'error_message' => $event->exception->getMessage(),
                     'error_type' => get_class($event->exception),
+                ],
+            ],
+
+            $event instanceof TeamInvitationSent => [
+                'team_id' => $event->invitation->team_id,
+                'user_id' => $event->invitedBy->id,
+                'event_type' => 'team.invitation_sent',
+                'level' => 'info',
+                'description' => "Invitation sent to '{$event->invitation->email}'",
+                'metadata' => [
+                    'invitation_id' => $event->invitation->id,
+                    'email' => $event->invitation->email,
+                ],
+            ],
+
+            $event instanceof TeamInvitationAccepted => [
+                'team_id' => $event->team->id,
+                'user_id' => $event->user->id,
+                'event_type' => 'team.invitation_accepted',
+                'level' => 'info',
+                'description' => "'{$event->user->name}' joined the team",
+                'metadata' => [
+                    'user_email' => $event->user->email,
+                    'invited_email' => $event->invitedEmail,
+                ],
+            ],
+
+            $event instanceof TeamInvitationRevoked => [
+                'team_id' => $event->team->id,
+                'user_id' => $event->revokedBy->id,
+                'event_type' => 'team.invitation_revoked',
+                'level' => 'info',
+                'description' => "Invitation to '{$event->email}' was revoked",
+                'metadata' => [
+                    'email' => $event->email,
+                ],
+            ],
+
+            $event instanceof TeamMemberRemoved => [
+                'team_id' => $event->team->id,
+                'user_id' => $event->removedBy->id,
+                'event_type' => 'team.member_removed',
+                'level' => 'info',
+                'description' => "'{$event->removedUserName}' was removed from the team",
+                'metadata' => [
+                    'removed_user_id' => $event->removedUserId,
+                    'removed_user_name' => $event->removedUserName,
+                    'removed_user_email' => $event->removedUserEmail,
+                ],
+            ],
+
+            $event instanceof TeamMemberLeft => [
+                'team_id' => $event->team->id,
+                'user_id' => $event->user->id,
+                'event_type' => 'team.member_left',
+                'level' => 'info',
+                'description' => "'{$event->user->name}' left the team",
+                'metadata' => [
+                    'user_email' => $event->user->email,
                 ],
             ],
 
