@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureTokenLimitNotExceeded;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureValidTeamMembership;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'token.limit' => EnsureTokenLimitNotExceeded::class,
             'team.valid' => EnsureValidTeamMembership::class,
+            'admin' => EnsureUserIsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
