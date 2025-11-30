@@ -195,8 +195,11 @@ watch(search, () => {
                         :href="link.url"
                         class="rounded px-3 py-1 text-sm"
                         :class="link.active ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-800'"
-                        v-html="link.label"
-                    />
+                    >
+                        <!-- eslint-disable-next-line vue/no-v-html -->
+                        <span v-html="link.label" />
+                    </Link>
+                    <!-- eslint-disable-next-line vue/no-v-html -->
                     <span
                         v-else
                         class="rounded bg-gray-50 px-3 py-1 text-sm text-gray-400 dark:bg-gray-900"
