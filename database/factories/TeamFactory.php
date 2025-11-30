@@ -20,9 +20,17 @@ class TeamFactory extends Factory
         return [
             'name' => fake()->company(),
             'owner_id' => User::factory(),
+            'is_active' => true,
             'post_auto_hide_days' => null,
             'monthly_token_limit' => 10000000,
             'relevancy_prompt' => null,
         ];
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
     }
 }

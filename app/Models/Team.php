@@ -16,6 +16,7 @@ class Team extends Model
     protected $fillable = [
         'name',
         'owner_id',
+        'is_active',
         'post_auto_hide_days',
         'monthly_token_limit',
         'relevancy_prompt',
@@ -28,6 +29,7 @@ class Team extends Model
         return [
             'post_auto_hide_days' => 'integer',
             'monthly_token_limit' => 'integer',
+            'is_active' => 'boolean',
         ];
     }
 

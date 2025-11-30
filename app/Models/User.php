@@ -27,6 +27,8 @@ class User extends Authenticatable
         'password',
         'current_team_id',
         'monthly_token_limit',
+        'is_admin',
+        'is_active',
     ];
 
     /**
@@ -53,7 +55,14 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'monthly_token_limit' => 'integer',
+            'is_admin' => 'boolean',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->is_admin === true;
     }
 
     public function currentTeam(): BelongsTo
