@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
+import AdminLayout from '@/layouts/AdminLayout.vue';
 import HealthCard from '@/components/Admin/HealthCard.vue';
 import StatCard from '@/components/Admin/StatCard.vue';
 import { type BreadcrumbItem } from '@/types';
@@ -68,7 +68,7 @@ const formatNumber = (num: number) => {
 <template>
     <Head title="Admin Dashboard" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AdminLayout :breadcrumbs="breadcrumbs">
         <div class="p-6">
             <div class="mb-6">
                 <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
@@ -212,5 +212,5 @@ const formatNumber = (num: number) => {
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </AdminLayout>
 </template>
