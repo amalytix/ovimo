@@ -3,7 +3,13 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
@@ -46,13 +52,20 @@ const submit = () => {
         <div class="p-6">
             <div class="mb-6">
                 <h1 class="text-2xl font-semibold">Edit Prompt</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Update your prompt template.</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Update your prompt template.
+                </p>
             </div>
 
             <form @submit.prevent="submit" class="max-w-2xl space-y-6">
                 <div class="space-y-2">
                     <Label for="internal_name">Name</Label>
-                    <Input id="internal_name" v-model="form.internal_name" type="text" placeholder="Enter prompt name" />
+                    <Input
+                        id="internal_name"
+                        v-model="form.internal_name"
+                        type="text"
+                        placeholder="Enter prompt name"
+                    />
                     <InputError :message="form.errors.internal_name" />
                 </div>
 
@@ -63,12 +76,17 @@ const submit = () => {
                             <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="CONTENT">Content Generation</SelectItem>
-                            <SelectItem value="IMAGE">Image Generation</SelectItem>
+                            <SelectItem value="CONTENT"
+                                >Content Generation</SelectItem
+                            >
+                            <SelectItem value="IMAGE"
+                                >Image Generation</SelectItem
+                            >
                         </SelectContent>
                     </Select>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Content prompts are used for generating text. Image prompts are used for generating AI images.
+                        Content prompts are used for generating text. Image
+                        prompts are used for generating AI images.
                     </p>
                     <InputError :message="form.errors.type" />
                 </div>
@@ -81,8 +99,12 @@ const submit = () => {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="BLOG_POST">Blog Post</SelectItem>
-                            <SelectItem value="LINKEDIN_POST">LinkedIn Post</SelectItem>
-                            <SelectItem value="YOUTUBE_SCRIPT">YouTube Script</SelectItem>
+                            <SelectItem value="LINKEDIN_POST"
+                                >LinkedIn Post</SelectItem
+                            >
+                            <SelectItem value="YOUTUBE_SCRIPT"
+                                >YouTube Script</SelectItem
+                            >
                         </SelectContent>
                     </Select>
                     <InputError :message="form.errors.channel" />
@@ -94,24 +116,38 @@ const submit = () => {
                         id="prompt_text"
                         v-model="form.prompt_text"
                         rows="12"
-                        class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         :placeholder="
                             form.type === 'IMAGE'
                                 ? 'Enter your image prompt template. Use {{content}} as a placeholder for the blog content.'
                                 : 'Enter your prompt template...'
                         "
                     ></textarea>
-                    <p v-if="form.type === 'IMAGE'" class="text-xs text-gray-500 dark:text-gray-400">
+                    <p
+                        v-if="form.type === 'IMAGE'"
+                        class="text-xs text-gray-500 dark:text-gray-400"
+                    >
                         Use the placeholder
-                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;content&#125;&#125;</code> which will be
-                        replaced with the blog content when generating image prompts.
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800"
+                            >&#123;&#123;content&#125;&#125;</code
+                        >
+                        which will be replaced with the blog content when
+                        generating image prompts.
                     </p>
                     <p v-else class="text-xs text-gray-500 dark:text-gray-400">
                         Use placeholders like
-                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;context&#125;&#125;</code> or
-                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;language&#125;&#125;</code> or
-                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800">&#123;&#123;channel&#125;&#125;</code> that will be replaced
-                        during content generation.
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800"
+                            >&#123;&#123;context&#125;&#125;</code
+                        >
+                        or
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800"
+                            >&#123;&#123;language&#125;&#125;</code
+                        >
+                        or
+                        <code class="rounded bg-gray-100 px-1 dark:bg-gray-800"
+                            >&#123;&#123;channel&#125;&#125;</code
+                        >
+                        that will be replaced during content generation.
                     </p>
                     <InputError :message="form.errors.prompt_text" />
                 </div>

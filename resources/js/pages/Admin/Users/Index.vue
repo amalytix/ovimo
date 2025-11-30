@@ -44,22 +44,33 @@ const status = ref(props.filters.status);
 const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
 
 const applyFilters = () => {
-    router.get('/admin/users', {
-        search: search.value || undefined,
-        status: status.value || undefined,
-        sort_by: props.filters.sort_by,
-        sort_dir: props.filters.sort_dir,
-    }, { preserveState: true });
+    router.get(
+        '/admin/users',
+        {
+            search: search.value || undefined,
+            status: status.value || undefined,
+            sort_by: props.filters.sort_by,
+            sort_dir: props.filters.sort_dir,
+        },
+        { preserveState: true },
+    );
 };
 
 const sort = (column: string) => {
-    const newDir = props.filters.sort_by === column && props.filters.sort_dir === 'asc' ? 'desc' : 'asc';
-    router.get('/admin/users', {
-        search: search.value || undefined,
-        status: status.value || undefined,
-        sort_by: column,
-        sort_dir: newDir,
-    }, { preserveState: true });
+    const newDir =
+        props.filters.sort_by === column && props.filters.sort_dir === 'asc'
+            ? 'desc'
+            : 'asc';
+    router.get(
+        '/admin/users',
+        {
+            search: search.value || undefined,
+            status: status.value || undefined,
+            sort_by: column,
+            sort_dir: newDir,
+        },
+        { preserveState: true },
+    );
 };
 
 let searchTimeout: ReturnType<typeof setTimeout>;
@@ -82,7 +93,9 @@ const impersonate = (userId: number) => {
         <div class="p-6">
             <div class="mb-6">
                 <h1 class="text-2xl font-semibold">Users</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Manage all users on the platform.</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Manage all users on the platform.
+                </p>
             </div>
 
             <!-- Filters -->
@@ -106,92 +119,127 @@ const impersonate = (userId: number) => {
 
             <!-- Table -->
             <div class="overflow-hidden rounded-lg border dark:border-gray-700">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table
+                    class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                >
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400"
                                 @click="sort('email')"
                             >
                                 Email
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400"
                                 @click="sort('name')"
                             >
                                 Name
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Status
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400"
                                 @click="sort('last_login_at')"
                             >
                                 Last Login
                             </th>
-                            <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Teams
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                                class="cursor-pointer px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400"
                                 @click="sort('sources_count')"
                             >
                                 Sources
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                                class="cursor-pointer px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400"
                                 @click="sort('posts_count')"
                             >
                                 Posts
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                                class="cursor-pointer px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400"
                                 @click="sort('tokens_7d')"
                             >
                                 Tokens (7d)
                             </th>
-                            <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Actions
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                    <tbody
+                        class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900"
+                    >
                         <tr v-for="user in users.data" :key="user.id">
-                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                            <td
+                                class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-white"
+                            >
                                 {{ user.email }}
-                                <span v-if="user.is_admin" class="ml-2 rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                <span
+                                    v-if="user.is_admin"
+                                    class="ml-2 rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                                >
                                     Admin
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ user.name }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <span
-                                    class="inline-flex rounded-full px-2 text-xs font-semibold leading-5"
-                                    :class="user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+                                    class="inline-flex rounded-full px-2 text-xs leading-5 font-semibold"
+                                    :class="
+                                        user.is_active
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                    "
                                 >
                                     {{ user.is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ user.last_login_at }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-center text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ user.teams_count }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-center text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ formatNumber(user.sources_count) }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-center text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ formatNumber(user.posts_count) }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ formatNumber(user.tokens_7d) }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
-                                <div class="flex items-center justify-end gap-2">
+                            <td
+                                class="px-6 py-4 text-right text-sm whitespace-nowrap"
+                            >
+                                <div
+                                    class="flex items-center justify-end gap-2"
+                                >
                                     <Link
                                         :href="`/admin/users/${user.id}/edit`"
                                         class="text-blue-600 hover:text-blue-900 dark:text-blue-400"
@@ -215,13 +263,20 @@ const impersonate = (userId: number) => {
             </div>
 
             <!-- Pagination -->
-            <div v-if="users.links.length > 3" class="mt-4 flex justify-center gap-1">
+            <div
+                v-if="users.links.length > 3"
+                class="mt-4 flex justify-center gap-1"
+            >
                 <template v-for="link in users.links" :key="link.label">
                     <Link
                         v-if="link.url"
                         :href="link.url"
                         class="rounded px-3 py-1 text-sm"
-                        :class="link.active ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-800'"
+                        :class="
+                            link.active
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800'
+                        "
                     >
                         <!-- eslint-disable-next-line vue/no-v-html -->
                         <span v-html="link.label" />

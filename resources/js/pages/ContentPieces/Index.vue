@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
+import ContentPieceBulkActions from '@/components/ContentPiece/ContentPieceBulkActions.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Pagination } from '@/components/ui/pagination';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
     DialogContent,
@@ -14,15 +10,25 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { toast } from '@/components/ui/sonner';
+import AppLayout from '@/layouts/AppLayout.vue';
 import CalendarMonth from '@/pages/ContentPieces/CalendarMonth.vue';
 import CalendarWeek from '@/pages/ContentPieces/CalendarWeek.vue';
-import ContentPieceBulkActions from '@/components/ContentPiece/ContentPieceBulkActions.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
-import { Pencil, Trash2 } from 'lucide-vue-next';
-import { toast } from '@/components/ui/sonner';
 import axios from 'axios';
+import { Pencil, Trash2 } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 interface ContentPiece {
     id: number;
@@ -64,15 +70,21 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Content Pieces', href: '/content-pieces' }];
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Content Pieces', href: '/content-pieces' },
+];
 
 const search = ref(props.filters.search || '');
 const status = ref(props.filters.status || 'all');
 const channel = ref(props.filters.channel || 'all');
 const view = ref<Props['filters']['view']>(props.filters.view || 'list');
 const sortBy = ref(props.filters.sort_by || 'published_at');
-const sortDirection = ref<Props['filters']['sort_direction']>(props.filters.sort_direction || 'asc');
-const selectedDate = ref<string>(props.filters?.date || new Date().toISOString().slice(0, 10));
+const sortDirection = ref<Props['filters']['sort_direction']>(
+    props.filters.sort_direction || 'asc',
+);
+const selectedDate = ref<string>(
+    props.filters?.date || new Date().toISOString().slice(0, 10),
+);
 const selectedIds = ref<number[]>([]);
 const statusDialogOpen = ref(false);
 const bulkStatus = ref<'NOT_STARTED' | 'DRAFT' | 'FINAL'>('DRAFT');
@@ -80,7 +92,10 @@ const bulkStatus = ref<'NOT_STARTED' | 'DRAFT' | 'FINAL'>('DRAFT');
 const showListView = computed(() => view.value === 'list');
 
 const allSelected = computed(() => {
-    return props.contentPieces.data.length > 0 && selectedIds.value.length === props.contentPieces.data.length;
+    return (
+        props.contentPieces.data.length > 0 &&
+        selectedIds.value.length === props.contentPieces.data.length
+    );
 });
 
 const applyFilters = (overrides: Record<string, unknown> = {}) => {
@@ -130,7 +145,8 @@ const formatStatus = (status: string) => {
 
 const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-        NOT_STARTED: 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-200',
+        NOT_STARTED:
+            'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-200',
         DRAFT: 'bg-blue-50 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200',
         FINAL: 'bg-green-50 text-green-700 dark:bg-green-900/60 dark:text-green-200',
     };
@@ -155,7 +171,7 @@ const formatLanguage = (language: string) => {
 };
 
 const formatPublishDate = (publishedAt: string | null) => {
-    if (! publishedAt) {
+    if (!publishedAt) {
         return 'Unscheduled';
     }
 
@@ -171,7 +187,7 @@ const formatPublishDate = (publishedAt: string | null) => {
 };
 
 const isPublishDateInPast = (publishedAt: string | null) => {
-    if (! publishedAt) {
+    if (!publishedAt) {
         return false;
     }
 
@@ -193,7 +209,9 @@ const toggleSelection = (id: number, checked: boolean) => {
             selectedIds.value.push(id);
         }
     } else {
-        selectedIds.value = selectedIds.value.filter((selectedId) => selectedId !== id);
+        selectedIds.value = selectedIds.value.filter(
+            (selectedId) => selectedId !== id,
+        );
     }
 };
 
@@ -206,26 +224,36 @@ const toggleAll = (checked: boolean) => {
 };
 
 const refreshContentPieces = () => {
-    router.get('/content-pieces', {
-        search: search.value || undefined,
-        status: status.value === 'all' ? undefined : status.value,
-        channel: channel.value === 'all' ? undefined : channel.value,
-        view: view.value,
-        sort_by: sortBy.value,
-        sort_direction: sortDirection.value,
-        date: selectedDate.value,
-    }, { preserveState: true, replace: true, preserveScroll: true });
+    router.get(
+        '/content-pieces',
+        {
+            search: search.value || undefined,
+            status: status.value === 'all' ? undefined : status.value,
+            channel: channel.value === 'all' ? undefined : channel.value,
+            view: view.value,
+            sort_by: sortBy.value,
+            sort_direction: sortDirection.value,
+            date: selectedDate.value,
+        },
+        { preserveState: true, replace: true, preserveScroll: true },
+    );
 };
 
 const handleBulkDelete = async () => {
     if (selectedIds.value.length === 0) {
         return;
     }
-    if (!confirm(`Are you sure you want to delete ${selectedIds.value.length} content piece(s)? This action cannot be undone.`)) {
+    if (
+        !confirm(
+            `Are you sure you want to delete ${selectedIds.value.length} content piece(s)? This action cannot be undone.`,
+        )
+    ) {
         return;
     }
     try {
-        await axios.post('/content-pieces/bulk-delete', { content_piece_ids: selectedIds.value });
+        await axios.post('/content-pieces/bulk-delete', {
+            content_piece_ids: selectedIds.value,
+        });
         toast.success('Content pieces deleted');
         selectedIds.value = [];
         refreshContentPieces();
@@ -240,7 +268,9 @@ const handleBulkUnsetPublishDate = async () => {
         return;
     }
     try {
-        await axios.post('/content-pieces/bulk-unset-publish-date', { content_piece_ids: selectedIds.value });
+        await axios.post('/content-pieces/bulk-unset-publish-date', {
+            content_piece_ids: selectedIds.value,
+        });
         toast.success('Publish dates removed');
         refreshContentPieces();
     } catch (error) {
@@ -276,8 +306,10 @@ watch(
     () => props.contentPieces.data,
     (items) => {
         const availableIds = items.map((item) => item.id);
-        selectedIds.value = selectedIds.value.filter((id) => availableIds.includes(id));
-    }
+        selectedIds.value = selectedIds.value.filter((id) =>
+            availableIds.includes(id),
+        );
+    },
 );
 </script>
 
@@ -289,17 +321,33 @@ watch(
             <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-semibold">Content Pieces</h1>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Plan, schedule, and organize your content.</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Plan, schedule, and organize your content.
+                    </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <div class="flex rounded-md border border-gray-200 bg-white text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                        <Button :variant="view === 'list' ? 'default' : 'outline'" class="rounded-none" @click="switchView('list')">
+                    <div
+                        class="flex rounded-md border border-gray-200 bg-white text-sm shadow-sm dark:border-gray-700 dark:bg-gray-900"
+                    >
+                        <Button
+                            :variant="view === 'list' ? 'default' : 'outline'"
+                            class="rounded-none"
+                            @click="switchView('list')"
+                        >
                             List
                         </Button>
-                        <Button :variant="view === 'week' ? 'default' : 'outline'" class="rounded-none" @click="switchView('week')">
+                        <Button
+                            :variant="view === 'week' ? 'default' : 'outline'"
+                            class="rounded-none"
+                            @click="switchView('week')"
+                        >
                             Week
                         </Button>
-                        <Button :variant="view === 'month' ? 'default' : 'outline'" class="rounded-none" @click="switchView('month')">
+                        <Button
+                            :variant="view === 'month' ? 'default' : 'outline'"
+                            class="rounded-none"
+                            @click="switchView('month')"
+                        >
                             Month
                         </Button>
                     </div>
@@ -313,7 +361,11 @@ watch(
             <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div class="space-y-2">
                     <Label>Search</Label>
-                    <Input v-model="search" placeholder="Search by name..." @keyup.enter="applyFilters" />
+                    <Input
+                        v-model="search"
+                        placeholder="Search by name..."
+                        @keyup.enter="applyFilters"
+                    />
                 </div>
                 <div class="space-y-2">
                     <Label>Status</Label>
@@ -323,7 +375,9 @@ watch(
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All statuses</SelectItem>
-                            <SelectItem value="NOT_STARTED">Not Started</SelectItem>
+                            <SelectItem value="NOT_STARTED"
+                                >Not Started</SelectItem
+                            >
                             <SelectItem value="DRAFT">Draft</SelectItem>
                             <SelectItem value="FINAL">Final</SelectItem>
                         </SelectContent>
@@ -338,61 +392,108 @@ watch(
                         <SelectContent>
                             <SelectItem value="all">All channels</SelectItem>
                             <SelectItem value="BLOG_POST">Blog Post</SelectItem>
-                            <SelectItem value="LINKEDIN_POST">LinkedIn Post</SelectItem>
-                            <SelectItem value="YOUTUBE_SCRIPT">YouTube Script</SelectItem>
+                            <SelectItem value="LINKEDIN_POST"
+                                >LinkedIn Post</SelectItem
+                            >
+                            <SelectItem value="YOUTUBE_SCRIPT"
+                                >YouTube Script</SelectItem
+                            >
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
             <div v-if="showListView" class="space-y-4">
-                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <div
+                    class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                    <table
+                        class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                    >
                         <thead class="bg-gray-50 dark:bg-gray-800">
                             <tr>
                                 <th class="px-4 py-3 align-middle">
-                                    <Checkbox :model-value="allSelected" @update:model-value="toggleAll($event === true)" />
+                                    <Checkbox
+                                        :model-value="allSelected"
+                                        @update:model-value="
+                                            toggleAll($event === true)
+                                        "
+                                    />
                                 </th>
-                                <th class="w-1/2 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 md:w-1/3">
+                                <th
+                                    class="w-1/2 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase md:w-1/3 dark:text-gray-400"
+                                >
                                     Name
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                                >
                                     Channel
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                                >
                                     Language
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                                >
                                     Status
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                                >
                                     <button
-                                        class="flex items-center gap-1 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                        class="flex items-center gap-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
                                         type="button"
                                         @click="togglePublishSort"
                                     >
                                         Publish Date
                                         <span class="text-xs text-gray-400">
-                                            {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                                            {{
+                                                sortDirection === 'asc'
+                                                    ? '↑'
+                                                    : '↓'
+                                            }}
                                         </span>
                                     </button>
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                                >
                                     Created
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                    class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
                                 >
                                     Actions
                                 </th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-                            <tr v-for="piece in contentPieces.data" :key="piece.id">
+                        <tbody
+                            class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900"
+                        >
+                            <tr
+                                v-for="piece in contentPieces.data"
+                                :key="piece.id"
+                            >
                                 <td class="px-4 py-4">
-                                    <Checkbox :model-value="selectedIds.includes(piece.id)" @update:model-value="(checked: boolean) => toggleSelection(piece.id, checked)" />
+                                    <Checkbox
+                                        :model-value="
+                                            selectedIds.includes(piece.id)
+                                        "
+                                        @update:model-value="
+                                            (checked: boolean) =>
+                                                toggleSelection(
+                                                    piece.id,
+                                                    checked,
+                                                )
+                                        "
+                                    />
                                 </td>
-                                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                <td
+                                    class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white"
+                                >
                                     <div class="max-w-xs md:max-w-sm">
                                         <Link
                                             :href="`/content-pieces/${piece.id}/edit`"
@@ -402,38 +503,73 @@ watch(
                                         </Link>
                                     </div>
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                    <span class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700">
+                                <td
+                                    class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                                >
+                                    <span
+                                        class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700"
+                                    >
                                         {{ formatChannel(piece.channel) }}
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                <td
+                                    class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                                >
                                     {{ formatLanguage(piece.target_language) }}
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-sm">
-                                    <span :class="getStatusColor(piece.status)" class="rounded-full px-2 py-1 text-xs">
+                                <td class="px-6 py-4 text-sm whitespace-nowrap">
+                                    <span
+                                        :class="getStatusColor(piece.status)"
+                                        class="rounded-full px-2 py-1 text-xs"
+                                    >
                                         {{ formatStatus(piece.status) }}
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                    <div v-if="piece.published_at" class="space-y-1">
+                                <td
+                                    class="px-6 py-4 text-sm whitespace-nowrap text-gray-900 dark:text-white"
+                                >
+                                    <div
+                                        v-if="piece.published_at"
+                                        class="space-y-1"
+                                    >
                                         <div
                                             class="text-sm text-gray-900 dark:text-white"
-                                            :class="{ 'line-through opacity-60': isPublishDateInPast(piece.published_at) }"
+                                            :class="{
+                                                'line-through opacity-60':
+                                                    isPublishDateInPast(
+                                                        piece.published_at,
+                                                    ),
+                                            }"
                                         >
-                                            {{ formatPublishDate(piece.published_at) }}
+                                            {{
+                                                formatPublishDate(
+                                                    piece.published_at,
+                                                )
+                                            }}
                                         </div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        <div
+                                            class="text-xs text-gray-500 dark:text-gray-400"
+                                        >
                                             {{ piece.published_at_human }}
                                         </div>
                                     </div>
-                                    <span v-else class="text-sm text-gray-500 dark:text-gray-400">Unscheduled</span>
+                                    <span
+                                        v-else
+                                        class="text-sm text-gray-500 dark:text-gray-400"
+                                        >Unscheduled</span
+                                    >
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                <td
+                                    class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                                >
                                     {{ piece.created_at }}
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end gap-3">
+                                <td
+                                    class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"
+                                >
+                                    <div
+                                        class="flex items-center justify-end gap-3"
+                                    >
                                         <Link
                                             :href="`/content-pieces/${piece.id}/edit`"
                                             class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
@@ -443,7 +579,9 @@ watch(
                                             <span class="sr-only">Edit</span>
                                         </Link>
                                         <button
-                                            @click="deleteContentPiece(piece.id)"
+                                            @click="
+                                                deleteContentPiece(piece.id)
+                                            "
                                             class="text-red-500 hover:text-red-700 dark:text-red-400"
                                             title="Delete"
                                         >
@@ -454,8 +592,12 @@ watch(
                                 </td>
                             </tr>
                             <tr v-if="contentPieces.data.length === 0">
-                                <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    No content pieces found. Click "Create Content" to start generating content.
+                                <td
+                                    colspan="8"
+                                    class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                                >
+                                    No content pieces found. Click "Create
+                                    Content" to start generating content.
                                 </td>
                             </tr>
                         </tbody>
@@ -491,7 +633,10 @@ watch(
         <DialogContent class="max-w-lg">
             <DialogHeader>
                 <DialogTitle>Update Status</DialogTitle>
-                <DialogDescription>Select the new status for the selected content pieces.</DialogDescription>
+                <DialogDescription
+                    >Select the new status for the selected content
+                    pieces.</DialogDescription
+                >
             </DialogHeader>
             <div class="space-y-2">
                 <Label>Status</Label>
@@ -507,8 +652,12 @@ watch(
                 </Select>
             </div>
             <DialogFooter>
-                <Button variant="ghost" @click="statusDialogOpen = false">Cancel</Button>
-                <Button type="button" @click="confirmBulkStatusUpdate">Update</Button>
+                <Button variant="ghost" @click="statusDialogOpen = false"
+                    >Cancel</Button
+                >
+                <Button type="button" @click="confirmBulkStatusUpdate"
+                    >Update</Button
+                >
             </DialogFooter>
         </DialogContent>
     </Dialog>

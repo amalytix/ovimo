@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
-import { EditorContent, useEditor } from '@tiptap/vue-3';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import StarterKit from '@tiptap/starter-kit';
-import { Markdown } from '@tiptap/markdown';
 import Typography from '@tiptap/extension-typography';
-import { Bold, Code, Heading1, Heading2, Heading3, Image as ImageIcon, Italic, Link2, ListOrdered, List, Quote, Strikethrough, WrapText, Type } from 'lucide-vue-next';
+import { Markdown } from '@tiptap/markdown';
+import StarterKit from '@tiptap/starter-kit';
+import { EditorContent, useEditor } from '@tiptap/vue-3';
+import {
+    Bold,
+    Code,
+    Heading1,
+    Heading2,
+    Heading3,
+    Image as ImageIcon,
+    Italic,
+    Link2,
+    List,
+    ListOrdered,
+    Quote,
+    Strikethrough,
+    Type,
+    WrapText,
+} from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { ResizableImage } from './ResizableImage';
 
@@ -74,7 +89,8 @@ const isActive = (name: string, attrs: Record<string, unknown> = {}) => {
 const toggleMarkdownMode = () => {
     isMarkdownMode.value = !isMarkdownMode.value;
     if (isMarkdownMode.value) {
-        markdownValue.value = editor?.value?.getMarkdown?.() ?? editor?.value?.getText() ?? '';
+        markdownValue.value =
+            editor?.value?.getMarkdown?.() ?? editor?.value?.getText() ?? '';
     } else {
         editor?.value?.commands.setContent(markdownValue.value || '', {
             contentType: 'markdown',
@@ -86,7 +102,7 @@ const toggleMarkdownMode = () => {
 
 const toolbarButtonClass = computed(
     () =>
-        'h-9 w-9 rounded-md border border-transparent text-sm transition hover:border-border hover:bg-muted aria-pressed:bg-primary aria-pressed:text-primary-foreground'
+        'h-9 w-9 rounded-md border border-transparent text-sm transition hover:border-border hover:bg-muted aria-pressed:bg-primary aria-pressed:text-primary-foreground',
 );
 
 const handleLink = () => {
@@ -135,7 +151,7 @@ watch(
                 editor.value.commands.setContent(value || '', false);
             }
         }
-    }
+    },
 );
 
 onBeforeUnmount(() => {
@@ -145,14 +161,18 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="flex flex-col gap-3">
-        <div class="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2">
+        <div
+            class="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2"
+        >
             <Button
                 variant="ghost"
                 size="icon"
                 :class="toolbarButtonClass"
                 :aria-pressed="isActive('heading', { level: 1 })"
                 aria-label="Heading 1"
-                @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
+                @click="
+                    editor?.chain().focus().toggleHeading({ level: 1 }).run()
+                "
             >
                 <Heading1 class="h-4 w-4" />
             </Button>
@@ -162,7 +182,9 @@ onBeforeUnmount(() => {
                 :class="toolbarButtonClass"
                 :aria-pressed="isActive('heading', { level: 2 })"
                 aria-label="Heading 2"
-                @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
+                @click="
+                    editor?.chain().focus().toggleHeading({ level: 2 }).run()
+                "
             >
                 <Heading2 class="h-4 w-4" />
             </Button>
@@ -172,7 +194,9 @@ onBeforeUnmount(() => {
                 :class="toolbarButtonClass"
                 :aria-pressed="isActive('heading', { level: 3 })"
                 aria-label="Heading 3"
-                @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()"
+                @click="
+                    editor?.chain().focus().toggleHeading({ level: 3 }).run()
+                "
             >
                 <Heading3 class="h-4 w-4" />
             </Button>
@@ -259,16 +283,35 @@ onBeforeUnmount(() => {
                 <WrapText class="h-4 w-4" />
             </Button>
             <span class="h-6 w-px bg-border" />
-            <Button variant="ghost" size="icon" :class="toolbarButtonClass" aria-label="Insert link" @click="handleLink">
+            <Button
+                variant="ghost"
+                size="icon"
+                :class="toolbarButtonClass"
+                aria-label="Insert link"
+                @click="handleLink"
+            >
                 <Link2 class="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" :class="toolbarButtonClass" aria-label="Insert image" @click="emit('request-image')">
+            <Button
+                variant="ghost"
+                size="icon"
+                :class="toolbarButtonClass"
+                aria-label="Insert image"
+                @click="emit('request-image')"
+            >
                 <ImageIcon class="h-4 w-4" />
             </Button>
             <span class="h-6 w-px bg-border" />
-            <Button variant="outline" size="sm" class="ml-auto h-9 gap-2" @click="toggleMarkdownMode">
+            <Button
+                variant="outline"
+                size="sm"
+                class="ml-auto h-9 gap-2"
+                @click="toggleMarkdownMode"
+            >
                 <Type class="h-4 w-4" />
-                <span>{{ isMarkdownMode ? 'Back to editor' : 'Markdown mode' }}</span>
+                <span>{{
+                    isMarkdownMode ? 'Back to editor' : 'Markdown mode'
+                }}</span>
             </Button>
         </div>
 
@@ -276,11 +319,15 @@ onBeforeUnmount(() => {
             <div v-if="isMarkdownMode" class="p-3">
                 <textarea
                     v-model="markdownValue"
-                    class="min-h-[320px] w-full rounded-md border border-input bg-background p-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    class="min-h-[320px] w-full rounded-md border border-input bg-background p-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                     placeholder="Write in markdown..."
                 />
             </div>
-            <EditorContent v-else :editor="editor" class="tiptap prose prose-slate max-w-none min-h-[320px] p-4 dark:prose-invert" />
+            <EditorContent
+                v-else
+                :editor="editor"
+                class="tiptap prose prose-slate dark:prose-invert min-h-[320px] max-w-none p-4"
+            />
         </div>
     </div>
 </template>
@@ -353,7 +400,8 @@ onBeforeUnmount(() => {
     border-radius: 0.5rem;
     overflow-x: auto;
     border: 1px solid rgb(51 65 85);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.875rem;
     line-height: 1.5;
 }
@@ -377,7 +425,8 @@ onBeforeUnmount(() => {
     color: rgb(51 65 85);
     padding: 0.2rem 0.4rem;
     border-radius: 0.3rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.875em;
 }
 

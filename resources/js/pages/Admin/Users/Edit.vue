@@ -62,7 +62,12 @@ const submit = () => {
 
                 <div class="grid gap-2">
                     <Label for="email">Email</Label>
-                    <Input id="email" v-model="form.email" type="email" required />
+                    <Input
+                        id="email"
+                        v-model="form.email"
+                        type="email"
+                        required
+                    />
                     <InputError :message="form.errors.email" />
                 </div>
 
@@ -73,9 +78,13 @@ const submit = () => {
                             :default-value="form.is_active"
                             @update:model-value="form.is_active = $event"
                         />
-                        <Label for="is_active" class="font-normal">Active</Label>
+                        <Label for="is_active" class="font-normal"
+                            >Active</Label
+                        >
                     </div>
-                    <p class="ml-6 -mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <p
+                        class="-mt-2 ml-6 text-xs text-gray-500 dark:text-gray-400"
+                    >
                         Inactive users cannot log in to the platform.
                     </p>
 
@@ -85,15 +94,21 @@ const submit = () => {
                             :default-value="form.is_admin"
                             @update:model-value="form.is_admin = $event"
                         />
-                        <Label for="is_admin" class="font-normal">Administrator</Label>
+                        <Label for="is_admin" class="font-normal"
+                            >Administrator</Label
+                        >
                     </div>
-                    <p class="ml-6 -mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <p
+                        class="-mt-2 ml-6 text-xs text-gray-500 dark:text-gray-400"
+                    >
                         Administrators have access to the admin panel.
                     </p>
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Button variant="outline" as="a" href="/admin/users">Cancel</Button>
+                    <Button variant="outline" as="a" href="/admin/users"
+                        >Cancel</Button
+                    >
                     <Button type="submit" :disabled="form.processing">
                         {{ form.processing ? 'Saving...' : 'Save Changes' }}
                     </Button>

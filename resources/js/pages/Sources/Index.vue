@@ -3,12 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Pagination } from '@/components/ui/pagination';
+import { toast } from '@/components/ui/sonner';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { AlertCircle, Pencil, RefreshCw, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
-import { toast } from '@/components/ui/sonner';
 
 interface Tag {
     id: number;
@@ -52,9 +52,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Sources', href: '/sources' },
-];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Sources', href: '/sources' }];
 
 // Initialize selected tags from URL filters
 const selectedTagIds = ref<number[]>(props.filters?.tag_ids || []);
@@ -100,7 +98,9 @@ const toggleTagFilter = (tagId: number, checked: boolean | 'indeterminate') => {
             selectedTagIds.value.push(tagId);
         }
     } else {
-        selectedTagIds.value = selectedTagIds.value.filter((id) => id !== tagId);
+        selectedTagIds.value = selectedTagIds.value.filter(
+            (id) => id !== tagId,
+        );
     }
 };
 
@@ -108,7 +108,10 @@ const applyFilters = () => {
     router.get(
         '/sources',
         {
-            tag_ids: selectedTagIds.value.length > 0 ? selectedTagIds.value : undefined,
+            tag_ids:
+                selectedTagIds.value.length > 0
+                    ? selectedTagIds.value
+                    : undefined,
             sort_by: currentSortBy.value,
             sort_direction: currentSortDirection.value,
         },
@@ -129,12 +132,15 @@ const clearFilters = () => {
 const sortBy = (column: string) => {
     if (currentSortBy.value === column) {
         // Toggle direction if same column
-        currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+        currentSortDirection.value =
+            currentSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
         // New column, default to desc for posts_count and last_checked_at, asc for others
         currentSortBy.value = column;
         currentSortDirection.value =
-            column === 'posts_count' || column === 'posts_last_7_days_count' || column === 'last_checked_at'
+            column === 'posts_count' ||
+            column === 'posts_last_7_days_count' ||
+            column === 'last_checked_at'
                 ? 'desc'
                 : 'asc';
     }
@@ -163,7 +169,10 @@ watch(selectedTagIds, applyFilters, { deep: true });
             </div>
 
             <!-- Tag Filters -->
-            <div v-if="tags.length > 0" class="mb-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div
+                v-if="tags.length > 0"
+                class="mb-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+            >
                 <div class="mb-3 flex items-center justify-between">
                     <Label class="text-sm font-medium">Filter by Tags</Label>
                     <button
@@ -175,83 +184,138 @@ watch(selectedTagIds, applyFilters, { deep: true });
                     </button>
                 </div>
                 <div class="flex flex-wrap gap-4">
-                    <div v-for="tag in tags" :key="tag.id" class="flex items-center gap-2">
+                    <div
+                        v-for="tag in tags"
+                        :key="tag.id"
+                        class="flex items-center gap-2"
+                    >
                         <Checkbox
                             :id="`filter-tag-${tag.id}`"
                             :default-value="selectedTagIds.includes(tag.id)"
-                            @update:model-value="toggleTagFilter(tag.id, $event)"
+                            @update:model-value="
+                                toggleTagFilter(tag.id, $event)
+                            "
                         />
-                        <Label :for="`filter-tag-${tag.id}`" class="cursor-pointer text-sm font-normal">
+                        <Label
+                            :for="`filter-tag-${tag.id}`"
+                            class="cursor-pointer text-sm font-normal"
+                        >
                             {{ tag.name }}
                         </Label>
                     </div>
                 </div>
-                <div v-if="selectedTagIds.length > 0" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                <div
+                    v-if="selectedTagIds.length > 0"
+                    class="mt-2 text-xs text-gray-500 dark:text-gray-400"
+                >
                     Showing sources with any of the selected tags
                 </div>
             </div>
 
-            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div
+                class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700"
+            >
+                <table
+                    class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                >
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('internal_name')"
                             >
                                 Name {{ getSortIcon('internal_name') }}
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('type')"
                             >
                                 Type {{ getSortIcon('type') }}
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Tags</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Interval</th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                Tags
+                            </th>
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                Interval
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('posts_count')"
                             >
                                 Posts {{ getSortIcon('posts_count') }}
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('posts_last_7_days_count')"
                             >
-                                Posts 7D {{ getSortIcon('posts_last_7_days_count') }}
+                                Posts 7D
+                                {{ getSortIcon('posts_last_7_days_count') }}
                             </th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('last_checked_at')"
                             >
-                                Last Checked {{ getSortIcon('last_checked_at') }}
+                                Last Checked
+                                {{ getSortIcon('last_checked_at') }}
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Notifications</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Auto Summarize</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Bypass Filter</th>
                             <th
-                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                Notifications
+                            </th>
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                Auto Summarize
+                            </th>
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                Bypass Filter
+                            </th>
+                            <th
+                                class="cursor-pointer px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                 @click="sortBy('is_active')"
                             >
                                 Status {{ getSortIcon('is_active') }}
                             </th>
-                            <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
+                            <th
+                                class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
+                                Actions
+                            </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                    <tbody
+                        class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900"
+                    >
                         <tr v-for="source in sources.data" :key="source.id">
-                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                                <Link :href="`/sources/${source.id}/edit`" class="hover:text-blue-600 dark:hover:text-blue-400">
+                            <td
+                                class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-white"
+                            >
+                                <Link
+                                    :href="`/sources/${source.id}/edit`"
+                                    class="hover:text-blue-600 dark:hover:text-blue-400"
+                                >
                                     {{ source.internal_name }}
                                 </Link>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                <span class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
+                                <span
+                                    class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700"
+                                >
                                     {{ source.type }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 <span
                                     v-for="tag in source.tags"
                                     :key="tag.id"
@@ -260,59 +324,108 @@ watch(selectedTagIds, applyFilters, { deep: true });
                                     {{ tag.name }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ formatInterval(source.monitoring_interval) }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ source.posts_count }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ source.posts_last_7_days_count }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 <div class="flex items-center gap-2">
-                                    <span>{{ source.last_checked_at || 'Never' }}</span>
+                                    <span>{{
+                                        source.last_checked_at || 'Never'
+                                    }}</span>
                                     <AlertCircle
-                                        v-if="source.last_run_status === 'error'"
-                                        v-tooltip="source.last_run_error || 'An error occurred during the last check'"
+                                        v-if="
+                                            source.last_run_status === 'error'
+                                        "
+                                        v-tooltip="
+                                            source.last_run_error ||
+                                            'An error occurred during the last check'
+                                        "
                                         class="size-4 flex-shrink-0 text-red-500"
                                     />
                                 </div>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <span
-                                    :class="source.should_notify ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+                                    :class="
+                                        source.should_notify
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                    "
                                     class="rounded-full px-2 py-1 text-xs"
                                 >
-                                    {{ source.should_notify ? 'Enabled' : 'Disabled' }}
+                                    {{
+                                        source.should_notify
+                                            ? 'Enabled'
+                                            : 'Disabled'
+                                    }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <span
-                                    :class="source.auto_summarize ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+                                    :class="
+                                        source.auto_summarize
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                    "
                                     class="rounded-full px-2 py-1 text-xs"
                                 >
-                                    {{ source.auto_summarize ? 'Enabled' : 'Disabled' }}
+                                    {{
+                                        source.auto_summarize
+                                            ? 'Enabled'
+                                            : 'Disabled'
+                                    }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <span
-                                    :class="source.bypass_keyword_filter ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+                                    :class="
+                                        source.bypass_keyword_filter
+                                            ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                    "
                                     class="rounded-full px-2 py-1 text-xs"
                                 >
-                                    {{ source.bypass_keyword_filter ? 'Enabled' : 'Disabled' }}
+                                    {{
+                                        source.bypass_keyword_filter
+                                            ? 'Enabled'
+                                            : 'Disabled'
+                                    }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <span
-                                    :class="source.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+                                    :class="
+                                        source.is_active
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                    "
                                     class="rounded-full px-2 py-1 text-xs"
                                 >
-                                    {{ source.is_active ? 'Active' : 'Inactive' }}
+                                    {{
+                                        source.is_active ? 'Active' : 'Inactive'
+                                    }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                <div class="flex items-center justify-end gap-3">
+                            <td
+                                class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"
+                            >
+                                <div
+                                    class="flex items-center justify-end gap-3"
+                                >
                                     <Link
                                         :href="`/sources/${source.id}/edit`"
                                         class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
@@ -338,8 +451,12 @@ watch(selectedTagIds, applyFilters, { deep: true });
                             </td>
                         </tr>
                         <tr v-if="sources.data.length === 0">
-                            <td colspan="12" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                No sources found. Click "Add Source" to create your first source.
+                            <td
+                                colspan="12"
+                                class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                            >
+                                No sources found. Click "Add Source" to create
+                                your first source.
                             </td>
                         </tr>
                     </tbody>

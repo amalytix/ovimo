@@ -20,11 +20,7 @@ createServer(
                 ),
             setup: ({ App, props, plugin }) =>
                 createSSRApp({
-                    render: () =>
-                        h(Fragment, [
-                            h(App, props),
-                            h(Toaster),
-                        ]),
+                    render: () => h(Fragment, [h(App, props), h(Toaster)]),
                 }).use(plugin),
         }),
     { cluster: true },

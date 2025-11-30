@@ -14,7 +14,18 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Activity, BarChart3, FileText, Image, LayoutGrid, MessageSquare, PenTool, Rss, Settings, Shield } from 'lucide-vue-next';
+import {
+    Activity,
+    BarChart3,
+    FileText,
+    Image,
+    LayoutGrid,
+    MessageSquare,
+    PenTool,
+    Rss,
+    Settings,
+    Shield,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 

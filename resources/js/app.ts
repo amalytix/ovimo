@@ -1,5 +1,5 @@
-import '../css/app.css';
 import 'vue-sonner/style.css';
+import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -19,11 +19,7 @@ createInertiaApp({
         ),
     setup({ el, App, props, plugin }) {
         createApp({
-            render: () =>
-                h(Fragment, [
-                    h(App, props),
-                    h(Toaster),
-                ]),
+            render: () => h(Fragment, [h(App, props), h(Toaster)]),
         })
             .use(plugin)
             .mount(el);

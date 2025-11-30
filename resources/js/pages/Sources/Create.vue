@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import { analyzeWebpage, testExtraction } from '@/actions/App/Http/Controllers/SourceController';
+import {
+    analyzeWebpage,
+    testExtraction,
+} from '@/actions/App/Http/Controllers/SourceController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
@@ -78,7 +87,9 @@ const analyzePageStructure = async () => {
     analyzeError.value = '';
 
     try {
-        const response = await axios.post(analyzeWebpage.url(), { url: form.url });
+        const response = await axios.post(analyzeWebpage.url(), {
+            url: form.url,
+        });
         form.css_selector_title = response.data.css_selector_title;
         form.css_selector_link = response.data.css_selector_link;
     } catch (error: unknown) {
@@ -161,7 +172,10 @@ const addTagFromInput = () => {
     newTagInput.value = '';
 };
 
-const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') => {
+const toggleExistingTag = (
+    tagName: string,
+    checked: boolean | 'indeterminate',
+) => {
     if (checked === true) {
         addTag(tagName);
     } else {
@@ -180,7 +194,13 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
             <form @submit.prevent="submit" class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="internal_name">Name</Label>
-                    <Input id="internal_name" v-model="form.internal_name" type="text" required placeholder="Source name" />
+                    <Input
+                        id="internal_name"
+                        v-model="form.internal_name"
+                        type="text"
+                        required
+                        placeholder="Source name"
+                    />
                     <InputError :message="form.errors.internal_name" />
                 </div>
 
@@ -191,7 +211,11 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                             <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem v-for="sourceType in sourceTypes" :key="sourceType.value" :value="sourceType.value">
+                            <SelectItem
+                                v-for="sourceType in sourceTypes"
+                                :key="sourceType.value"
+                                :value="sourceType.value"
+                            >
                                 {{ sourceType.label }}
                             </SelectItem>
                         </SelectContent>
@@ -200,15 +224,30 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="url">{{ form.type === 'WEBHOOK' ? 'Webhook URL' : 'URL' }}</Label>
-                    <Input id="url" v-model="form.url" type="url" required placeholder="https://example.com/feed" />
-                    <p v-if="form.type === 'WEBHOOK'" class="text-xs text-gray-500">Must accept POST requests</p>
+                    <Label for="url">{{
+                        form.type === 'WEBHOOK' ? 'Webhook URL' : 'URL'
+                    }}</Label>
+                    <Input
+                        id="url"
+                        v-model="form.url"
+                        type="url"
+                        required
+                        placeholder="https://example.com/feed"
+                    />
+                    <p
+                        v-if="form.type === 'WEBHOOK'"
+                        class="text-xs text-gray-500"
+                    >
+                        Must accept POST requests
+                    </p>
                     <InputError :message="form.errors.url" />
                 </div>
 
                 <!-- Webhook-specific fields -->
                 <template v-if="form.type === 'WEBHOOK'">
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <div
+                        class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800"
+                    >
                         <h3 class="mb-4 font-medium">Webhook Settings</h3>
 
                         <div class="grid gap-4">
@@ -218,21 +257,38 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                                     id="webhook_keywords"
                                     v-model="form.keywords"
                                     rows="5"
-                                    class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                     placeholder="Enter keywords (one per line)&#10;amvisor&#10;amalytix&#10;insightleap"
                                 ></textarea>
-                                <p class="text-xs text-gray-500">These keywords will be sent to your webhook endpoint in the request body</p>
+                                <p class="text-xs text-gray-500">
+                                    These keywords will be sent to your webhook
+                                    endpoint in the request body
+                                </p>
                                 <InputError :message="form.errors.keywords" />
                             </div>
 
-                            <div class="rounded-md bg-blue-50 p-3 dark:bg-blue-950">
-                                <h4 class="mb-2 text-sm font-medium">Expected Response Format</h4>
-                                <p class="mb-2 text-xs text-gray-600 dark:text-gray-400">
-                                    Your webhook must return a JSON response with a "data" array. Each item must have at least "title" and "url" fields.
+                            <div
+                                class="rounded-md bg-blue-50 p-3 dark:bg-blue-950"
+                            >
+                                <h4 class="mb-2 text-sm font-medium">
+                                    Expected Response Format
+                                </h4>
+                                <p
+                                    class="mb-2 text-xs text-gray-600 dark:text-gray-400"
+                                >
+                                    Your webhook must return a JSON response
+                                    with a "data" array. Each item must have at
+                                    least "title" and "url" fields.
                                 </p>
                                 <details class="text-xs">
-                                    <summary class="cursor-pointer font-medium text-blue-600 dark:text-blue-400">Show example response</summary>
-                                    <pre class="mt-2 overflow-x-auto rounded bg-white p-2 dark:bg-gray-900"><code>{
+                                    <summary
+                                        class="cursor-pointer font-medium text-blue-600 dark:text-blue-400"
+                                    >
+                                        Show example response
+                                    </summary>
+                                    <pre
+                                        class="mt-2 overflow-x-auto rounded bg-white p-2 dark:bg-gray-900"
+                                    ><code>{
   "data": [
     {
       "title": "Example Post Title",
@@ -250,8 +306,12 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
 
                 <!-- Website-specific fields -->
                 <template v-if="form.type === 'WEBSITE'">
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="mb-4 font-medium">Website Extraction Settings</h3>
+                    <div
+                        class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800"
+                    >
+                        <h3 class="mb-4 font-medium">
+                            Website Extraction Settings
+                        </h3>
 
                         <div class="mb-4">
                             <Button
@@ -260,44 +320,70 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                                 :disabled="isAnalyzing || !form.url"
                                 @click="analyzePageStructure"
                             >
-                                {{ isAnalyzing ? 'Analyzing...' : 'Analyze Page' }}
+                                {{
+                                    isAnalyzing
+                                        ? 'Analyzing...'
+                                        : 'Analyze Page'
+                                }}
                             </Button>
-                            <p class="mt-1 text-xs text-gray-500">Uses AI to detect post structure and suggest CSS selectors</p>
-                            <p v-if="analyzeError" class="mt-1 text-sm text-red-600">{{ analyzeError }}</p>
+                            <p class="mt-1 text-xs text-gray-500">
+                                Uses AI to detect post structure and suggest CSS
+                                selectors
+                            </p>
+                            <p
+                                v-if="analyzeError"
+                                class="mt-1 text-sm text-red-600"
+                            >
+                                {{ analyzeError }}
+                            </p>
                         </div>
 
                         <div class="grid gap-4">
                             <div class="grid gap-2">
-                                <Label for="css_selector_title">CSS Selector for Title</Label>
+                                <Label for="css_selector_title"
+                                    >CSS Selector for Title</Label
+                                >
                                 <Input
                                     id="css_selector_title"
                                     v-model="form.css_selector_title"
                                     type="text"
                                     placeholder=".post-title a"
                                 />
-                                <InputError :message="form.errors.css_selector_title" />
+                                <InputError
+                                    :message="form.errors.css_selector_title"
+                                />
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="css_selector_link">CSS Selector for Link</Label>
+                                <Label for="css_selector_link"
+                                    >CSS Selector for Link</Label
+                                >
                                 <Input
                                     id="css_selector_link"
                                     v-model="form.css_selector_link"
                                     type="text"
                                     placeholder=".post-title a"
                                 />
-                                <InputError :message="form.errors.css_selector_link" />
+                                <InputError
+                                    :message="form.errors.css_selector_link"
+                                />
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="keywords">Keywords (optional)</Label>
+                                <Label for="keywords"
+                                    >Keywords (optional)</Label
+                                >
                                 <Input
                                     id="keywords"
                                     v-model="form.keywords"
                                     type="text"
                                     placeholder="Amazon, Vendor Central, Seller Central"
                                 />
-                                <p class="text-xs text-gray-500">Comma-separated keywords to filter posts. Only posts containing these keywords will be monitored.</p>
+                                <p class="text-xs text-gray-500">
+                                    Comma-separated keywords to filter posts.
+                                    Only posts containing these keywords will be
+                                    monitored.
+                                </p>
                                 <InputError :message="form.errors.keywords" />
                             </div>
 
@@ -305,23 +391,41 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                                 <Button
                                     type="button"
                                     variant="secondary"
-                                    :disabled="isTesting || !form.css_selector_title || !form.css_selector_link"
+                                    :disabled="
+                                        isTesting ||
+                                        !form.css_selector_title ||
+                                        !form.css_selector_link
+                                    "
                                     @click="testExtractionNow"
                                 >
-                                    {{ isTesting ? 'Testing...' : 'Test Extraction' }}
+                                    {{
+                                        isTesting
+                                            ? 'Testing...'
+                                            : 'Test Extraction'
+                                    }}
                                 </Button>
-                                <p v-if="testError" class="mt-1 text-sm text-red-600">{{ testError }}</p>
+                                <p
+                                    v-if="testError"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ testError }}
+                                </p>
                             </div>
 
                             <div v-if="extractedPosts.length > 0" class="mt-2">
-                                <Label class="mb-2 block">Preview (first {{ extractedPosts.length }} posts):</Label>
+                                <Label class="mb-2 block"
+                                    >Preview (first
+                                    {{ extractedPosts.length }} posts):</Label
+                                >
                                 <div class="space-y-2">
                                     <div
                                         v-for="(post, index) in extractedPosts"
                                         :key="index"
                                         class="rounded border border-gray-200 bg-white p-3 dark:border-gray-600 dark:bg-gray-700"
                                     >
-                                        <div class="font-medium">{{ post.title }}</div>
+                                        <div class="font-medium">
+                                            {{ post.title }}
+                                        </div>
                                         <a
                                             :href="post.link"
                                             target="_blank"
@@ -343,7 +447,11 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                             <SelectValue placeholder="Select interval" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem v-for="interval in intervals" :key="interval.value" :value="interval.value">
+                            <SelectItem
+                                v-for="interval in intervals"
+                                :key="interval.value"
+                                :value="interval.value"
+                            >
                                 {{ interval.label }}
                             </SelectItem>
                         </SelectContent>
@@ -353,30 +461,56 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
 
                 <div class="grid gap-4">
                     <div class="flex items-center gap-2">
-                        <Checkbox id="is_active" :default-value="form.is_active" @update:model-value="form.is_active = $event" />
-                        <Label for="is_active" class="font-normal">Active</Label>
+                        <Checkbox
+                            id="is_active"
+                            :default-value="form.is_active"
+                            @update:model-value="form.is_active = $event"
+                        />
+                        <Label for="is_active" class="font-normal"
+                            >Active</Label
+                        >
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <Checkbox id="should_notify" :default-value="form.should_notify" @update:model-value="form.should_notify = $event" />
-                        <Label for="should_notify" class="font-normal">Send notifications for new posts</Label>
+                        <Checkbox
+                            id="should_notify"
+                            :default-value="form.should_notify"
+                            @update:model-value="form.should_notify = $event"
+                        />
+                        <Label for="should_notify" class="font-normal"
+                            >Send notifications for new posts</Label
+                        >
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <Checkbox id="auto_summarize" :default-value="form.auto_summarize" @update:model-value="form.auto_summarize = $event" />
-                        <Label for="auto_summarize" class="font-normal">Auto-summarize new posts with AI</Label>
+                        <Checkbox
+                            id="auto_summarize"
+                            :default-value="form.auto_summarize"
+                            @update:model-value="form.auto_summarize = $event"
+                        />
+                        <Label for="auto_summarize" class="font-normal"
+                            >Auto-summarize new posts with AI</Label
+                        >
                     </div>
 
                     <div class="flex items-center gap-2">
                         <Checkbox
                             id="bypass_keyword_filter"
                             :default-value="form.bypass_keyword_filter"
-                            @update:model-value="form.bypass_keyword_filter = $event"
+                            @update:model-value="
+                                form.bypass_keyword_filter = $event
+                            "
                         />
-                        <Label for="bypass_keyword_filter" class="font-normal">Bypass team keyword filters</Label>
+                        <Label for="bypass_keyword_filter" class="font-normal"
+                            >Bypass team keyword filters</Label
+                        >
                     </div>
-                    <p class="ml-6 -mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        When enabled, all posts from this source will be analyzed regardless of team positive/negative keyword settings.
+                    <p
+                        class="-mt-2 ml-6 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                        When enabled, all posts from this source will be
+                        analyzed regardless of team positive/negative keyword
+                        settings.
                     </p>
                 </div>
 
@@ -389,9 +523,17 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                             placeholder="Type a tag and press Enter"
                             @keydown="handleTagInput"
                         />
-                        <Button type="button" variant="outline" @click="addTagFromInput">Add</Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            @click="addTagFromInput"
+                            >Add</Button
+                        >
                     </div>
-                    <div v-if="form.tags.length > 0" class="flex flex-wrap gap-2">
+                    <div
+                        v-if="form.tags.length > 0"
+                        class="flex flex-wrap gap-2"
+                    >
                         <span
                             v-for="tag in form.tags"
                             :key="tag"
@@ -408,15 +550,29 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                         </span>
                     </div>
                     <div v-if="props.tags.length > 0" class="mt-2">
-                        <Label class="text-xs text-gray-500 dark:text-gray-400">Or select existing tags:</Label>
+                        <Label class="text-xs text-gray-500 dark:text-gray-400"
+                            >Or select existing tags:</Label
+                        >
                         <div class="mt-1 flex flex-wrap gap-3">
-                            <div v-for="tag in props.tags" :key="tag.id" class="flex items-center gap-1">
+                            <div
+                                v-for="tag in props.tags"
+                                :key="tag.id"
+                                class="flex items-center gap-1"
+                            >
                                 <Checkbox
                                     :id="`existing-tag-${tag.id}`"
-                                    :default-value="form.tags.includes(tag.name)"
-                                    @update:model-value="toggleExistingTag(tag.name, $event)"
+                                    :default-value="
+                                        form.tags.includes(tag.name)
+                                    "
+                                    @update:model-value="
+                                        toggleExistingTag(tag.name, $event)
+                                    "
                                 />
-                                <Label :for="`existing-tag-${tag.id}`" class="text-sm font-normal">{{ tag.name }}</Label>
+                                <Label
+                                    :for="`existing-tag-${tag.id}`"
+                                    class="text-sm font-normal"
+                                    >{{ tag.name }}</Label
+                                >
                             </div>
                         </div>
                     </div>
@@ -424,7 +580,9 @@ const toggleExistingTag = (tagName: string, checked: boolean | 'indeterminate') 
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Button variant="outline" as="a" href="/sources">Cancel</Button>
+                    <Button variant="outline" as="a" href="/sources"
+                        >Cancel</Button
+                    >
                     <Button type="submit" :disabled="form.processing">
                         {{ form.processing ? 'Creating...' : 'Create Source' }}
                     </Button>

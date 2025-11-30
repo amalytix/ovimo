@@ -1,10 +1,22 @@
 <script setup lang="ts">
+import {
+    destroy,
+    generate,
+    status,
+    store,
+    update,
+} from '@/actions/App/Http/Controllers/ImageGenerationController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
-import { store, update, generate, status, destroy } from '@/actions/App/Http/Controllers/ImageGenerationController';
 import { computed, onUnmounted, ref, watch } from 'vue';
 
 type ImagePrompt = {
@@ -72,11 +84,19 @@ const aspectRatios = [
 ] as const;
 
 const canGeneratePrompt = computed(() => {
-    return props.hasEditedText && selectedPromptId.value !== null && !isGeneratingPrompt.value;
+    return (
+        props.hasEditedText &&
+        selectedPromptId.value !== null &&
+        !isGeneratingPrompt.value
+    );
 });
 
 const canGenerateImage = computed(() => {
-    return currentTextPrompt.value.trim().length > 0 && currentGenerationId.value !== null && !isGeneratingImage.value;
+    return (
+        currentTextPrompt.value.trim().length > 0 &&
+        currentGenerationId.value !== null &&
+        !isGeneratingImage.value
+    );
 });
 
 const completedGenerations = computed(() => {
@@ -115,7 +135,8 @@ const generateTextPrompt = async () => {
         currentTextPrompt.value = newGeneration.generated_text_prompt || '';
         emit('generations-updated', generations.value);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Failed to generate prompt';
+        error.value =
+            e instanceof Error ? e.message : 'Failed to generate prompt';
     } finally {
         isGeneratingPrompt.value = false;
     }
@@ -125,25 +146,29 @@ const updateTextPrompt = async () => {
     if (!currentGenerationId.value || !currentTextPrompt.value.trim()) return;
 
     try {
-        const response = await fetch(update.url([props.contentPieceId, currentGenerationId.value]), {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-XSRF-TOKEN': getCsrfToken(),
+        const response = await fetch(
+            update.url([props.contentPieceId, currentGenerationId.value]),
+            {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': getCsrfToken(),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    generated_text_prompt: currentTextPrompt.value,
+                    aspect_ratio: selectedAspectRatio.value,
+                }),
             },
-            credentials: 'same-origin',
-            body: JSON.stringify({
-                generated_text_prompt: currentTextPrompt.value,
-                aspect_ratio: selectedAspectRatio.value,
-            }),
-        });
+        );
 
         if (!response.ok) {
             const data = await response.json();
             throw new Error(data.message || 'Failed to update prompt');
         }
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Failed to update prompt';
+        error.value =
+            e instanceof Error ? e.message : 'Failed to update prompt';
     }
 };
 
@@ -157,14 +182,17 @@ const generateImage = async () => {
     isGeneratingImage.value = true;
 
     try {
-        const response = await fetch(generate.url([props.contentPieceId, currentGenerationId.value!]), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-XSRF-TOKEN': getCsrfToken(),
+        const response = await fetch(
+            generate.url([props.contentPieceId, currentGenerationId.value!]),
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': getCsrfToken(),
+                },
+                credentials: 'same-origin',
             },
-            credentials: 'same-origin',
-        });
+        );
 
         const data = await response.json();
 
@@ -175,7 +203,8 @@ const generateImage = async () => {
         // Start polling for status
         startPolling(currentGenerationId.value!);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Failed to generate image';
+        error.value =
+            e instanceof Error ? e.message : 'Failed to generate image';
         isGeneratingImage.value = false;
     }
 };
@@ -185,12 +214,16 @@ const startPolling = (generationId: number) => {
 
     pollingInterval = window.setInterval(async () => {
         try {
-            const response = await fetch(status.url([props.contentPieceId, generationId]));
+            const response = await fetch(
+                status.url([props.contentPieceId, generationId]),
+            );
             const data = await response.json();
             const updatedGeneration = data.image_generation as ImageGeneration;
 
             // Update the generation in our list
-            const index = generations.value.findIndex((g) => g.id === generationId);
+            const index = generations.value.findIndex(
+                (g) => g.id === generationId,
+            );
             if (index !== -1) {
                 generations.value[index] = updatedGeneration;
             }
@@ -204,7 +237,9 @@ const startPolling = (generationId: number) => {
             } else if (updatedGeneration.status === 'FAILED') {
                 stopPolling();
                 isGeneratingImage.value = false;
-                error.value = updatedGeneration.error_message || 'Image generation failed';
+                error.value =
+                    updatedGeneration.error_message ||
+                    'Image generation failed';
             }
         } catch (e) {
             console.error('Polling error:', e);
@@ -221,23 +256,31 @@ const stopPolling = () => {
 
 const deleteGeneration = async (generationId: number) => {
     try {
-        const response = await fetch(destroy.url([props.contentPieceId, generationId], { query: { detach_media: 'true' } }), {
-            method: 'DELETE',
-            headers: {
-                'X-XSRF-TOKEN': getCsrfToken(),
+        const response = await fetch(
+            destroy.url([props.contentPieceId, generationId], {
+                query: { detach_media: 'true' },
+            }),
+            {
+                method: 'DELETE',
+                headers: {
+                    'X-XSRF-TOKEN': getCsrfToken(),
+                },
+                credentials: 'same-origin',
             },
-            credentials: 'same-origin',
-        });
+        );
 
         if (!response.ok) {
             const data = await response.json();
             throw new Error(data.message || 'Failed to delete generation');
         }
 
-        generations.value = generations.value.filter((g) => g.id !== generationId);
+        generations.value = generations.value.filter(
+            (g) => g.id !== generationId,
+        );
         emit('generations-updated', generations.value);
     } catch (e) {
-        error.value = e instanceof Error ? e.message : 'Failed to delete generation';
+        error.value =
+            e instanceof Error ? e.message : 'Failed to delete generation';
     }
 };
 
@@ -251,7 +294,7 @@ watch(
     () => props.imageGenerations,
     (newGenerations) => {
         generations.value = [...newGenerations];
-    }
+    },
 );
 
 onUnmounted(() => {
@@ -264,11 +307,17 @@ onUnmounted(() => {
         <!-- Left Column: Generation Form -->
         <div class="space-y-6">
             <div class="space-y-4 rounded-lg border border-dashed p-4">
-                <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">Generate New Image</h3>
+                <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">
+                    Generate New Image
+                </h3>
 
                 <!-- Warning if no edited text -->
-                <div v-if="!hasEditedText" class="rounded-md bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-                    Please add content in the Editing tab before generating images.
+                <div
+                    v-if="!hasEditedText"
+                    class="rounded-md bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                >
+                    Please add content in the Editing tab before generating
+                    images.
                 </div>
 
                 <!-- Prompt Template Selection -->
@@ -279,12 +328,22 @@ onUnmounted(() => {
                             <SelectValue placeholder="Select image prompt" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem v-for="prompt in imagePrompts" :key="prompt.id" :value="prompt.id">
+                            <SelectItem
+                                v-for="prompt in imagePrompts"
+                                :key="prompt.id"
+                                :value="prompt.id"
+                            >
                                 {{ prompt.internal_name }}
                             </SelectItem>
                         </SelectContent>
                     </Select>
-                    <p v-if="imagePrompts.length === 0" class="text-xs text-muted-foreground">No image prompts available. Create one in Settings &gt; Prompts.</p>
+                    <p
+                        v-if="imagePrompts.length === 0"
+                        class="text-xs text-muted-foreground"
+                    >
+                        No image prompts available. Create one in Settings &gt;
+                        Prompts.
+                    </p>
                 </div>
 
                 <!-- Aspect Ratio Selection -->
@@ -295,7 +354,11 @@ onUnmounted(() => {
                             <SelectValue placeholder="Select aspect ratio" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem v-for="ratio in aspectRatios" :key="ratio.value" :value="ratio.value">
+                            <SelectItem
+                                v-for="ratio in aspectRatios"
+                                :key="ratio.value"
+                                :value="ratio.value"
+                            >
                                 {{ ratio.label }}
                             </SelectItem>
                         </SelectContent>
@@ -303,17 +366,36 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Generate Text Prompt Button -->
-                <Button type="button" class="w-full" :disabled="!canGeneratePrompt" @click="generateTextPrompt">
+                <Button
+                    type="button"
+                    class="w-full"
+                    :disabled="!canGeneratePrompt"
+                    @click="generateTextPrompt"
+                >
                     <Spinner v-if="isGeneratingPrompt" class="mr-2" />
-                    {{ isGeneratingPrompt ? 'Generating Prompt...' : 'Generate Text Prompt' }}
+                    {{
+                        isGeneratingPrompt
+                            ? 'Generating Prompt...'
+                            : 'Generate Text Prompt'
+                    }}
                 </Button>
             </div>
 
             <!-- Current Text Prompt (editable) -->
-            <div v-if="currentTextPrompt || currentGenerationId" class="space-y-4 rounded-lg border border-dashed p-4">
+            <div
+                v-if="currentTextPrompt || currentGenerationId"
+                class="space-y-4 rounded-lg border border-dashed p-4"
+            >
                 <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">Generated Prompt</h3>
-                    <span v-if="isGeneratingImage" class="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-100">
+                    <h3
+                        class="text-sm font-medium text-gray-900 dark:text-gray-50"
+                    >
+                        Generated Prompt
+                    </h3>
+                    <span
+                        v-if="isGeneratingImage"
+                        class="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-100"
+                    >
                         Generating...
                     </span>
                 </div>
@@ -324,20 +406,35 @@ onUnmounted(() => {
                         id="text_prompt"
                         v-model="currentTextPrompt"
                         rows="6"
-                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                         placeholder="The generated image prompt will appear here..."
                         :disabled="isGeneratingImage"
                     />
                 </div>
 
                 <div class="flex gap-2">
-                    <Button type="button" variant="secondary" class="flex-1" :disabled="!canGeneratePrompt" @click="generateTextPrompt">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        class="flex-1"
+                        :disabled="!canGeneratePrompt"
+                        @click="generateTextPrompt"
+                    >
                         <Spinner v-if="isGeneratingPrompt" class="mr-2" />
                         Regenerate
                     </Button>
-                    <Button type="button" class="flex-1" :disabled="!canGenerateImage" @click="generateImage">
+                    <Button
+                        type="button"
+                        class="flex-1"
+                        :disabled="!canGenerateImage"
+                        @click="generateImage"
+                    >
                         <Spinner v-if="isGeneratingImage" class="mr-2" />
-                        {{ isGeneratingImage ? 'Generating...' : 'Generate Image' }}
+                        {{
+                            isGeneratingImage
+                                ? 'Generating...'
+                                : 'Generate Image'
+                        }}
                     </Button>
                 </div>
             </div>
@@ -352,58 +449,126 @@ onUnmounted(() => {
                 <div class="space-y-1">
                     <Label>Generated Images</Label>
                     <p class="text-xs text-muted-foreground">
-                        {{ completedGenerations.length }} image{{ completedGenerations.length !== 1 ? 's' : '' }} generated
+                        {{ completedGenerations.length }} image{{
+                            completedGenerations.length !== 1 ? 's' : ''
+                        }}
+                        generated
                     </p>
                 </div>
             </div>
 
-            <div v-if="completedGenerations.length === 0" class="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed">
-                <p class="text-sm text-muted-foreground">No images generated yet.</p>
+            <div
+                v-if="completedGenerations.length === 0"
+                class="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed"
+            >
+                <p class="text-sm text-muted-foreground">
+                    No images generated yet.
+                </p>
             </div>
 
             <div v-else class="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                <div v-for="generation in completedGenerations" :key="generation.id" class="group relative overflow-hidden rounded-lg border bg-muted/30">
+                <div
+                    v-for="generation in completedGenerations"
+                    :key="generation.id"
+                    class="group relative overflow-hidden rounded-lg border bg-muted/30"
+                >
                     <img
                         v-if="generation.media"
                         :src="generation.media.temporary_url"
                         :alt="generation.media.filename"
                         class="aspect-video w-full object-cover"
                     />
-                    <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div
+                        class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                    >
                         <div class="flex flex-wrap justify-center gap-2">
-                            <Button variant="secondary" size="sm" as="a" :href="generation.media?.temporary_url" target="_blank"> View </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                as="a"
+                                :href="generation.media?.temporary_url"
+                                target="_blank"
+                            >
+                                View
+                            </Button>
                             <Button
                                 v-if="isAttached(generation.media_id)"
                                 variant="outline"
                                 size="sm"
                                 class="border-green-500 bg-green-500/20 text-white hover:bg-green-500/40"
-                                @click="generation.media_id && emit('detach-media', generation.media_id)"
+                                @click="
+                                    generation.media_id &&
+                                    emit('detach-media', generation.media_id)
+                                "
                             >
                                 Attached ✓
                             </Button>
-                            <Button v-else variant="secondary" size="sm" @click="generation.media && emit('attach-media', generation.media)"> Attach </Button>
-                            <Button variant="destructive" size="sm" @click="deleteGeneration(generation.id)"> Remove </Button>
+                            <Button
+                                v-else
+                                variant="secondary"
+                                size="sm"
+                                @click="
+                                    generation.media &&
+                                    emit('attach-media', generation.media)
+                                "
+                            >
+                                Attach
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                @click="deleteGeneration(generation.id)"
+                            >
+                                Remove
+                            </Button>
                         </div>
                     </div>
                     <div class="p-2">
-                        <p class="truncate text-xs text-muted-foreground">{{ generation.media?.filename }}</p>
-                        <p class="text-xs text-muted-foreground">{{ generation.aspect_ratio }}</p>
+                        <p class="truncate text-xs text-muted-foreground">
+                            {{ generation.media?.filename }}
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                            {{ generation.aspect_ratio }}
+                        </p>
                     </div>
                 </div>
             </div>
 
             <!-- Generating/Failed generations -->
-            <div v-if="generations.filter((g) => g.status === 'GENERATING').length > 0" class="rounded-lg border bg-blue-50 p-4 dark:bg-blue-900/20">
+            <div
+                v-if="
+                    generations.filter((g) => g.status === 'GENERATING')
+                        .length > 0
+                "
+                class="rounded-lg border bg-blue-50 p-4 dark:bg-blue-900/20"
+            >
                 <div class="flex items-center gap-2">
                     <Spinner />
-                    <p class="text-sm text-blue-700 dark:text-blue-300">Generating image...</p>
+                    <p class="text-sm text-blue-700 dark:text-blue-300">
+                        Generating image...
+                    </p>
                 </div>
             </div>
 
-            <div v-for="gen in generations.filter((g) => g.status === 'FAILED')" :key="`failed-${gen.id}`" class="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-900/20">
-                <p class="text-sm font-medium text-red-700 dark:text-red-300">Generation Failed</p>
-                <p class="text-xs text-red-600 dark:text-red-400">{{ gen.error_message }}</p>
-                <Button variant="ghost" size="sm" class="mt-2" @click="deleteGeneration(gen.id)"> Dismiss </Button>
+            <div
+                v-for="gen in generations.filter((g) => g.status === 'FAILED')"
+                :key="`failed-${gen.id}`"
+                class="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-900/20"
+            >
+                <p class="text-sm font-medium text-red-700 dark:text-red-300">
+                    Generation Failed
+                </p>
+                <p class="text-xs text-red-600 dark:text-red-400">
+                    {{ gen.error_message }}
+                </p>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    class="mt-2"
+                    @click="deleteGeneration(gen.id)"
+                >
+                    Dismiss
+                </Button>
             </div>
         </div>
     </div>

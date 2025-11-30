@@ -50,10 +50,14 @@ const status = ref(props.filters.status);
 const search = ref(props.filters.search);
 
 const applyFilters = () => {
-    router.get('/admin/sources', {
-        status: status.value || undefined,
-        search: search.value || undefined,
-    }, { preserveState: true });
+    router.get(
+        '/admin/sources',
+        {
+            status: status.value || undefined,
+            search: search.value || undefined,
+        },
+        { preserveState: true },
+    );
 };
 
 let searchTimeout: ReturnType<typeof setTimeout>;
@@ -74,7 +78,8 @@ const getStatusBadgeClass = (source: Source) => {
 
 const getStatusText = (source: Source) => {
     if (!source.is_active) return 'Inactive';
-    if (source.consecutive_failures > 0) return `Failing (${source.consecutive_failures}x)`;
+    if (source.consecutive_failures > 0)
+        return `Failing (${source.consecutive_failures}x)`;
     return 'Healthy';
 };
 </script>
@@ -86,7 +91,9 @@ const getStatusText = (source: Source) => {
         <div class="p-6">
             <div class="mb-6">
                 <h1 class="text-2xl font-semibold">Source Health</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Monitor source status and failures.</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Monitor source status and failures.
+                </p>
             </div>
 
             <!-- Stats -->
@@ -119,33 +126,51 @@ const getStatusText = (source: Source) => {
 
             <!-- Table -->
             <div class="overflow-hidden rounded-lg border dark:border-gray-700">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table
+                    class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                >
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Source
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Team
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Type
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Status
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Last Error
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Last Checked
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                    <tbody
+                        class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900"
+                    >
                         <tr v-for="source in sources.data" :key="source.id">
                             <td class="px-6 py-4">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                <div
+                                    class="text-sm font-medium text-gray-900 dark:text-white"
+                                >
                                     {{ source.internal_name }}
                                 </div>
                                 <a
@@ -153,35 +178,51 @@ const getStatusText = (source: Source) => {
                                     target="_blank"
                                     class="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
                                 >
-                                    {{ source.url.substring(0, 50) }}{{ source.url.length > 50 ? '...' : '' }}
+                                    {{ source.url.substring(0, 50)
+                                    }}{{ source.url.length > 50 ? '...' : '' }}
                                     <ExternalLink class="h-3 w-3" />
                                 </a>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                <Link :href="`/admin/teams/${source.team_id}/edit`" class="hover:underline">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
+                                <Link
+                                    :href="`/admin/teams/${source.team_id}/edit`"
+                                    class="hover:underline"
+                                >
                                     {{ source.team_name }}
                                 </Link>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ source.type }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <span
-                                    class="inline-flex rounded-full px-2 text-xs font-semibold leading-5"
+                                    class="inline-flex rounded-full px-2 text-xs leading-5 font-semibold"
                                     :class="getStatusBadgeClass(source)"
                                 >
                                     {{ getStatusText(source) }}
                                 </span>
                             </td>
-                            <td class="max-w-xs truncate px-6 py-4 text-sm text-red-600 dark:text-red-400" :title="source.last_run_error || ''">
+                            <td
+                                class="max-w-xs truncate px-6 py-4 text-sm text-red-600 dark:text-red-400"
+                                :title="source.last_run_error || ''"
+                            >
                                 {{ source.last_run_error || '-' }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ source.last_checked_at || 'Never' }}
                             </td>
                         </tr>
                         <tr v-if="sources.data.length === 0">
-                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                colspan="6"
+                                class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                            >
                                 No sources found matching your filters.
                             </td>
                         </tr>
@@ -190,13 +231,20 @@ const getStatusText = (source: Source) => {
             </div>
 
             <!-- Pagination -->
-            <div v-if="sources.links.length > 3" class="mt-4 flex justify-center gap-1">
+            <div
+                v-if="sources.links.length > 3"
+                class="mt-4 flex justify-center gap-1"
+            >
                 <template v-for="link in sources.links" :key="link.label">
                     <Link
                         v-if="link.url"
                         :href="link.url"
                         class="rounded px-3 py-1 text-sm"
-                        :class="link.active ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-800'"
+                        :class="
+                            link.active
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800'
+                        "
                     >
                         <!-- eslint-disable-next-line vue/no-v-html -->
                         <span v-html="link.label" />

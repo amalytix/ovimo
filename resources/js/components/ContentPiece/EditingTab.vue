@@ -36,11 +36,17 @@ defineExpose({
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-lg font-semibold">Edited content</h3>
-                <p class="text-sm text-muted-foreground">Polish the piece, embed media, and toggle modes.</p>
+                <p class="text-sm text-muted-foreground">
+                    Polish the piece, embed media, and toggle modes.
+                </p>
             </div>
             <div class="flex gap-2">
-                <Button variant="outline" @click="emit('open-media-picker')">Add Media</Button>
-                <Button variant="ghost" @click="emit('request-image')">Insert image in editor</Button>
+                <Button variant="outline" @click="emit('open-media-picker')"
+                    >Add Media</Button
+                >
+                <Button variant="ghost" @click="emit('request-image')"
+                    >Insert image in editor</Button
+                >
             </div>
         </div>
 
@@ -59,11 +65,21 @@ defineExpose({
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <h4 class="text-sm font-semibold">Attached media</h4>
-                    <Button size="sm" variant="outline" @click="emit('open-media-picker')">Add Media</Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        @click="emit('open-media-picker')"
+                        >Add Media</Button
+                    >
                 </div>
-                <span class="text-xs text-muted-foreground">{{ selectedMedia.length }} files</span>
+                <span class="text-xs text-muted-foreground"
+                    >{{ selectedMedia.length }} files</span
+                >
             </div>
-            <div v-if="selectedMedia.length" class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+            <div
+                v-if="selectedMedia.length"
+                class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6"
+            >
                 <MediaCard
                     v-for="media in selectedMedia"
                     :key="media.id"
@@ -73,7 +89,12 @@ defineExpose({
                     @preview="removeMedia(media.id)"
                 />
             </div>
-            <div v-else class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No media attached yet.</div>
+            <div
+                v-else
+                class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground"
+            >
+                No media attached yet.
+            </div>
         </div>
     </div>
 </template>

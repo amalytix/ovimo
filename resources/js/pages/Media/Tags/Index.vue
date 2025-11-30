@@ -2,12 +2,12 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/sonner';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Pencil, Save, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
-import { toast } from '@/components/ui/sonner';
 
 interface Tag {
     id: number;
@@ -58,7 +58,7 @@ const saveEdit = (tag: Tag) => {
                 toast.success('Tag updated');
             },
             onError: () => toast.error('Unable to update tag'),
-        }
+        },
     );
 };
 
@@ -81,8 +81,14 @@ const deleteTag = (tag: Tag) => {
         <div class="space-y-6 p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-50">Media Tags</h1>
-                    <p class="text-sm text-gray-500">Manage reusable tags for your media library.</p>
+                    <h1
+                        class="text-2xl font-semibold text-gray-900 dark:text-gray-50"
+                    >
+                        Media Tags
+                    </h1>
+                    <p class="text-sm text-gray-500">
+                        Manage reusable tags for your media library.
+                    </p>
                 </div>
             </div>
 
@@ -91,9 +97,18 @@ const deleteTag = (tag: Tag) => {
                     <CardTitle>Create Tag</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <form class="flex items-center gap-3" @submit.prevent="submitCreate">
-                        <Input v-model="createForm.name" placeholder="Tag name" class="w-64" />
-                        <Button type="submit" :disabled="createForm.processing">Create</Button>
+                    <form
+                        class="flex items-center gap-3"
+                        @submit.prevent="submitCreate"
+                    >
+                        <Input
+                            v-model="createForm.name"
+                            placeholder="Tag name"
+                            class="w-64"
+                        />
+                        <Button type="submit" :disabled="createForm.processing"
+                            >Create</Button
+                        >
                     </form>
                 </CardContent>
             </Card>
@@ -103,16 +118,30 @@ const deleteTag = (tag: Tag) => {
                     <CardTitle>Existing Tags</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+                    <div
+                        class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800"
+                    >
+                        <table
+                            class="min-w-full divide-y divide-gray-200 dark:divide-gray-800"
+                        >
                             <thead class="bg-gray-50 dark:bg-gray-900/60">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Media</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase"
+                                    >
+                                        Name
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase"
+                                    >
+                                        Media
+                                    </th>
                                     <th class="px-4 py-3" />
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                            <tbody
+                                class="divide-y divide-gray-200 dark:divide-gray-800"
+                            >
                                 <tr v-for="tag in tags" :key="tag.id">
                                     <td class="px-4 py-3">
                                         <Input
@@ -120,13 +149,24 @@ const deleteTag = (tag: Tag) => {
                                             v-model="editing[tag.id]"
                                             class="w-64"
                                         />
-                                        <span v-else class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{ tag.name }}</span>
+                                        <span
+                                            v-else
+                                            class="text-sm font-semibold text-gray-900 dark:text-gray-50"
+                                            >{{ tag.name }}</span
+                                        >
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ tag.media_count }}</td>
+                                    <td
+                                        class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300"
+                                    >
+                                        {{ tag.media_count }}
+                                    </td>
                                     <td class="px-4 py-3 text-right">
                                         <div class="flex justify-end gap-2">
                                             <Button
-                                                v-if="editing[tag.id] !== undefined"
+                                                v-if="
+                                                    editing[tag.id] !==
+                                                    undefined
+                                                "
                                                 size="sm"
                                                 class="gap-2"
                                                 @click="saveEdit(tag)"

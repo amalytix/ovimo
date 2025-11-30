@@ -59,7 +59,11 @@ const weekDays = computed<CalendarDay[]>(() => {
         const dateString = formatInputDate(cursor);
         days.push({
             date: dateString,
-            label: new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(cursor),
+            label: new Intl.DateTimeFormat(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+            }).format(cursor),
             isToday: dateString === todayString,
             events: events.value[dateString] || [],
         });
@@ -73,16 +77,22 @@ const weekLabel = computed(() => {
     const end = new Date(weekStart.value);
     end.setDate(end.getDate() + 6);
 
-    const startText = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(
-        weekStart.value,
-    );
-    const endText = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(end);
+    const startText = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(weekStart.value);
+    const endText = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(end);
 
     return `${startText} - ${endText}`;
 });
 
 const formatEventTime = (value: string | null) => {
-    if (! value) {
+    if (!value) {
         return null;
     }
 
@@ -109,7 +119,7 @@ const loadEvents = async () => {
             },
         );
 
-        if (! response.ok) {
+        if (!response.ok) {
             throw new Error('Unable to load calendar data');
         }
 
@@ -148,18 +158,32 @@ watch(
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="text-xl font-semibold">Week Overview</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ weekLabel }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ weekLabel }}
+                </p>
             </div>
             <div class="flex items-center gap-2">
-                <Button variant="outline" size="sm" @click="goToToday">Today</Button>
+                <Button variant="outline" size="sm" @click="goToToday"
+                    >Today</Button
+                >
                 <div class="flex items-center gap-1">
-                    <Button variant="outline" size="icon" @click="goToPreviousWeek">‹</Button>
-                    <Button variant="outline" size="icon" @click="goToNextWeek">›</Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        @click="goToPreviousWeek"
+                        >‹</Button
+                    >
+                    <Button variant="outline" size="icon" @click="goToNextWeek"
+                        >›</Button
+                    >
                 </div>
             </div>
         </div>
 
-        <div v-if="loading" class="rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+        <div
+            v-if="loading"
+            class="rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300"
+        >
             Loading calendar...
         </div>
 
@@ -171,8 +195,16 @@ watch(
             >
                 <div class="mb-2 flex items-center justify-between">
                     <div>
-                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ day.date }}</p>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ day.label }}</p>
+                        <p
+                            class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                        >
+                            {{ day.date }}
+                        </p>
+                        <p
+                            class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+                        >
+                            {{ day.label }}
+                        </p>
                     </div>
                     <span
                         v-if="day.isToday"
@@ -187,17 +219,29 @@ watch(
                         :key="event.id"
                         class="rounded-lg border border-gray-200 bg-white/80 p-2 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-900/70 dark:hover:border-blue-500"
                     >
-                        <Link :href="edit.url(event.id)" class="text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-300">
+                        <Link
+                            :href="edit.url(event.id)"
+                            class="text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-300"
+                        >
                             {{ event.internal_name }}
                         </Link>
-                        <div class="mt-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                            <span>{{ event.prompt_name || 'Prompt not set' }}</span>
+                        <div
+                            class="mt-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            <span>{{
+                                event.prompt_name || 'Prompt not set'
+                            }}</span>
                             <span v-if="formatEventTime(event.published_at)">
                                 {{ formatEventTime(event.published_at) }}
                             </span>
                         </div>
                     </div>
-                    <p v-if="day.events.length === 0" class="text-xs text-gray-400 dark:text-gray-500">No content</p>
+                    <p
+                        v-if="day.events.length === 0"
+                        class="text-xs text-gray-400 dark:text-gray-500"
+                    >
+                        No content
+                    </p>
                 </div>
             </div>
         </div>

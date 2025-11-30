@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -6,11 +7,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import type { MediaItem } from '@/types/media';
-import { computed, ref, watch } from 'vue';
-import { Download, RefreshCw } from 'lucide-vue-next';
 import axios from 'axios';
+import { Download, RefreshCw } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     open: boolean;
@@ -31,7 +31,7 @@ watch(
     (value) => {
         tempUrl.value = value?.temporary_url ?? null;
         loadError.value = false;
-    }
+    },
 );
 
 const refreshUrl = async () => {
@@ -63,12 +63,26 @@ const refreshUrl = async () => {
                         <DialogTitle>{{ media?.filename }}</DialogTitle>
                         <DialogDescription>
                             {{ media?.mime_type }} ·
-                            <span v-if="media?.file_size">{{ (media.file_size / 1024 / 1024).toFixed(2) }} MB</span>
+                            <span v-if="media?.file_size"
+                                >{{
+                                    (media.file_size / 1024 / 1024).toFixed(2)
+                                }}
+                                MB</span
+                            >
                         </DialogDescription>
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
-                        <Button v-if="media?.download_url || tempUrl" size="sm" variant="outline" as-child>
-                            <a :href="media?.download_url || tempUrl" download class="inline-flex items-center gap-2">
+                        <Button
+                            v-if="media?.download_url || tempUrl"
+                            size="sm"
+                            variant="outline"
+                            as-child
+                        >
+                            <a
+                                :href="media?.download_url || tempUrl"
+                                download
+                                class="inline-flex items-center gap-2"
+                            >
                                 <Download class="h-4 w-4" />
                                 Download
                             </a>
@@ -77,7 +91,10 @@ const refreshUrl = async () => {
                 </div>
             </DialogHeader>
 
-            <div v-if="media" class="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+            <div
+                v-if="media"
+                class="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900"
+            >
                 <img
                     v-if="isImage && tempUrl"
                     :src="tempUrl"
@@ -86,19 +103,39 @@ const refreshUrl = async () => {
                     @error="loadError = true"
                 />
                 <div v-else class="flex h-[70vh] items-center justify-center">
-                    <object v-if="media.temporary_url" :data="media.temporary_url" type="application/pdf" class="h-full w-full">
-                        <p class="text-center text-sm text-gray-500">Unable to preview this file.</p>
+                    <object
+                        v-if="media.temporary_url"
+                        :data="media.temporary_url"
+                        type="application/pdf"
+                        class="h-full w-full"
+                    >
+                        <p class="text-center text-sm text-gray-500">
+                            Unable to preview this file.
+                        </p>
                     </object>
-                    <div v-else class="flex flex-col items-center gap-2 text-sm text-gray-500">
+                    <div
+                        v-else
+                        class="flex flex-col items-center gap-2 text-sm text-gray-500"
+                    >
                         <p>Preview unavailable.</p>
-                        <Button size="sm" variant="outline" class="gap-2" :disabled="isRefreshing" @click="refreshUrl">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            class="gap-2"
+                            :disabled="isRefreshing"
+                            @click="refreshUrl"
+                        >
                             <RefreshCw class="h-4 w-4" />
-                            {{ isRefreshing ? 'Refreshing...' : 'Refresh link' }}
+                            {{
+                                isRefreshing ? 'Refreshing...' : 'Refresh link'
+                            }}
                         </Button>
-                        <p v-if="loadError" class="text-xs text-red-500">Unable to load preview.</p>
+                        <p v-if="loadError" class="text-xs text-red-500">
+                            Unable to load preview.
+                        </p>
                     </div>
                 </div>
             </div>
         </DialogContent>
     </Dialog>
-    </template>
+</template>

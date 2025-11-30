@@ -11,13 +11,13 @@ import PublishingStatus from '@/components/Publishing/PublishingStatus.vue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { publish, status } from '@/routes/content-pieces';
+import { view as mediaView } from '@/routes/media';
 import type { BreadcrumbItem } from '@/types';
 import type { MediaItem, MediaTag } from '@/types/media';
 import type { SocialIntegration } from '@/types/social';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import { publish, status } from '@/routes/content-pieces';
-import { view as mediaView } from '@/routes/media';
 
 type Prompt = {
     id: number;
@@ -146,12 +146,18 @@ const activeTab = ref<'research' | 'editing' | 'images' | 'publishing'>(
           ? 'images'
           : initialTab === 'publishing'
             ? 'publishing'
-            : 'research'
+            : 'research',
 );
-const updateTabInUrl = (tab: 'research' | 'editing' | 'images' | 'publishing') => {
+const updateTabInUrl = (
+    tab: 'research' | 'editing' | 'images' | 'publishing',
+) => {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
-    window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`);
+    window.history.replaceState(
+        {},
+        '',
+        `${url.pathname}?${url.searchParams.toString()}`,
+    );
 };
 
 const imageGenerations = ref<ImageGeneration[]>([...props.imageGenerations]);
@@ -168,7 +174,7 @@ watch(
     () => activeTab.value,
     (value) => {
         updateTabInUrl(value);
-    }
+    },
 );
 const showCopyDialog = ref(false);
 const generation = ref<{ status: string | null; error: string | null }>({
@@ -191,7 +197,9 @@ let successTimeout: number | null = null;
 
 const publishingForm = useForm({
     integration_id: props.integrations.linkedin[0]?.id ?? null,
-    schedule_at: props.contentPiece.publish_at ? formatDateTimeLocal(props.contentPiece.publish_at) : '',
+    schedule_at: props.contentPiece.publish_at
+        ? formatDateTimeLocal(props.contentPiece.publish_at)
+        : '',
 });
 
 const publishNow = () => {
@@ -241,7 +249,8 @@ const startPolling = (contentPieceId: number) => {
                 }, 4000);
             } else if (data.generation_status === 'FAILED') {
                 stopPolling();
-                generation.value.error = data.error || 'Generation failed. Please try again.';
+                generation.value.error =
+                    data.error || 'Generation failed. Please try again.';
             }
         } catch (error) {
             console.error('Polling error:', error);
@@ -272,7 +281,7 @@ watch(
             startPolling(polling.content_piece_id);
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const openCopyDialog = () => {
@@ -289,7 +298,9 @@ const confirmCopy = (mode: 'replace' | 'append') => {
     if (mode === 'replace') {
         form.edited_text = form.research_text;
     } else {
-        form.edited_text = [form.edited_text, form.research_text].filter(Boolean).join('\n\n');
+        form.edited_text = [form.edited_text, form.research_text]
+            .filter(Boolean)
+            .join('\n\n');
     }
     editingContentType.value = 'markdown';
     activeTab.value = 'editing';
@@ -336,7 +347,12 @@ const removeMedia = (id: number) => {
     form.media_ids = selectedMedia.value.map((m) => m.id);
 };
 
-const attachGeneratedImage = (imageMedia: { id: number; filename: string; mime_type: string; temporary_url: string }) => {
+const attachGeneratedImage = (imageMedia: {
+    id: number;
+    filename: string;
+    mime_type: string;
+    temporary_url: string;
+}) => {
     // Check if already attached
     if (selectedMedia.value.find((m) => m.id === imageMedia.id)) {
         return;
@@ -363,31 +379,31 @@ const detachGeneratedImage = (mediaId: number) => {
 };
 
 const save = () => {
-    form
-        .transform((data) => ({
-            ...data,
-            published_at: serializePublishedAt(form.published_at),
-        }))
-        .put(`/content-pieces/${props.contentPiece.id}?tab=${activeTab.value}`, {
-            preserveScroll: true,
-            onFinish: () => form.transform((data) => data),
-        });
+    form.transform((data) => ({
+        ...data,
+        published_at: serializePublishedAt(form.published_at),
+    })).put(`/content-pieces/${props.contentPiece.id}?tab=${activeTab.value}`, {
+        preserveScroll: true,
+        onFinish: () => form.transform((data) => data),
+    });
 };
 
 const saveAndClose = () => {
-    form
-        .transform((data) => ({
-            ...data,
-            published_at: serializePublishedAt(form.published_at),
-        }))
-        .put(`/content-pieces/${props.contentPiece.id}?tab=${activeTab.value}`, {
-            onSuccess: () => router.visit('/content-pieces'),
-            onFinish: () => form.transform((data) => data),
-        });
+    form.transform((data) => ({
+        ...data,
+        published_at: serializePublishedAt(form.published_at),
+    })).put(`/content-pieces/${props.contentPiece.id}?tab=${activeTab.value}`, {
+        onSuccess: () => router.visit('/content-pieces'),
+        onFinish: () => form.transform((data) => data),
+    });
 };
 
 const generateContent = () => {
-    router.post(`/content-pieces/${props.contentPiece.id}/generate?tab=${activeTab.value}`, {}, { preserveScroll: true });
+    router.post(
+        `/content-pieces/${props.contentPiece.id}/generate?tab=${activeTab.value}`,
+        {},
+        { preserveScroll: true },
+    );
 };
 </script>
 
@@ -404,7 +420,11 @@ const generateContent = () => {
                 @save-and-close="saveAndClose"
             />
 
-            <Tabs v-model="activeTab" default-value="research" class="space-y-4">
+            <Tabs
+                v-model="activeTab"
+                default-value="research"
+                class="space-y-4"
+            >
                 <TabsList>
                     <TabsTrigger value="research">Research</TabsTrigger>
                     <TabsTrigger value="editing">Editing</TabsTrigger>
@@ -412,7 +432,10 @@ const generateContent = () => {
                     <TabsTrigger value="publishing">Publishing</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="research" class="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
+                <TabsContent
+                    value="research"
+                    class="space-y-4 rounded-xl border bg-card p-4 shadow-sm"
+                >
                     <ResearchTab
                         :form="form"
                         :prompts="prompts"
@@ -423,7 +446,10 @@ const generateContent = () => {
                     />
                 </TabsContent>
 
-                <TabsContent value="editing" class="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
+                <TabsContent
+                    value="editing"
+                    class="space-y-4 rounded-xl border bg-card p-4 shadow-sm"
+                >
                     <EditingTab
                         ref="editingTabRef"
                         :form="form"
@@ -432,81 +458,151 @@ const generateContent = () => {
                         @open-media-picker="openMediaPicker"
                         @remove-media="removeMedia"
                         @request-image="openImagePicker"
-                        @content-type-change="(value: 'html' | 'markdown') => (editingContentType = value)"
+                        @content-type-change="
+                            (value: 'html' | 'markdown') =>
+                                (editingContentType = value)
+                        "
                     />
                 </TabsContent>
 
-                <TabsContent value="images" class="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
+                <TabsContent
+                    value="images"
+                    class="space-y-4 rounded-xl border bg-card p-4 shadow-sm"
+                >
                     <ImagesTab
                         :content-piece-id="contentPiece.id"
                         :image-prompts="imagePrompts"
                         :image-generations="imageGenerations"
                         :attached-media-ids="form.media_ids"
-                        :has-edited-text="!!form.edited_text && form.edited_text.trim().length > 0"
+                        :has-edited-text="
+                            !!form.edited_text &&
+                            form.edited_text.trim().length > 0
+                        "
                         @generations-updated="handleGenerationsUpdated"
                         @attach-media="attachGeneratedImage"
                         @detach-media="detachGeneratedImage"
                     />
                 </TabsContent>
 
-                <TabsContent value="publishing" class="space-y-6 rounded-xl border bg-card p-4 shadow-sm">
+                <TabsContent
+                    value="publishing"
+                    class="space-y-6 rounded-xl border bg-card p-4 shadow-sm"
+                >
                     <div class="flex items-center justify-between">
                         <div class="space-y-1">
-                            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Publishing status</p>
+                            <p
+                                class="text-sm font-medium text-gray-900 dark:text-gray-50"
+                            >
+                                Publishing status
+                            </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Manage LinkedIn publishing for this content piece.
+                                Manage LinkedIn publishing for this content
+                                piece.
                             </p>
                         </div>
-                        <PublishingStatus :status="contentPiece.publish_state || 'not_published'" />
+                        <PublishingStatus
+                            :status="
+                                contentPiece.publish_state || 'not_published'
+                            "
+                        />
                     </div>
 
                     <div class="grid gap-6 md:grid-cols-2">
-                        <div class="space-y-4 rounded-lg border border-dashed p-4">
-                            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">Destination</h3>
+                        <div
+                            class="space-y-4 rounded-lg border border-dashed p-4"
+                        >
+                            <h3
+                                class="text-sm font-medium text-gray-900 dark:text-gray-50"
+                            >
+                                Destination
+                            </h3>
                             <LinkedInIntegrationSelector
                                 :integrations="integrations.linkedin"
                                 v-model="publishingForm.integration_id"
                             />
-                            <p v-if="!integrations.linkedin.length" class="text-xs text-amber-600 dark:text-amber-400">
-                                Connect a LinkedIn profile in Team Settings to enable publishing.
+                            <p
+                                v-if="!integrations.linkedin.length"
+                                class="text-xs text-amber-600 dark:text-amber-400"
+                            >
+                                Connect a LinkedIn profile in Team Settings to
+                                enable publishing.
                             </p>
                         </div>
 
-                        <div class="space-y-4 rounded-lg border border-dashed p-4">
-                            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">Schedule</h3>
-                            <PublishingScheduler v-model="publishingForm.schedule_at" />
+                        <div
+                            class="space-y-4 rounded-lg border border-dashed p-4"
+                        >
+                            <h3
+                                class="text-sm font-medium text-gray-900 dark:text-gray-50"
+                            >
+                                Schedule
+                            </h3>
+                            <PublishingScheduler
+                                v-model="publishingForm.schedule_at"
+                            />
                             <div class="flex gap-3">
                                 <Button
                                     class="w-full"
                                     variant="secondary"
-                                    :disabled="publishingForm.processing || !publishingForm.integration_id"
+                                    :disabled="
+                                        publishingForm.processing ||
+                                        !publishingForm.integration_id
+                                    "
                                     @click="publishNow"
                                 >
-                                    {{ publishingForm.processing ? 'Starting…' : 'Publish now' }}
+                                    {{
+                                        publishingForm.processing
+                                            ? 'Starting…'
+                                            : 'Publish now'
+                                    }}
                                 </Button>
                                 <Button
                                     class="w-full"
-                                    :disabled="publishingForm.processing || !publishingForm.integration_id"
+                                    :disabled="
+                                        publishingForm.processing ||
+                                        !publishingForm.integration_id
+                                    "
                                     @click="schedulePublish"
                                 >
-                                    {{ publishingForm.processing ? 'Scheduling…' : 'Schedule' }}
+                                    {{
+                                        publishingForm.processing
+                                            ? 'Scheduling…'
+                                            : 'Schedule'
+                                    }}
                                 </Button>
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="contentPiece.published_platforms?.linkedin" class="rounded-lg border bg-muted/30 p-4">
-                        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Last published to LinkedIn</p>
+                    <div
+                        v-if="contentPiece.published_platforms?.linkedin"
+                        class="rounded-lg border bg-muted/30 p-4"
+                    >
+                        <p
+                            class="text-sm font-medium text-gray-900 dark:text-gray-50"
+                        >
+                            Last published to LinkedIn
+                        </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                            URN: {{ contentPiece.published_platforms.linkedin.urn || 'n/a' }}
+                            URN:
+                            {{
+                                contentPiece.published_platforms.linkedin.urn ||
+                                'n/a'
+                            }}
                         </p>
                     </div>
                 </TabsContent>
             </Tabs>
 
             <div class="flex items-center justify-end gap-3">
-                <Button variant="outline" @click="saveAndClose">Save &amp; close</Button>
-                <Button variant="secondary" :disabled="form.processing || isPolling" @click="save">
+                <Button variant="outline" @click="saveAndClose"
+                    >Save &amp; close</Button
+                >
+                <Button
+                    variant="secondary"
+                    :disabled="form.processing || isPolling"
+                    @click="save"
+                >
                     {{ form.processing ? 'Saving...' : 'Save Changes' }}
                 </Button>
             </div>

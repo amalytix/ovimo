@@ -108,9 +108,7 @@ withDefaults(
         <section id="features" class="border-t border-gray-200 py-20">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="mx-auto max-w-2xl text-center">
-                    <h2
-                        class="text-3xl font-bold tracking-tight sm:text-4xl"
-                    >
+                    <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">
                         Everything you need to stay informed and create content
                     </h2>
                     <p class="mt-4 text-lg text-gray-600">
@@ -143,8 +141,8 @@ withDefaults(
                         </h3>
                         <p class="mt-2 text-gray-600">
                             Track RSS feeds and XML sitemaps automatically with
-                            configurable intervals. Set it once and let Ovimo
-                            do the work.
+                            configurable intervals. Set it once and let Ovimo do
+                            the work.
                         </p>
                     </div>
                     <!-- Feature 2 -->
@@ -166,9 +164,7 @@ withDefaults(
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-lg font-semibold">
-                            AI Summarization
-                        </h3>
+                        <h3 class="text-lg font-semibold">AI Summarization</h3>
                         <p class="mt-2 text-gray-600">
                             GPT-5.1 powered summaries with intelligent relevancy
                             scoring. Quickly understand what matters to you.
@@ -211,9 +207,7 @@ withDefaults(
         >
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="mx-auto max-w-2xl text-center">
-                    <h2
-                        class="text-3xl font-bold tracking-tight sm:text-4xl"
-                    >
+                    <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">
                         How It Works
                     </h2>
                     <p class="mt-4 text-lg text-gray-600">
@@ -259,9 +253,7 @@ withDefaults(
                         >
                             3
                         </div>
-                        <h3 class="mt-4 text-lg font-semibold">
-                            AI Analysis
-                        </h3>
+                        <h3 class="mt-4 text-lg font-semibold">AI Analysis</h3>
                         <p class="mt-2 text-gray-600">
                             Each post is summarized and scored for relevancy
                             based on your team's interests.
@@ -290,9 +282,7 @@ withDefaults(
         <section id="faq" class="border-t border-gray-200 py-20">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="mx-auto max-w-2xl text-center">
-                    <h2
-                        class="text-3xl font-bold tracking-tight sm:text-4xl"
-                    >
+                    <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">
                         Frequently Asked Questions
                     </h2>
                 </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import AdminLayout from '@/layouts/AdminLayout.vue';
 import HealthCard from '@/components/Admin/HealthCard.vue';
 import StatCard from '@/components/Admin/StatCard.vue';
+import AdminLayout from '@/layouts/AdminLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 
@@ -72,17 +72,33 @@ const formatNumber = (num: number) => {
         <div class="p-6">
             <div class="mb-6">
                 <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Platform overview and system health.</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Platform overview and system health.
+                </p>
             </div>
 
             <!-- Platform Overview -->
             <div class="mb-8">
                 <h2 class="mb-4 text-lg font-semibold">Platform Overview</h2>
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <StatCard title="Total Users" :value="platformOverview.total_users" href="/admin/users" />
-                    <StatCard title="Total Teams" :value="platformOverview.total_teams" href="/admin/teams" />
-                    <StatCard title="New Signups (7d)" :value="platformOverview.new_signups_7d" />
-                    <StatCard title="Logins (7d)" :value="platformOverview.logins_7d" />
+                    <StatCard
+                        title="Total Users"
+                        :value="platformOverview.total_users"
+                        href="/admin/users"
+                    />
+                    <StatCard
+                        title="Total Teams"
+                        :value="platformOverview.total_teams"
+                        href="/admin/teams"
+                    />
+                    <StatCard
+                        title="New Signups (7d)"
+                        :value="platformOverview.new_signups_7d"
+                    />
+                    <StatCard
+                        title="Logins (7d)"
+                        :value="platformOverview.logins_7d"
+                    />
                 </div>
             </div>
 
@@ -121,12 +137,25 @@ const formatNumber = (num: number) => {
             <div class="mb-8">
                 <h2 class="mb-4 text-lg font-semibold">Usage</h2>
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <StatCard title="Tokens Today" :value="formatNumber(usageStats.tokens_today)" />
-                    <StatCard title="Tokens (7d)" :value="formatNumber(usageStats.tokens_7d)" />
-                    <div class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Source Checks</div>
+                    <StatCard
+                        title="Tokens Today"
+                        :value="formatNumber(usageStats.tokens_today)"
+                    />
+                    <StatCard
+                        title="Tokens (7d)"
+                        :value="formatNumber(usageStats.tokens_7d)"
+                    />
+                    <div
+                        class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+                    >
+                        <div
+                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                        >
+                            Source Checks
+                        </div>
                         <div class="mt-2 text-xl font-bold">
-                            Today: {{ formatNumber(usageStats.source_checks_today) }} |
+                            Today:
+                            {{ formatNumber(usageStats.source_checks_today) }} |
                             7d: {{ formatNumber(usageStats.source_checks_7d) }}
                         </div>
                     </div>
@@ -136,45 +165,99 @@ const formatNumber = (num: number) => {
             <!-- Tables Row -->
             <div class="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
                 <!-- Top Teams -->
-                <div class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h2 class="mb-4 text-lg font-semibold">Top 5 Teams by Token Usage (7d)</h2>
+                <div
+                    class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+                >
+                    <h2 class="mb-4 text-lg font-semibold">
+                        Top 5 Teams by Token Usage (7d)
+                    </h2>
                     <div v-if="topTeams.length > 0" class="space-y-3">
-                        <div v-for="(team, index) in topTeams" :key="team.id" class="flex items-center justify-between">
-                            <Link :href="`/admin/teams/${team.id}/edit`" class="hover:underline">
+                        <div
+                            v-for="(team, index) in topTeams"
+                            :key="team.id"
+                            class="flex items-center justify-between"
+                        >
+                            <Link
+                                :href="`/admin/teams/${team.id}/edit`"
+                                class="hover:underline"
+                            >
                                 {{ index + 1 }}. {{ team.name }}
                             </Link>
                             <span class="text-gray-500 dark:text-gray-400">
-                                {{ formatNumber(team.tokens_used) }} ({{ team.percentage }}%)
+                                {{ formatNumber(team.tokens_used) }} ({{
+                                    team.percentage
+                                }}%)
                             </span>
                         </div>
                     </div>
-                    <div v-else class="text-sm text-gray-500 dark:text-gray-400">No usage data yet.</div>
+                    <div
+                        v-else
+                        class="text-sm text-gray-500 dark:text-gray-400"
+                    >
+                        No usage data yet.
+                    </div>
                 </div>
 
                 <!-- Teams Approaching Limit -->
-                <div class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h2 class="mb-4 text-lg font-semibold">Teams Approaching Limit (&gt;80%)</h2>
-                    <div v-if="teamsApproachingLimit.length > 0" class="space-y-3">
-                        <div v-for="team in teamsApproachingLimit" :key="team.id" class="flex items-center justify-between">
-                            <Link :href="`/admin/teams/${team.id}/edit`" class="hover:underline">
+                <div
+                    class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+                >
+                    <h2 class="mb-4 text-lg font-semibold">
+                        Teams Approaching Limit (&gt;80%)
+                    </h2>
+                    <div
+                        v-if="teamsApproachingLimit.length > 0"
+                        class="space-y-3"
+                    >
+                        <div
+                            v-for="team in teamsApproachingLimit"
+                            :key="team.id"
+                            class="flex items-center justify-between"
+                        >
+                            <Link
+                                :href="`/admin/teams/${team.id}/edit`"
+                                class="hover:underline"
+                            >
                                 {{ team.name }}
                             </Link>
-                            <span class="font-semibold" :class="team.percentage >= 95 ? 'text-red-500' : 'text-yellow-500'">
+                            <span
+                                class="font-semibold"
+                                :class="
+                                    team.percentage >= 95
+                                        ? 'text-red-500'
+                                        : 'text-yellow-500'
+                                "
+                            >
                                 {{ team.percentage }}%
                             </span>
                         </div>
                     </div>
-                    <div v-else class="text-sm text-gray-500 dark:text-gray-400">No teams approaching limit.</div>
+                    <div
+                        v-else
+                        class="text-sm text-gray-500 dark:text-gray-400"
+                    >
+                        No teams approaching limit.
+                    </div>
                 </div>
             </div>
 
             <!-- Chart and Recent Registrations -->
             <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 <!-- Token Usage Chart -->
-                <div class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h2 class="mb-4 text-lg font-semibold">Token Usage (Last 28 Days)</h2>
-                    <div v-if="dailyTokenUsage.length > 0" class="overflow-x-auto">
-                        <div class="flex min-w-full items-end gap-1" style="height: 150px">
+                <div
+                    class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+                >
+                    <h2 class="mb-4 text-lg font-semibold">
+                        Token Usage (Last 28 Days)
+                    </h2>
+                    <div
+                        v-if="dailyTokenUsage.length > 0"
+                        class="overflow-x-auto"
+                    >
+                        <div
+                            class="flex min-w-full items-end gap-1"
+                            style="height: 150px"
+                        >
                             <div
                                 v-for="day in dailyTokenUsage"
                                 :key="day.date"
@@ -189,26 +272,58 @@ const formatNumber = (num: number) => {
                                 ></div>
                             </div>
                         </div>
-                        <div class="mt-2 flex justify-between text-xs text-gray-500">
+                        <div
+                            class="mt-2 flex justify-between text-xs text-gray-500"
+                        >
                             <span>{{ dailyTokenUsage[0]?.date }}</span>
-                            <span>{{ dailyTokenUsage[dailyTokenUsage.length - 1]?.date }}</span>
+                            <span>{{
+                                dailyTokenUsage[dailyTokenUsage.length - 1]
+                                    ?.date
+                            }}</span>
                         </div>
                     </div>
-                    <div v-else class="text-sm text-gray-500 dark:text-gray-400">No usage data yet.</div>
+                    <div
+                        v-else
+                        class="text-sm text-gray-500 dark:text-gray-400"
+                    >
+                        No usage data yet.
+                    </div>
                 </div>
 
                 <!-- Recent Registrations -->
-                <div class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <h2 class="mb-4 text-lg font-semibold">Recent Registrations</h2>
-                    <div v-if="recentRegistrations.length > 0" class="space-y-3">
-                        <div v-for="user in recentRegistrations" :key="user.id" class="flex items-center justify-between">
-                            <Link :href="`/admin/users/${user.id}/edit`" class="hover:underline">
+                <div
+                    class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+                >
+                    <h2 class="mb-4 text-lg font-semibold">
+                        Recent Registrations
+                    </h2>
+                    <div
+                        v-if="recentRegistrations.length > 0"
+                        class="space-y-3"
+                    >
+                        <div
+                            v-for="user in recentRegistrations"
+                            :key="user.id"
+                            class="flex items-center justify-between"
+                        >
+                            <Link
+                                :href="`/admin/users/${user.id}/edit`"
+                                class="hover:underline"
+                            >
                                 {{ user.email }}
                             </Link>
-                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ user.created_at }}</span>
+                            <span
+                                class="text-sm text-gray-500 dark:text-gray-400"
+                                >{{ user.created_at }}</span
+                            >
                         </div>
                     </div>
-                    <div v-else class="text-sm text-gray-500 dark:text-gray-400">No recent registrations.</div>
+                    <div
+                        v-else
+                        class="text-sm text-gray-500 dark:text-gray-400"
+                    >
+                        No recent registrations.
+                    </div>
                 </div>
             </div>
         </div>

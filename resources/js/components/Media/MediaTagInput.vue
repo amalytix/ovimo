@@ -25,14 +25,16 @@ watch(
     () => props.modelValue,
     (value) => {
         internalSelection.value = [...value];
-    }
+    },
 );
 
 const filteredTags = computed(() => {
     if (!search.value) {
         return props.tags;
     }
-    return props.tags.filter((tag) => tag.name.toLowerCase().includes(search.value.toLowerCase()));
+    return props.tags.filter((tag) =>
+        tag.name.toLowerCase().includes(search.value.toLowerCase()),
+    );
 });
 
 const trimmedSearch = computed(() => search.value.trim());
@@ -42,12 +44,16 @@ const canCreate = computed(() => {
         return false;
     }
 
-    return !props.tags.some((tag) => tag.name.toLowerCase() === trimmedSearch.value.toLowerCase());
+    return !props.tags.some(
+        (tag) => tag.name.toLowerCase() === trimmedSearch.value.toLowerCase(),
+    );
 });
 
 const toggle = (id: number) => {
     if (internalSelection.value.includes(id)) {
-        internalSelection.value = internalSelection.value.filter((tagId) => tagId !== id);
+        internalSelection.value = internalSelection.value.filter(
+            (tagId) => tagId !== id,
+        );
     } else {
         internalSelection.value = [...internalSelection.value, id];
     }
@@ -72,7 +78,10 @@ const createTag = () => {
             :placeholder="placeholder || 'Search tags'"
             @keydown.enter.prevent="createTag"
         />
-        <div v-if="canCreate" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <div
+            v-if="canCreate"
+            class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
+        >
             <Button size="sm" :disabled="creating" @click="createTag">
                 {{ creating ? 'Adding…' : `Add \"${trimmedSearch}\"` }}
             </Button>
@@ -85,7 +94,11 @@ const createTag = () => {
                 variant="outline"
                 size="sm"
                 class="gap-2 border-dashed"
-                :class="internalSelection.includes(tag.id) ? 'bg-gray-900 text-white hover:bg-black dark:bg-white/90 dark:text-gray-900' : ''"
+                :class="
+                    internalSelection.includes(tag.id)
+                        ? 'bg-gray-900 text-white hover:bg-black dark:bg-white/90 dark:text-gray-900'
+                        : ''
+                "
                 @click="toggle(tag.id)"
             >
                 <Badge

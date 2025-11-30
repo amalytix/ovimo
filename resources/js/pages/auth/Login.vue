@@ -31,7 +31,8 @@ defineProps<{
             v-if="accountInactive"
             class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400"
         >
-            Your account has been deactivated. Please contact support for assistance.
+            Your account has been deactivated. Please contact support for
+            assistance.
         </div>
 
         <div

@@ -63,15 +63,21 @@ const submit = () => {
                             :default-value="form.is_active"
                             @update:model-value="form.is_active = $event"
                         />
-                        <Label for="is_active" class="font-normal">Active</Label>
+                        <Label for="is_active" class="font-normal"
+                            >Active</Label
+                        >
                     </div>
-                    <p class="ml-6 -mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <p
+                        class="-mt-2 ml-6 text-xs text-gray-500 dark:text-gray-400"
+                    >
                         Inactive teams cannot access the platform.
                     </p>
                 </div>
 
                 <div class="flex justify-end gap-3">
-                    <Button variant="outline" as="a" href="/admin/teams">Cancel</Button>
+                    <Button variant="outline" as="a" href="/admin/teams"
+                        >Cancel</Button
+                    >
                     <Button type="submit" :disabled="form.processing">
                         {{ form.processing ? 'Saving...' : 'Save Changes' }}
                     </Button>

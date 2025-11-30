@@ -36,8 +36,10 @@ const icon = computed(() => {
         .map((key) => (icons as Record<string, any>)[key])
         .find(Boolean);
 
-    if (! resolvedIcon && import.meta.env.DEV) {
-        console.warn(`[Icon] Missing icon "${props.name}". Tried: ${candidates.join(', ')}`);
+    if (!resolvedIcon && import.meta.env.DEV) {
+        console.warn(
+            `[Icon] Missing icon "${props.name}". Tried: ${candidates.join(', ')}`,
+        );
     }
 
     return resolvedIcon ?? (icons as Record<string, any>).HelpCircle;

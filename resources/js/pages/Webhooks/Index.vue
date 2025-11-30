@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 
@@ -24,7 +24,9 @@ interface Props {
 
 defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Webhooks', href: '/webhooks' }];
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Webhooks', href: '/webhooks' },
+];
 
 const deleteWebhook = (id: number) => {
     if (confirm('Are you sure you want to delete this webhook?')) {
@@ -54,51 +56,80 @@ const formatEvent = (event: string) => {
                 </Link>
             </div>
 
-            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div
+                class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700"
+            >
+                <table
+                    class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                >
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Name
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 URL
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Event
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Status
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Last Triggered
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Failures
                             </th>
                             <th
-                                class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
                             >
                                 Actions
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                    <tbody
+                        class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900"
+                    >
                         <tr v-for="webhook in webhooks.data" :key="webhook.id">
-                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                                <Link :href="`/webhooks/${webhook.id}/edit`" class="hover:text-blue-600 dark:hover:text-blue-400">
+                            <td
+                                class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-white"
+                            >
+                                <Link
+                                    :href="`/webhooks/${webhook.id}/edit`"
+                                    class="hover:text-blue-600 dark:hover:text-blue-400"
+                                >
                                     {{ webhook.name }}
                                 </Link>
                             </td>
-                            <td class="max-w-xs truncate px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="max-w-xs truncate px-6 py-4 text-sm text-gray-500 dark:text-gray-400"
+                            >
                                 {{ webhook.url }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                <span class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
+                                <span
+                                    class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-700"
+                                >
                                     {{ formatEvent(webhook.event) }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                            <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <span
                                     :class="
                                         webhook.is_active
@@ -107,35 +138,56 @@ const formatEvent = (event: string) => {
                                     "
                                     class="rounded-full px-2 py-1 text-xs"
                                 >
-                                    {{ webhook.is_active ? 'Active' : 'Inactive' }}
+                                    {{
+                                        webhook.is_active
+                                            ? 'Active'
+                                            : 'Inactive'
+                                    }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 {{ webhook.last_triggered_at || 'Never' }}
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
                                 <span
-                                    :class="webhook.failure_count > 0 ? 'text-red-600 dark:text-red-400' : ''"
+                                    :class="
+                                        webhook.failure_count > 0
+                                            ? 'text-red-600 dark:text-red-400'
+                                            : ''
+                                    "
                                     class="font-medium"
                                 >
                                     {{ webhook.failure_count }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                            <td
+                                class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap"
+                            >
                                 <Link
                                     :href="`/webhooks/${webhook.id}/edit`"
                                     class="mr-3 text-blue-600 hover:text-blue-900 dark:text-blue-400"
                                 >
                                     Edit
                                 </Link>
-                                <button @click="deleteWebhook(webhook.id)" class="text-red-600 hover:text-red-900 dark:text-red-400">
+                                <button
+                                    @click="deleteWebhook(webhook.id)"
+                                    class="text-red-600 hover:text-red-900 dark:text-red-400"
+                                >
                                     Delete
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="webhooks.data.length === 0">
-                            <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                                No webhooks configured. Click "Add Webhook" to set up notifications.
+                            <td
+                                colspan="7"
+                                class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                            >
+                                No webhooks configured. Click "Add Webhook" to
+                                set up notifications.
                             </td>
                         </tr>
                     </tbody>

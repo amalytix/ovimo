@@ -95,11 +95,14 @@ const calendarDays = computed<CalendarDay[]>(() => {
 });
 
 const monthLabel = computed(() =>
-    new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(parseDate(props.date)),
+    new Intl.DateTimeFormat(undefined, {
+        month: 'long',
+        year: 'numeric',
+    }).format(parseDate(props.date)),
 );
 
 const formatEventTime = (value: string | null) => {
-    if (! value) {
+    if (!value) {
         return null;
     }
 
@@ -126,7 +129,7 @@ const loadEvents = async () => {
             },
         );
 
-        if (! response.ok) {
+        if (!response.ok) {
             throw new Error('Unable to load calendar data');
         }
 
@@ -165,40 +168,68 @@ watch(
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="text-xl font-semibold">{{ monthLabel }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Week starts on Monday</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Week starts on Monday
+                </p>
             </div>
             <div class="flex items-center gap-2">
-                <Button variant="outline" size="sm" @click="goToToday">Today</Button>
+                <Button variant="outline" size="sm" @click="goToToday"
+                    >Today</Button
+                >
                 <div class="flex items-center gap-1">
-                    <Button variant="outline" size="icon" @click="goToPreviousMonth">‹</Button>
-                    <Button variant="outline" size="icon" @click="goToNextMonth">›</Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        @click="goToPreviousMonth"
+                        >‹</Button
+                    >
+                    <Button variant="outline" size="icon" @click="goToNextMonth"
+                        >›</Button
+                    >
                 </div>
             </div>
         </div>
 
-        <div v-if="loading" class="rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+        <div
+            v-if="loading"
+            class="rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300"
+        >
             Loading calendar...
         </div>
 
-        <div v-else class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+        <div
+            v-else
+            class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950"
+        >
             <div class="min-w-[960px]">
-                <div class="grid grid-cols-7 bg-gray-50 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-900 dark:text-gray-400">
-                    <div v-for="heading in weekDayHeadings" :key="heading" class="border-b border-gray-200 px-2 py-3 dark:border-gray-800">
+                <div
+                    class="grid grid-cols-7 bg-gray-50 text-center text-xs font-semibold tracking-wide text-gray-500 uppercase dark:bg-gray-900 dark:text-gray-400"
+                >
+                    <div
+                        v-for="heading in weekDayHeadings"
+                        :key="heading"
+                        class="border-b border-gray-200 px-2 py-3 dark:border-gray-800"
+                    >
                         {{ heading }}
                     </div>
                 </div>
-                <div class="grid grid-cols-7 gap-px bg-gray-100 dark:bg-gray-800">
+                <div
+                    class="grid grid-cols-7 gap-px bg-gray-100 dark:bg-gray-800"
+                >
                     <div
                         v-for="day in calendarDays"
                         :key="day.date"
                         class="relative min-h-[9rem] bg-white p-3 text-sm dark:bg-gray-900"
                         :class="{
                             'bg-gray-50 dark:bg-gray-800': !day.isCurrentMonth,
-                            'ring-1 ring-blue-500 ring-offset-1 ring-offset-white dark:ring-offset-gray-900': day.isToday,
+                            'ring-1 ring-blue-500 ring-offset-1 ring-offset-white dark:ring-offset-gray-900':
+                                day.isToday,
                         }"
                     >
                         <div class="mb-2 flex items-center justify-between">
-                            <span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <span
+                                class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 {{ day.date }}
                             </span>
                             <span
@@ -215,15 +246,34 @@ watch(
                                 :key="event.id"
                                 class="rounded-lg border border-gray-200 bg-white/80 p-2 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-900/70 dark:hover:border-blue-500"
                             >
-                                <Link :href="edit.url(event.id)" class="text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-300">
+                                <Link
+                                    :href="edit.url(event.id)"
+                                    class="text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-300"
+                                >
                                     {{ event.internal_name }}
                                 </Link>
-                                <div class="mt-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                    <span>{{ event.prompt_name || 'Prompt not set' }}</span>
-                                    <span v-if="formatEventTime(event.published_at)">{{ formatEventTime(event.published_at) }}</span>
+                                <div
+                                    class="mt-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    <span>{{
+                                        event.prompt_name || 'Prompt not set'
+                                    }}</span>
+                                    <span
+                                        v-if="
+                                            formatEventTime(event.published_at)
+                                        "
+                                        >{{
+                                            formatEventTime(event.published_at)
+                                        }}</span
+                                    >
                                 </div>
                             </div>
-                            <p v-if="day.events.length === 0" class="text-xs text-gray-400 dark:text-gray-500">No content</p>
+                            <p
+                                v-if="day.events.length === 0"
+                                class="text-xs text-gray-400 dark:text-gray-500"
+                            >
+                                No content
+                            </p>
                         </div>
                     </div>
                 </div>

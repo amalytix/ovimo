@@ -25,11 +25,18 @@ const statusColors = {
         :is="href ? 'a' : 'div'"
         :href="href"
         class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
-        :class="{ 'transition-colors hover:bg-gray-50 dark:hover:bg-gray-700': href }"
+        :class="{
+            'transition-colors hover:bg-gray-50 dark:hover:bg-gray-700': href,
+        }"
     >
         <div class="flex items-center justify-between">
-            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ title }}</div>
-            <span class="inline-block h-3 w-3 rounded-full" :class="statusColors[status]"></span>
+            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                {{ title }}
+            </div>
+            <span
+                class="inline-block h-3 w-3 rounded-full"
+                :class="statusColors[status]"
+            ></span>
         </div>
         <div class="mt-2 text-3xl font-bold">{{ formatNumber(value) }}</div>
     </component>

@@ -7,12 +7,12 @@ import ResearchTab from '@/components/ContentPiece/ResearchTab.vue';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { status } from '@/routes/content-pieces';
+import { view as mediaView } from '@/routes/media';
 import type { BreadcrumbItem } from '@/types';
 import type { MediaItem, MediaTag } from '@/types/media';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { onUnmounted, ref, watch } from 'vue';
-import { status } from '@/routes/content-pieces';
-import { view as mediaView } from '@/routes/media';
 
 type Prompt = {
     id: number;
@@ -112,7 +112,8 @@ const startPolling = (contentPieceId: number) => {
                 }, 4000);
             } else if (data.generation_status === 'FAILED') {
                 stopPolling();
-                generation.value.error = data.error || 'Generation failed. Please try again.';
+                generation.value.error =
+                    data.error || 'Generation failed. Please try again.';
             }
         } catch (error) {
             console.error('Polling error:', error);
@@ -143,7 +144,7 @@ watch(
             startPolling(polling.content_piece_id);
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const openCopyDialog = () => {
@@ -160,7 +161,9 @@ const confirmCopy = (mode: 'replace' | 'append') => {
     if (mode === 'replace') {
         form.edited_text = form.research_text;
     } else {
-        form.edited_text = [form.edited_text, form.research_text].filter(Boolean).join('\n\n');
+        form.edited_text = [form.edited_text, form.research_text]
+            .filter(Boolean)
+            .join('\n\n');
     }
     editingContentType.value = 'markdown';
     activeTab.value = 'editing';
@@ -208,27 +211,23 @@ const removeMedia = (id: number) => {
 };
 
 const saveDraft = () => {
-    form
-        .transform((data) => ({
-            ...data,
-            published_at: serializePublishedAt(form.published_at),
-        }))
-        .post('/content-pieces', {
-            preserveScroll: true,
-            onFinish: () => form.transform((data) => data),
-        });
+    form.transform((data) => ({
+        ...data,
+        published_at: serializePublishedAt(form.published_at),
+    })).post('/content-pieces', {
+        preserveScroll: true,
+        onFinish: () => form.transform((data) => data),
+    });
 };
 
 const saveAndGenerate = () => {
-    form
-        .transform((data) => ({
-            ...data,
-            generate_content: true,
-            published_at: serializePublishedAt(form.published_at),
-        }))
-        .post('/content-pieces', {
-            onFinish: () => form.transform((data) => data),
-        });
+    form.transform((data) => ({
+        ...data,
+        generate_content: true,
+        published_at: serializePublishedAt(form.published_at),
+    })).post('/content-pieces', {
+        onFinish: () => form.transform((data) => data),
+    });
 };
 
 const cancel = () => {
@@ -243,13 +242,20 @@ const cancel = () => {
         <div class="space-y-6 p-6">
             <GeneralInfoHeader :form="form" />
 
-            <Tabs v-model="activeTab" default-value="research" class="space-y-4">
+            <Tabs
+                v-model="activeTab"
+                default-value="research"
+                class="space-y-4"
+            >
                 <TabsList>
                     <TabsTrigger value="research">Research</TabsTrigger>
                     <TabsTrigger value="editing">Editing</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="research" class="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
+                <TabsContent
+                    value="research"
+                    class="space-y-4 rounded-xl border bg-card p-4 shadow-sm"
+                >
                     <ResearchTab
                         :form="form"
                         :prompts="prompts"
@@ -260,7 +266,10 @@ const cancel = () => {
                     />
                 </TabsContent>
 
-                <TabsContent value="editing" class="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
+                <TabsContent
+                    value="editing"
+                    class="space-y-4 rounded-xl border bg-card p-4 shadow-sm"
+                >
                     <EditingTab
                         ref="editingTabRef"
                         :form="form"
@@ -269,14 +278,20 @@ const cancel = () => {
                         @open-media-picker="openMediaPicker"
                         @remove-media="removeMedia"
                         @request-image="openImagePicker"
-                        @content-type-change="(value) => (editingContentType.value = value)"
+                        @content-type-change="
+                            (value) => (editingContentType.value = value)
+                        "
                     />
                 </TabsContent>
             </Tabs>
 
             <div class="flex items-center justify-end gap-3">
                 <Button variant="outline" @click="cancel">Cancel</Button>
-                <Button variant="secondary" :disabled="form.processing || isPolling" @click="saveDraft">
+                <Button
+                    variant="secondary"
+                    :disabled="form.processing || isPolling"
+                    @click="saveDraft"
+                >
                     {{ form.processing ? 'Saving...' : 'Save Draft' }}
                 </Button>
             </div>

@@ -3,7 +3,13 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Pencil } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
 
@@ -43,7 +49,8 @@ const defaultChannels: ChannelOption[] = [
 ];
 
 const placeholderTitle = 'New Content Piece';
-const publishedAtLabel = () => (props.form.published_at ? 'Scheduled' : 'Schedule');
+const publishedAtLabel = () =>
+    props.form.published_at ? 'Scheduled' : 'Schedule';
 
 const titleRef = ref<HTMLElement | null>(null);
 
@@ -71,7 +78,8 @@ const handleTitleFocus = () => {
 const initializeTitle = () => {
     if (!titleRef.value) return;
 
-    const initialValue = props.contentPieceTitle || props.form.internal_name || '';
+    const initialValue =
+        props.contentPieceTitle || props.form.internal_name || '';
     titleRef.value.textContent = initialValue;
 };
 
@@ -82,17 +90,23 @@ onMounted(() => {
 
 <template>
     <div class="rounded-xl border bg-card p-4 shadow-sm">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div
+            class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+        >
             <div class="space-y-1">
-                <p class="text-xs uppercase tracking-wide text-muted-foreground">Content piece</p>
+                <p
+                    class="text-xs tracking-wide text-muted-foreground uppercase"
+                >
+                    Content piece
+                </p>
                 <div class="flex items-center gap-2">
                     <div
                         ref="titleRef"
-                        class="min-w-[200px] rounded-md px-2 py-1 text-2xl font-semibold leading-tight text-foreground hover:bg-muted focus-visible:outline-none"
+                        class="min-w-[200px] rounded-md px-2 py-1 text-2xl leading-tight font-semibold text-foreground hover:bg-muted focus-visible:outline-none"
                         contenteditable="true"
                         :data-placeholder="placeholderTitle"
                         dir="ltr"
-                        style="unicode-bidi: plaintext;"
+                        style="unicode-bidi: plaintext"
                         role="textbox"
                         aria-label="Content piece title"
                         @input="handleTitleInput"
@@ -102,7 +116,9 @@ onMounted(() => {
                     <Pencil class="h-4 w-4 text-muted-foreground" />
                 </div>
                 <InputError :message="props.form.errors?.internal_name" />
-                <p class="text-sm text-muted-foreground">Keep the basics aligned while you switch between tabs.</p>
+                <p class="text-sm text-muted-foreground">
+                    Keep the basics aligned while you switch between tabs.
+                </p>
             </div>
             <div class="flex items-center gap-3">
                 <!-- eslint-disable-next-line vue/no-mutating-props -->
@@ -111,13 +127,23 @@ onMounted(() => {
                         <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem v-for="status in props.statuses ?? defaultStatuses" :key="status.value" :value="status.value">
+                        <SelectItem
+                            v-for="status in props.statuses ?? defaultStatuses"
+                            :key="status.value"
+                            :value="status.value"
+                        >
                             {{ status.label }}
                         </SelectItem>
                     </SelectContent>
                 </Select>
-                <Button variant="outline" @click="emit('saveAndClose')">Save &amp; Close</Button>
-                <Button variant="secondary" :disabled="props.isSaving" @click="emit('save')">
+                <Button variant="outline" @click="emit('saveAndClose')"
+                    >Save &amp; Close</Button
+                >
+                <Button
+                    variant="secondary"
+                    :disabled="props.isSaving"
+                    @click="emit('save')"
+                >
                     {{ props.isSaving ? 'Saving...' : 'Save Changes' }}
                 </Button>
             </div>
@@ -132,7 +158,11 @@ onMounted(() => {
                         <SelectValue placeholder="Channel" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem v-for="channel in props.channels ?? defaultChannels" :key="channel.value" :value="channel.value">
+                        <SelectItem
+                            v-for="channel in props.channels ?? defaultChannels"
+                            :key="channel.value"
+                            :value="channel.value"
+                        >
                             {{ channel.label }}
                         </SelectItem>
                     </SelectContent>
@@ -157,8 +187,13 @@ onMounted(() => {
 
             <div class="space-y-2">
                 <Label for="published_at">{{ publishedAtLabel() }}</Label>
-                <!-- eslint-disable-next-line vue/no-mutating-props -->
-                <Input id="published_at" v-model="form.published_at" type="datetime-local" />
+                <!-- eslint-disable vue/no-mutating-props -->
+                <Input
+                    id="published_at"
+                    v-model="form.published_at"
+                    type="datetime-local"
+                />
+                <!-- eslint-enable vue/no-mutating-props -->
                 <InputError :message="form.errors.published_at" />
             </div>
         </div>

@@ -34,19 +34,25 @@ const getJobsStatus = (pending: number): 'healthy' | 'warning' | 'critical' => {
     return 'healthy';
 };
 
-const getFailedJobsStatus = (failed: number): 'healthy' | 'warning' | 'critical' => {
+const getFailedJobsStatus = (
+    failed: number,
+): 'healthy' | 'warning' | 'critical' => {
     if (failed > 50) return 'critical';
     if (failed > 10) return 'warning';
     return 'healthy';
 };
 
-const getSourcesStatus = (failing: number): 'healthy' | 'warning' | 'critical' => {
+const getSourcesStatus = (
+    failing: number,
+): 'healthy' | 'warning' | 'critical' => {
     if (failing > 10) return 'critical';
     if (failing > 0) return 'warning';
     return 'healthy';
 };
 
-const getErrorsStatus = (errors: number): 'healthy' | 'warning' | 'critical' => {
+const getErrorsStatus = (
+    errors: number,
+): 'healthy' | 'warning' | 'critical' => {
     if (errors > 100) return 'critical';
     if (errors > 10) return 'warning';
     return 'healthy';
@@ -60,7 +66,9 @@ const getErrorsStatus = (errors: number): 'healthy' | 'warning' | 'critical' => 
         <div class="p-6">
             <div class="mb-6">
                 <h1 class="text-2xl font-semibold">System Health</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Overview of system status and health metrics.</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Overview of system status and health metrics.
+                </p>
             </div>
 
             <!-- Health Cards -->
@@ -93,25 +101,50 @@ const getErrorsStatus = (errors: number): 'healthy' | 'warning' | 'critical' => 
 
             <!-- Stats -->
             <div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <StatCard title="Total Sources" :value="overview.total_sources" href="/admin/sources?status=all" />
-                <StatCard title="Active Sources" :value="overview.active_sources" href="/admin/sources?status=healthy" />
-                <StatCard title="Total Failed Jobs" :value="overview.total_failed_jobs" href="/admin/jobs" />
+                <StatCard
+                    title="Total Sources"
+                    :value="overview.total_sources"
+                    href="/admin/sources?status=all"
+                />
+                <StatCard
+                    title="Active Sources"
+                    :value="overview.active_sources"
+                    href="/admin/sources?status=healthy"
+                />
+                <StatCard
+                    title="Total Failed Jobs"
+                    :value="overview.total_failed_jobs"
+                    href="/admin/jobs"
+                />
             </div>
 
             <!-- Jobs by Queue -->
-            <div class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <div
+                class="rounded-lg border bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+            >
                 <h2 class="mb-4 text-lg font-semibold">Jobs by Queue</h2>
                 <div v-if="jobsByQueue.length > 0" class="space-y-3">
-                    <div v-for="queue in jobsByQueue" :key="queue.queue" class="flex items-center justify-between">
-                        <Link :href="`/admin/jobs?queue=${queue.queue}`" class="font-medium hover:underline">
+                    <div
+                        v-for="queue in jobsByQueue"
+                        :key="queue.queue"
+                        class="flex items-center justify-between"
+                    >
+                        <Link
+                            :href="`/admin/jobs?queue=${queue.queue}`"
+                            class="font-medium hover:underline"
+                        >
                             {{ queue.queue }}
                         </Link>
-                        <span class="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        <span
+                            class="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                        >
                             {{ queue.count }}
                         </span>
                     </div>
                 </div>
-                <div v-else class="text-sm text-gray-500 dark:text-gray-400">No pending jobs in any queue.</div>
+                <div v-else class="text-sm text-gray-500 dark:text-gray-400">
+                    No pending jobs in any queue.
+                </div>
             </div>
         </div>
     </AdminLayout>

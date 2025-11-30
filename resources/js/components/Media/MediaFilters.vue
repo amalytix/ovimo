@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { MediaTag } from '@/types/media';
 import type { MediaFilters as Filters } from '@/composables/useMediaFilters';
+import type { MediaTag } from '@/types/media';
 import MediaTagInput from './MediaTagInput.vue';
 
 const props = defineProps<{
@@ -43,20 +43,26 @@ const updateTags = (value: number[]) => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div
+        class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+    >
         <div class="flex flex-wrap items-center gap-3">
             <Input
                 :model-value="filters.search"
                 type="text"
                 placeholder="Search filename"
-                class="w-full flex-1 min-w-[220px]"
+                class="w-full min-w-[220px] flex-1"
                 @update:model-value="updateFilter('search', $event)"
             />
             <div class="flex items-center gap-2">
                 <Button
                     size="sm"
                     variant="outline"
-                    :class="filters.file_type === 'all' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : ''"
+                    :class="
+                        filters.file_type === 'all'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : ''
+                    "
                     @click="setFileType('all')"
                 >
                     All
@@ -64,7 +70,11 @@ const updateTags = (value: number[]) => {
                 <Button
                     size="sm"
                     variant="outline"
-                    :class="filters.file_type === 'images' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : ''"
+                    :class="
+                        filters.file_type === 'images'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : ''
+                    "
                     @click="setFileType('images')"
                 >
                     Images
@@ -72,31 +82,68 @@ const updateTags = (value: number[]) => {
                 <Button
                     size="sm"
                     variant="outline"
-                    :class="filters.file_type === 'pdfs' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : ''"
+                    :class="
+                        filters.file_type === 'pdfs'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : ''
+                    "
                     @click="setFileType('pdfs')"
                 >
                     PDFs
                 </Button>
             </div>
             <div class="flex items-center gap-2">
-                <Input :model-value="filters.date_from" type="date" class="w-36" @update:model-value="updateFilter('date_from', $event)" />
+                <Input
+                    :model-value="filters.date_from"
+                    type="date"
+                    class="w-36"
+                    @update:model-value="updateFilter('date_from', $event)"
+                />
                 <span class="text-sm text-gray-500">to</span>
-                <Input :model-value="filters.date_to" type="date" class="w-36" @update:model-value="updateFilter('date_to', $event)" />
+                <Input
+                    :model-value="filters.date_to"
+                    type="date"
+                    class="w-36"
+                    @update:model-value="updateFilter('date_to', $event)"
+                />
             </div>
-            <Button variant="ghost" size="sm" class="ml-auto" @click="clearFilters">
+            <Button
+                variant="ghost"
+                size="sm"
+                class="ml-auto"
+                @click="clearFilters"
+            >
                 Clear
             </Button>
         </div>
         <div class="flex flex-wrap items-start gap-3">
-            <MediaTagInput class="flex-1" :model-value="filters.tag_ids" :tags="tags" placeholder="Filter tags" @update:model-value="updateTags" />
+            <MediaTagInput
+                class="flex-1"
+                :model-value="filters.tag_ids"
+                :tags="tags"
+                placeholder="Filter tags"
+                @update:model-value="updateTags"
+            />
             <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-600 dark:text-gray-300">Sort</span>
+                <span class="text-sm text-gray-600 dark:text-gray-300"
+                    >Sort</span
+                >
                 <select
-                    class="py-1 h-9.5 rounded-md border border-gray-200 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:text-gray-100"
+                    class="h-9.5 rounded-md border border-gray-200 bg-transparent px-3 py-1 text-sm text-gray-800 dark:border-gray-700 dark:text-gray-100"
                     :value="`${filters.sort_by}:${filters.sort_dir}`"
                     @change="
-                        updateFilter('sort_by', ($event.target as HTMLSelectElement).value.split(':')[0] as Filters['sort_by']);
-                        updateFilter('sort_dir', ($event.target as HTMLSelectElement).value.split(':')[1] as Filters['sort_dir']);
+                        updateFilter(
+                            'sort_by',
+                            ($event.target as HTMLSelectElement).value.split(
+                                ':',
+                            )[0] as Filters['sort_by'],
+                        );
+                        updateFilter(
+                            'sort_dir',
+                            ($event.target as HTMLSelectElement).value.split(
+                                ':',
+                            )[1] as Filters['sort_dir'],
+                        );
                     "
                 >
                     <option value="uploaded_at:desc">Uploaded: Newest</option>

@@ -4,7 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import { computed } from 'vue';
 
@@ -42,14 +48,20 @@ const emit = defineEmits<{
 const promptOptions = computed(() => props.prompts ?? []);
 
 const isGenerating = computed(() => {
-    return props.generationStatus.status === 'PROCESSING' || props.generationStatus.status === 'QUEUED';
+    return (
+        props.generationStatus.status === 'PROCESSING' ||
+        props.generationStatus.status === 'QUEUED'
+    );
 });
 
 const togglePost = (postId: number, checked: boolean) => {
     if (checked) {
         props.form.post_ids = [...props.form.post_ids, postId]; // eslint-disable-line vue/no-mutating-props
     } else {
-        props.form.post_ids = props.form.post_ids.filter((id: number) => id !== postId); // eslint-disable-line vue/no-mutating-props
+        // eslint-disable-next-line vue/no-mutating-props
+        props.form.post_ids = props.form.post_ids.filter(
+            (id: number) => id !== postId,
+        );
     }
 };
 </script>
@@ -67,7 +79,11 @@ const togglePost = (postId: number, checked: boolean) => {
                         <SelectValue placeholder="Select prompt" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem v-for="prompt in promptOptions" :key="prompt.id" :value="prompt.id">
+                        <SelectItem
+                            v-for="prompt in promptOptions"
+                            :key="prompt.id"
+                            :value="prompt.id"
+                        >
                             {{ prompt.name }}
                         </SelectItem>
                     </SelectContent>
@@ -83,7 +99,7 @@ const togglePost = (postId: number, checked: boolean) => {
                     id="briefing_text"
                     v-model="form.briefing_text"
                     rows="3"
-                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                     placeholder="Tone, audience, notes..."
                 />
                 <!-- eslint-enable vue/no-mutating-props -->
@@ -94,7 +110,9 @@ const togglePost = (postId: number, checked: boolean) => {
             <div class="space-y-3">
                 <div class="flex items-center gap-2">
                     <Label>Source posts</Label>
-                    <Badge variant="outline">{{ form.post_ids?.length || 0 }} selected</Badge>
+                    <Badge variant="outline"
+                        >{{ form.post_ids?.length || 0 }} selected</Badge
+                    >
                 </div>
                 <div class="space-y-2">
                     <div
@@ -103,12 +121,29 @@ const togglePost = (postId: number, checked: boolean) => {
                         class="rounded-lg border bg-card p-3 shadow-sm transition hover:border-border/80"
                     >
                         <div class="flex items-start gap-2">
-                            <Checkbox :id="`post-${post.id}`" :model-value="form.post_ids.includes(post.id)" @update:model-value="(v: boolean) => togglePost(post.id, v)" />
+                            <Checkbox
+                                :id="`post-${post.id}`"
+                                :model-value="form.post_ids.includes(post.id)"
+                                @update:model-value="
+                                    (v: boolean) => togglePost(post.id, v)
+                                "
+                            />
                             <div class="space-y-1">
-                                <label :for="`post-${post.id}`" class="block text-sm font-semibold">
-                                    {{ post.external_title || post.internal_title || post.uri }}
+                                <label
+                                    :for="`post-${post.id}`"
+                                    class="block text-sm font-semibold"
+                                >
+                                    {{
+                                        post.external_title ||
+                                        post.internal_title ||
+                                        post.uri
+                                    }}
                                 </label>
-                                <p class="line-clamp-2 text-xs text-muted-foreground">{{ post.summary }}</p>
+                                <p
+                                    class="line-clamp-2 text-xs text-muted-foreground"
+                                >
+                                    {{ post.summary }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -117,7 +152,12 @@ const togglePost = (postId: number, checked: boolean) => {
             </div>
 
             <!-- Generate Button -->
-            <Button type="button" class="w-full" :disabled="!form.prompt_id || isGenerating" @click="emit('generate')">
+            <Button
+                type="button"
+                class="w-full"
+                :disabled="!form.prompt_id || isGenerating"
+                @click="emit('generate')"
+            >
                 <Spinner v-if="isGenerating" class="mr-2" />
                 {{ isGenerating ? 'Generating...' : 'Generate Content' }}
             </Button>
@@ -128,13 +168,19 @@ const togglePost = (postId: number, checked: boolean) => {
             <div class="flex items-center justify-between">
                 <div class="space-y-1">
                     <Label for="research_text">Research text</Label>
-                    <p class="text-xs text-muted-foreground">AI output lands here; copy it into the editor when ready.</p>
+                    <p class="text-xs text-muted-foreground">
+                        AI output lands here; copy it into the editor when
+                        ready.
+                    </p>
                 </div>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                <div
+                    class="flex items-center gap-2 text-xs text-muted-foreground"
+                >
                     <span
                         :class="[
                             'rounded-full px-3 py-1 text-xs font-medium',
-                            generationStatus.status === 'PROCESSING' || generationStatus.status === 'QUEUED'
+                            generationStatus.status === 'PROCESSING' ||
+                            generationStatus.status === 'QUEUED'
                                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-100'
                                 : generationStatus.status === 'COMPLETED'
                                   ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-100'
@@ -145,7 +191,12 @@ const togglePost = (postId: number, checked: boolean) => {
                     >
                         {{ generationStatus.status || 'Idle' }}
                     </span>
-                    <Button variant="secondary" size="sm" @click="emit('copy-to-editor')">Copy to editing tab</Button>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        @click="emit('copy-to-editor')"
+                        >Copy to editing tab</Button
+                    >
                 </div>
             </div>
             <!-- eslint-disable vue/no-mutating-props -->
@@ -153,13 +204,15 @@ const togglePost = (postId: number, checked: boolean) => {
                 id="research_text"
                 v-model="form.research_text"
                 rows="24"
-                class="w-full rounded-lg border border-input bg-background p-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                class="w-full rounded-lg border border-input bg-background p-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                 readonly
                 placeholder="Start generation to populate research text."
             />
             <!-- eslint-enable vue/no-mutating-props -->
             <InputError :message="form.errors.research_text" />
-            <p v-if="generationStatus.error" class="text-sm text-red-500">{{ generationStatus.error }}</p>
+            <p v-if="generationStatus.error" class="text-sm text-red-500">
+                {{ generationStatus.error }}
+            </p>
         </div>
     </div>
 </template>
