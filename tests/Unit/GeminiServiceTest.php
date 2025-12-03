@@ -2,6 +2,7 @@
 
 uses(Tests\TestCase::class);
 
+use App\Exceptions\AINotConfiguredException;
 use App\Services\GeminiService;
 use App\Services\TokenLimitService;
 use Illuminate\Support\Facades\Config;
@@ -15,7 +16,7 @@ it('throws when api key missing', function () {
     $service = new GeminiService($tokenLimitService);
 
     expect(fn () => $service->generateImage('prompt', '16:9'))
-        ->toThrow(RuntimeException::class, 'Gemini API key is not configured');
+        ->toThrow(AINotConfiguredException::class, 'Gemini is not configured for this team.');
 });
 
 it('surfaces overloaded errors clearly', function () {
@@ -37,6 +38,7 @@ it('surfaces overloaded errors clearly', function () {
     $tokenLimitService = mock(TokenLimitService::class);
 
     $service = new GeminiService($tokenLimitService);
+    $service->configureForTeam('test-key', 'gemini-3-pro-image-preview', '1K');
 
     $caught = null;
 

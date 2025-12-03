@@ -45,12 +45,19 @@ type ImageGeneration = {
     created_at: string;
 };
 
+type AiState = {
+    has_openai: boolean;
+    has_gemini: boolean;
+    settings_url: string;
+};
+
 const props = defineProps<{
     contentPieceId: number;
     imagePrompts: ImagePrompt[];
     imageGenerations: ImageGeneration[];
     attachedMediaIds: number[];
     hasEditedText: boolean;
+    ai: AiState;
 }>();
 
 const emit = defineEmits<{
@@ -72,6 +79,7 @@ const currentGenerationId = ref<number | null>(null);
 const isGeneratingPrompt = ref(false);
 const isGeneratingImage = ref(false);
 const error = ref<string | null>(null);
+const errorSettingsUrl = ref<string | null>(null);
 
 let pollingInterval: number | null = null;
 
@@ -87,7 +95,8 @@ const canGeneratePrompt = computed(() => {
     return (
         props.hasEditedText &&
         selectedPromptId.value !== null &&
-        !isGeneratingPrompt.value
+        !isGeneratingPrompt.value &&
+        props.ai.has_openai
     );
 });
 
@@ -95,7 +104,8 @@ const canGenerateImage = computed(() => {
     return (
         currentTextPrompt.value.trim().length > 0 &&
         currentGenerationId.value !== null &&
-        !isGeneratingImage.value
+        !isGeneratingImage.value &&
+        props.ai.has_gemini
     );
 });
 
@@ -104,9 +114,19 @@ const completedGenerations = computed(() => {
 });
 
 const generateTextPrompt = async () => {
-    if (!canGeneratePrompt.value) return;
+    if (!canGeneratePrompt.value) {
+        error.value = props.ai.has_openai
+            ? 'Add edited text and select a prompt first.'
+            : 'OpenAI API key is missing. Add one in Team Settings > AI.';
+        errorSettingsUrl.value = props.ai.has_openai
+            ? null
+            : props.ai.settings_url;
+
+        return;
+    }
 
     error.value = null;
+    errorSettingsUrl.value = null;
     isGeneratingPrompt.value = true;
 
     try {
@@ -126,7 +146,9 @@ const generateTextPrompt = async () => {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'Failed to generate prompt');
+            error.value = data.message || 'Failed to generate prompt';
+            errorSettingsUrl.value = data.settings_url || null;
+            return;
         }
 
         const newGeneration = data.image_generation as ImageGeneration;
@@ -137,6 +159,7 @@ const generateTextPrompt = async () => {
     } catch (e) {
         error.value =
             e instanceof Error ? e.message : 'Failed to generate prompt';
+        errorSettingsUrl.value = null;
     } finally {
         isGeneratingPrompt.value = false;
     }
@@ -173,12 +196,22 @@ const updateTextPrompt = async () => {
 };
 
 const generateImage = async () => {
-    if (!canGenerateImage.value) return;
+    if (!canGenerateImage.value) {
+        error.value = props.ai.has_gemini
+            ? 'Generate or edit a prompt first.'
+            : 'Gemini API key is missing. Add one in Team Settings > AI.';
+        errorSettingsUrl.value = props.ai.has_gemini
+            ? null
+            : props.ai.settings_url;
+
+        return;
+    }
 
     // First save any edits to the prompt
     await updateTextPrompt();
 
     error.value = null;
+    errorSettingsUrl.value = null;
     isGeneratingImage.value = true;
 
     try {
@@ -197,7 +230,11 @@ const generateImage = async () => {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'Failed to start image generation');
+            error.value = data.message || 'Failed to start image generation';
+            errorSettingsUrl.value = data.settings_url || null;
+            isGeneratingImage.value = false;
+
+            return;
         }
 
         // Start polling for status
@@ -205,6 +242,7 @@ const generateImage = async () => {
     } catch (e) {
         error.value =
             e instanceof Error ? e.message : 'Failed to generate image';
+        errorSettingsUrl.value = null;
         isGeneratingImage.value = false;
     }
 };
@@ -310,6 +348,27 @@ onUnmounted(() => {
                 <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">
                     Generate New Image
                 </h3>
+
+                <div
+                    v-if="!ai.has_openai || !ai.has_gemini"
+                    class="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+                >
+                    <p class="font-medium">AI setup required</p>
+                    <ul class="mt-1 list-disc space-y-1 pl-4 text-xs">
+                        <li v-if="!ai.has_openai">
+                            OpenAI key missing for text prompt generation.
+                        </li>
+                        <li v-if="!ai.has_gemini">
+                            Gemini key missing for image rendering.
+                        </li>
+                    </ul>
+                    <a
+                        :href="ai.settings_url"
+                        class="mt-2 inline-flex items-center text-xs font-semibold text-blue-700 underline dark:text-blue-300"
+                    >
+                        Open AI settings
+                    </a>
+                </div>
 
                 <!-- Warning if no edited text -->
                 <div
@@ -441,6 +500,12 @@ onUnmounted(() => {
 
             <!-- Error Display -->
             <InputError v-if="error" :message="error" />
+            <div
+                v-if="errorSettingsUrl"
+                class="text-xs text-blue-700 underline dark:text-blue-300"
+            >
+                <a :href="errorSettingsUrl">Configure AI settings</a>
+            </div>
         </div>
 
         <!-- Right Column: Generated Images -->

@@ -79,6 +79,12 @@ type ContentPiece = {
     publish_at?: string | null;
 };
 
+type AiState = {
+    has_openai: boolean;
+    has_gemini: boolean;
+    settings_url: string;
+};
+
 interface Props {
     contentPiece: ContentPiece;
     prompts: Prompt[];
@@ -90,9 +96,11 @@ interface Props {
     integrations: {
         linkedin: SocialIntegration[];
     };
+    ai: AiState;
 }
 
 const props = defineProps<Props>();
+const ai = props.ai;
 const integrations = props.integrations;
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -441,6 +449,7 @@ const generateContent = () => {
                         :prompts="prompts"
                         :posts="allAvailablePosts"
                         :generation-status="generation"
+                        :ai="ai"
                         @copy-to-editor="openCopyDialog"
                         @generate="generateContent"
                     />
@@ -478,6 +487,7 @@ const generateContent = () => {
                             !!form.edited_text &&
                             form.edited_text.trim().length > 0
                         "
+                        :ai="ai"
                         @generations-updated="handleGenerationsUpdated"
                         @attach-media="attachGeneratedImage"
                         @detach-media="detachGeneratedImage"

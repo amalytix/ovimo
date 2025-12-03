@@ -42,9 +42,15 @@ interface Source {
     tags: string[];
 }
 
+interface AiState {
+    has_openai: boolean;
+    settings_url: string;
+}
+
 interface Props {
     source: Source;
     tags: Tag[];
+    ai: AiState;
 }
 
 interface ExtractedPost {
@@ -53,6 +59,7 @@ interface ExtractedPost {
 }
 
 const props = defineProps<Props>();
+const ai = props.ai;
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Sources', href: '/sources' },
@@ -109,6 +116,12 @@ const analyzePageStructure = async () => {
         return;
     }
 
+    if (!ai.has_openai) {
+        analyzeError.value = 'OpenAI API key is not configured for this team. Add one in Team Settings > AI.';
+
+        return;
+    }
+
     isAnalyzing.value = true;
     analyzeError.value = '';
 
@@ -121,6 +134,10 @@ const analyzePageStructure = async () => {
     } catch (error: unknown) {
         if (axios.isAxiosError(error) && error.response?.data?.message) {
             analyzeError.value = error.response.data.message;
+
+            if (error.response.data.settings_url) {
+                analyzeError.value += ` Configure at ${error.response.data.settings_url}.`;
+            }
         } else {
             analyzeError.value = 'Failed to analyze page structure';
         }
@@ -340,10 +357,21 @@ const toggleExistingTag = (
                         </h3>
 
                         <div class="mb-4">
+                            <div
+                                v-if="!ai.has_openai"
+                                class="mb-2 text-xs text-amber-700 dark:text-amber-300"
+                            >
+                                OpenAI key missing. Configure it in
+                                <a :href="ai.settings_url" class="underline"
+                                    >Team Settings &gt; AI</a
+                                >.
+                            </div>
                             <Button
                                 type="button"
                                 variant="outline"
-                                :disabled="isAnalyzing || !form.url"
+                                :disabled="
+                                    isAnalyzing || !form.url || !ai.has_openai
+                                "
                                 @click="analyzePageStructure"
                             >
                                 {{

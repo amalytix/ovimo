@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AINotConfiguredException;
 use App\Exceptions\TokenLimitExceededException;
 use App\Http\Requests\StoreSourceRequest;
 use App\Http\Requests\UpdateSourceRequest;
 use App\Jobs\MonitorSource;
 use App\Models\Source;
 use App\Models\Tag;
-use App\Services\OpenAIService;
+use App\Services\AIServiceFactory;
 use App\Services\WebsiteParserService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -94,10 +95,15 @@ class SourceController extends Controller
 
     public function create(): Response
     {
-        $teamId = auth()->user()->current_team_id;
+        $team = auth()->user()->currentTeam;
+        $teamId = $team->id;
 
         return Inertia::render('Sources/Create', [
             'tags' => Tag::where('team_id', $teamId)->get(['id', 'name']),
+            'ai' => [
+                'has_openai' => $team->hasOpenAIConfigured(),
+                'settings_url' => '/team-settings?tab=ai',
+            ],
         ]);
     }
 
@@ -168,7 +174,8 @@ class SourceController extends Controller
     {
         $this->authorize('update', $source);
 
-        $teamId = auth()->user()->current_team_id;
+        $team = auth()->user()->currentTeam;
+        $teamId = $team->id;
 
         return Inertia::render('Sources/Edit', [
             'source' => [
@@ -187,6 +194,10 @@ class SourceController extends Controller
                 'tags' => $source->tags->pluck('name')->toArray(),
             ],
             'tags' => Tag::where('team_id', $teamId)->get(['id', 'name']),
+            'ai' => [
+                'has_openai' => $team->hasOpenAIConfigured(),
+                'settings_url' => '/team-settings?tab=ai',
+            ],
         ]);
     }
 
@@ -259,7 +270,7 @@ class SourceController extends Controller
             ->with('success', 'Source check has been queued.');
     }
 
-    public function analyzeWebpage(Request $request, OpenAIService $openAIService, WebsiteParserService $parserService): JsonResponse
+    public function analyzeWebpage(Request $request, AIServiceFactory $aiFactory, WebsiteParserService $parserService): JsonResponse
     {
         $request->validate([
             'url' => ['required', 'url', 'max:2048'],
@@ -273,6 +284,13 @@ class SourceController extends Controller
         $maxHtmlLength = 50000;
         if (strlen($html) > $maxHtmlLength) {
             $html = substr($html, 0, $maxHtmlLength);
+        }
+
+        try {
+            $team = auth()->user()->currentTeam;
+            $openAIService = $aiFactory->forOpenAI($team);
+        } catch (AINotConfiguredException $e) {
+            return $this->aiNotConfiguredResponse($e);
         }
 
         $result = $openAIService->analyzeWebpage($html);
@@ -337,5 +355,14 @@ class SourceController extends Controller
         }
 
         $source->tags()->sync($tagIds);
+    }
+
+    private function aiNotConfiguredResponse(AINotConfiguredException $exception): JsonResponse
+    {
+        return response()->json([
+            'message' => $exception->getMessage(),
+            'settings_url' => $exception->settingsUrl,
+            'provider' => $exception->provider,
+        ], 422);
     }
 }

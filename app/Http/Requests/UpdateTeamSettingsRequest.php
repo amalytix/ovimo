@@ -11,6 +11,27 @@ class UpdateTeamSettingsRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $payload = [];
+
+        if ($this->has('openai_api_key')) {
+            $payload['openai_api_key'] = $this->input('openai_api_key') === ''
+                ? null
+                : $this->input('openai_api_key');
+        }
+
+        if ($this->has('gemini_api_key')) {
+            $payload['gemini_api_key'] = $this->input('gemini_api_key') === ''
+                ? null
+                : $this->input('gemini_api_key');
+        }
+
+        if (! empty($payload)) {
+            $this->merge($payload);
+        }
+    }
+
     /**
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -23,6 +44,11 @@ class UpdateTeamSettingsRequest extends FormRequest
             'relevancy_prompt' => ['nullable', 'string', 'max:5000'],
             'positive_keywords' => ['nullable', 'string', 'max:10000'],
             'negative_keywords' => ['nullable', 'string', 'max:10000'],
+            'openai_api_key' => ['nullable', 'string', 'max:500'],
+            'openai_model' => ['nullable', 'string', 'max:50'],
+            'gemini_api_key' => ['nullable', 'string', 'max:500'],
+            'gemini_image_model' => ['nullable', 'string', 'max:100'],
+            'gemini_image_size' => ['nullable', 'string', 'in:1K,2K,4K'],
         ];
     }
 }

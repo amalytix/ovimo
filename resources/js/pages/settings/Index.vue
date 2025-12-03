@@ -57,6 +57,13 @@ interface Team {
     relevancy_prompt: string | null;
     positive_keywords: string | null;
     negative_keywords: string | null;
+    openai_api_key_masked: string | null;
+    openai_model: string | null;
+    gemini_api_key_masked: string | null;
+    gemini_image_model: string | null;
+    gemini_image_size: string | null;
+    has_openai: boolean;
+    has_gemini: boolean;
     users: TeamUser[];
 }
 
@@ -110,10 +117,47 @@ const settingsForm = useForm({
     relevancy_prompt: props.team.relevancy_prompt || '',
     positive_keywords: props.team.positive_keywords || '',
     negative_keywords: props.team.negative_keywords || '',
+    openai_api_key: '',
+    openai_model: props.team.openai_model || 'gpt-5-mini',
+    gemini_api_key: '',
+    gemini_image_model:
+        props.team.gemini_image_model || 'gemini-3-pro-image-preview',
+    gemini_image_size: props.team.gemini_image_size || '1K',
 });
 
+const clearOpenAIKey = ref(false);
+const clearGeminiKey = ref(false);
+
 const submitSettings = () => {
-    settingsForm.put('/team-settings');
+    settingsForm.transform((data) => {
+        const payload = { ...data } as Record<string, unknown>;
+
+        if (payload.openai_api_key === '' && !clearOpenAIKey.value) {
+            delete payload.openai_api_key;
+        }
+
+        if (payload.gemini_api_key === '' && !clearGeminiKey.value) {
+            delete payload.gemini_api_key;
+        }
+
+        return payload;
+    });
+
+    settingsForm.put('/team-settings', {
+        onFinish: () => {
+            clearOpenAIKey.value = false;
+            clearGeminiKey.value = false;
+            settingsForm.reset('openai_api_key', 'gemini_api_key');
+        },
+    });
+};
+
+const handleOpenAIInput = () => {
+    clearOpenAIKey.value = false;
+};
+
+const handleGeminiInput = () => {
+    clearGeminiKey.value = false;
 };
 
 // Webhook modal state
@@ -785,25 +829,192 @@ const formatExpiry = (expiresAt: string) => {
                 <TabsContent value="ai">
                     <form
                         @submit.prevent="submitSettings"
-                        class="max-w-2xl space-y-8"
+                        class="max-w-3xl space-y-10"
                     >
-                        <div class="space-y-6">
+                        <div class="space-y-8">
                             <div>
                                 <h2 class="text-lg font-medium">
-                                    AI Configuration
+                                    AI Providers
                                 </h2>
                                 <p
                                     class="mt-1 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    Customize how AI evaluates and processes
-                                    your content.
+                                    Store per-team credentials for OpenAI and Gemini. Keys stay hidden; leave the fields blank to keep existing values.
+                                </p>
+                            </div>
+
+                            <div class="grid gap-6 md:grid-cols-2">
+                                <div class="space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                                                OpenAI
+                                            </h3>
+                                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                                Used for summarization, analysis, and content generation.
+                                            </p>
+                                        </div>
+                                        <Badge :variant="props.team.has_openai ? 'default' : 'secondary'">
+                                            {{ props.team.has_openai ? 'Configured' : 'Not configured' }}
+                                        </Badge>
+                                    </div>
+
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        Current key: {{ props.team.openai_api_key_masked || 'None' }}
+                                    </p>
+
+                                    <div class="space-y-2">
+                                        <Label for="openai_api_key">API Key</Label>
+                                        <Input
+                                            id="openai_api_key"
+                                            v-model="settingsForm.openai_api_key"
+                                            type="password"
+                                            autocomplete="off"
+                                            placeholder="sk-..."
+                                            @input="handleOpenAIInput"
+                                        />
+                                        <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                            <span>Leave empty to keep current.</span>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                @click="
+                                                    clearOpenAIKey.value = true;
+                                                    settingsForm.openai_api_key = '';
+                                                "
+                                            >
+                                                Clear key
+                                            </Button>
+                                            <a
+                                                href="https://platform.openai.com/settings/organization/api-keys"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                class="text-blue-600 hover:underline dark:text-blue-300"
+                                            >
+                                                Get a key
+                                            </a>
+                                        </div>
+                                        <InputError :message="settingsForm.errors.openai_api_key" />
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label for="openai_model">Default Model</Label>
+                                        <Input
+                                            id="openai_model"
+                                            v-model="settingsForm.openai_model"
+                                            type="text"
+                                            placeholder="gpt-5.1"
+                                        />
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            Used for long-form generation. Summaries still use gpt-5-mini unless overridden in code.
+                                        </p>
+                                        <InputError :message="settingsForm.errors.openai_model" />
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                    <div class="flex items-start justify-between gap-3">
+        
+                                        <div>
+                                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                                                Google Gemini
+                                            </h3>
+                                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                                                Used for AI image generation.
+                                            </p>
+                                        </div>
+                                        <Badge :variant="props.team.has_gemini ? 'default' : 'secondary'">
+                                            {{ props.team.has_gemini ? 'Configured' : 'Not configured' }}
+                                        </Badge>
+                                    </div>
+
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        Current key: {{ props.team.gemini_api_key_masked || 'None' }}
+                                    </p>
+
+                                    <div class="space-y-2">
+                                        <Label for="gemini_api_key">API Key</Label>
+                                        <Input
+                                            id="gemini_api_key"
+                                            v-model="settingsForm.gemini_api_key"
+                                            type="password"
+                                            autocomplete="off"
+                                            placeholder="AIza..."
+                                            @input="handleGeminiInput"
+                                        />
+                                        <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                            <span>Leave empty to keep current.</span>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                @click="
+                                                    clearGeminiKey.value = true;
+                                                    settingsForm.gemini_api_key = '';
+                                                "
+                                            >
+                                                Clear key
+                                            </Button>
+                                            <a
+                                                href="https://aistudio.google.com/app/apikey"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                class="text-blue-600 hover:underline dark:text-blue-300"
+                                            >
+                                                Get a key
+                                            </a>
+                                        </div>
+                                        <InputError :message="settingsForm.errors.gemini_api_key" />
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label for="gemini_image_model">Image Model</Label>
+                                        <Input
+                                            id="gemini_image_model"
+                                            v-model="settingsForm.gemini_image_model"
+                                            type="text"
+                                            placeholder="gemini-3-pro-image-preview"
+                                        />
+                                        <InputError :message="settingsForm.errors.gemini_image_model" />
+                                    </div>
+
+                                    <div class="space-y-2">
+        
+                                        <Label for="gemini_image_size">Image Size</Label>
+                                        <Select
+                                            v-model="settingsForm.gemini_image_size"
+                                            name="gemini_image_size"
+                                            id="gemini_image_size"
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Choose size" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="1K">1K</SelectItem>
+                                                <SelectItem value="2K">2K</SelectItem>
+                                                <SelectItem value="4K">4K</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            Higher sizes produce larger images and may take longer.
+                                        </p>
+                                        <InputError :message="settingsForm.errors.gemini_image_size" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="text-lg font-medium">Content Controls</h3>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    Adjust how AI scores relevancy and how many tokens the team can spend.
                                 </p>
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="relevancy_prompt"
-                                    >Custom Relevancy Prompt</Label
-                                >
+                                <Label for="relevancy_prompt">Custom Relevancy Prompt</Label>
                                 <textarea
                                     id="relevancy_prompt"
                                     v-model="settingsForm.relevancy_prompt"
@@ -811,47 +1022,28 @@ const formatExpiry = (expiresAt: string) => {
                                     class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                     placeholder="You are a news analyst. Rate the relevancy of content for a business news monitoring system..."
                                 ></textarea>
-                                <p
-                                    class="text-xs text-gray-500 dark:text-gray-400"
-                                >
-                                    Customize how the AI evaluates post
-                                    relevancy. This prompt is used when
-                                    summarizing and scoring new posts.
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    Used when summarizing and scoring new posts.
                                 </p>
-                                <InputError
-                                    :message="
-                                        settingsForm.errors.relevancy_prompt
-                                    "
-                                />
+                                <InputError :message="settingsForm.errors.relevancy_prompt" />
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="monthly_token_limit"
-                                    >Monthly Token Limit</Label
-                                >
+                                <Label for="monthly_token_limit">Monthly Token Limit</Label>
                                 <Input
                                     id="monthly_token_limit"
-                                    v-model.number="
-                                        settingsForm.monthly_token_limit
-                                    "
+                                    v-model.number="settingsForm.monthly_token_limit"
                                     type="number"
                                     min="0"
                                 />
-                                <p
-                                    class="text-xs text-gray-500 dark:text-gray-400"
-                                >
-                                    Maximum tokens allowed per month. Leave
-                                    empty for unlimited.
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    Maximum tokens allowed per month. Leave empty for unlimited.
                                 </p>
-                                <InputError
-                                    :message="
-                                        settingsForm.errors.monthly_token_limit
-                                    "
-                                />
+                                <InputError :message="settingsForm.errors.monthly_token_limit" />
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-4 pt-4">
+                        <div class="flex items-center gap-4 pt-2">
                             <Button
                                 type="submit"
                                 :disabled="settingsForm.processing"
@@ -862,6 +1054,9 @@ const formatExpiry = (expiresAt: string) => {
                                         : 'Save Settings'
                                 }}
                             </Button>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Keys are stored per team. Features are disabled until keys are configured.
+                            </p>
                         </div>
                     </form>
                 </TabsContent>

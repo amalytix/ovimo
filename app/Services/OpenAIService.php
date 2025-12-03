@@ -2,24 +2,49 @@
 
 namespace App\Services;
 
+use App\Exceptions\AINotConfiguredException;
 use App\Models\Team;
 use App\Models\TokenUsageLog;
 use App\Models\User;
+use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 use OpenAI;
 
 class OpenAIService
 {
-    private OpenAI\Client $client;
+    private ?OpenAI\Client $client = null;
+
+    private ?string $configuredApiKey = null;
+
+    private ?string $configuredModel = null;
+
+    private int $timeout;
 
     public function __construct(private TokenLimitService $tokenLimitService)
     {
+        $this->timeout = (int) config('openai.request_timeout', 300);
+    }
+
+    public function configureForTeam(string $apiKey, ?string $model = null): self
+    {
+        $this->configuredApiKey = $apiKey;
+        $this->configuredModel = $model ?: config('openai.model', 'gpt-5.1');
+
         $this->client = OpenAI::factory()
-            ->withApiKey(config('openai.api_key'))
-            ->withHttpClient(new \GuzzleHttp\Client([
-                'timeout' => config('openai.request_timeout', 300),
+            ->withApiKey($apiKey)
+            ->withHttpClient(new Client([
+                'timeout' => $this->timeout,
             ]))
             ->make();
+
+        return $this;
+    }
+
+    private function ensureConfigured(): void
+    {
+        if (! $this->client || ! $this->configuredApiKey) {
+            throw new AINotConfiguredException('OpenAI is not configured for this team.', 'openai');
+        }
     }
 
     /**
@@ -27,6 +52,8 @@ class OpenAIService
      */
     public function summarizePost(string $uri, Team $team): array
     {
+        $this->ensureConfigured();
+
         $relevancyPrompt = $team->relevancy_prompt ?? 'You are a news analyst. Rate the relevancy of content for a business news monitoring system.';
 
         $prompt = <<<PROMPT
@@ -83,6 +110,8 @@ class OpenAIService
      */
     public function analyzeWebpage(string $html): array
     {
+        $this->ensureConfigured();
+
         $prompt = <<<PROMPT
         You are an expert web scraper. Analyze the following HTML and identify CSS selectors that can extract article/post titles and their corresponding links.
 
@@ -142,10 +171,12 @@ class OpenAIService
      */
     public function generateContent(string $prompt, string $context): array
     {
+        $this->ensureConfigured();
+
         // Extend PHP execution time for long-running AI requests
         set_time_limit(config('openai.request_timeout', 300));
 
-        $model = config('openai.model', 'gpt-5.1');
+        $model = $this->configuredModel ?? config('openai.model', 'gpt-5.1');
 
         Log::debug('OpenAI API Request - generateContent', [
             'model' => $model,
@@ -177,6 +208,8 @@ class OpenAIService
      */
     public function generateImagePrompt(string $contentText, string $promptTemplate): array
     {
+        $this->ensureConfigured();
+
         $model = 'gpt-5-mini';
 
         // Replace {{content}} placeholder with actual content

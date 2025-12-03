@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AINotConfiguredException;
 use App\Models\Team;
 use App\Models\TokenUsageLog;
 use App\Models\User;
@@ -12,20 +13,43 @@ use RuntimeException;
 
 class GeminiService
 {
-    private string $apiKey;
+    private const ALLOWED_IMAGE_SIZES = ['1K', '2K', '4K'];
 
-    private string $model;
+    private ?string $apiKey = null;
+
+    private ?string $model = null;
 
     private int $timeout;
 
-    private string $imageSize;
+    private ?string $imageSize = null;
+
+    private string $defaultImageModel;
+
+    private string $defaultImageSize;
 
     public function __construct(private TokenLimitService $tokenLimitService)
     {
-        $this->apiKey = (string) config('gemini.api_key', '');
-        $this->model = config('gemini.image_model', 'gemini-3-pro-image-preview');
         $this->timeout = config('gemini.request_timeout', 120);
-        $this->imageSize = config('gemini.image_size', '1K');
+        $this->defaultImageModel = config('gemini.image_model', 'gemini-3-pro-image-preview');
+        $this->defaultImageSize = config('gemini.image_size', '1K');
+    }
+
+    public function configureForTeam(string $apiKey, ?string $imageModel = null, ?string $imageSize = null): self
+    {
+        $this->apiKey = $apiKey;
+        $this->model = $imageModel ?: $this->defaultImageModel;
+
+        $size = $imageSize ?: $this->defaultImageSize;
+        $this->imageSize = in_array($size, self::ALLOWED_IMAGE_SIZES, true) ? $size : $this->defaultImageSize;
+
+        return $this;
+    }
+
+    private function ensureConfigured(): void
+    {
+        if (! $this->apiKey || ! $this->model) {
+            throw new AINotConfiguredException('Gemini is not configured for this team.', 'gemini');
+        }
     }
 
     /**
@@ -35,9 +59,7 @@ class GeminiService
      */
     public function generateImage(string $prompt, string $aspectRatio): array
     {
-        if (empty($this->apiKey)) {
-            throw new RuntimeException('Gemini API key is not configured');
-        }
+        $this->ensureConfigured();
 
         $endpoint = sprintf(
             'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s',
@@ -194,6 +216,8 @@ class GeminiService
 
     public function trackUsage(?User $user, Team $team, string $operation): void
     {
+        $this->ensureConfigured();
+
         // Gemini image generation doesn't provide token counts in the same way as text models
         // We'll track it as a fixed cost per image generation for now
         $estimatedTokens = 1000;

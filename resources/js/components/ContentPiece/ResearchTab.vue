@@ -33,11 +33,17 @@ type GenerationStatus = {
     error?: string | null;
 };
 
+type AiState = {
+    has_openai: boolean;
+    settings_url: string;
+};
+
 const props = defineProps<{
     form: Record<string, any>;
     prompts: Prompt[];
     posts: Post[];
     generationStatus: GenerationStatus;
+    ai: AiState;
 }>();
 
 const emit = defineEmits<{
@@ -72,7 +78,21 @@ const togglePost = (postId: number, checked: boolean) => {
         <div class="space-y-6">
             <!-- Prompt Template -->
             <div class="space-y-2">
-                <Label for="prompt_id">Prompt template</Label>
+                <div class="flex items-center justify-between">
+                    <Label for="prompt_id">Prompt template</Label>
+                    <div
+                        v-if="!ai.has_openai"
+                        class="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300"
+                    >
+                        <span>OpenAI key missing.</span>
+                        <a
+                            :href="ai.settings_url"
+                            class="underline"
+                        >
+                            Configure in AI settings
+                        </a>
+                    </div>
+                </div>
                 <!-- eslint-disable-next-line vue/no-mutating-props -->
                 <Select v-model="form.prompt_id">
                     <SelectTrigger>
@@ -155,7 +175,7 @@ const togglePost = (postId: number, checked: boolean) => {
             <Button
                 type="button"
                 class="w-full"
-                :disabled="!form.prompt_id || isGenerating"
+                :disabled="!form.prompt_id || isGenerating || !ai.has_openai"
                 @click="emit('generate')"
             >
                 <Spinner v-if="isGenerating" class="mr-2" />

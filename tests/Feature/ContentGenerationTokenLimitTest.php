@@ -6,6 +6,7 @@ use App\Models\Prompt;
 use App\Models\Team;
 use App\Models\TokenUsageLog;
 use App\Models\User;
+use App\Services\AIServiceFactory;
 use App\Services\OpenAIService;
 use App\Services\TokenLimitService;
 use App\Services\WebContentExtractor;
@@ -16,7 +17,11 @@ test('content generation job stops when team is over limit', function () {
     /** @var User $user */
     $user = User::factory()->create();
     /** @var Team $team */
-    $team = Team::factory()->create(['owner_id' => $user->id, 'monthly_token_limit' => 1000]);
+    $team = Team::factory()->create([
+        'owner_id' => $user->id,
+        'monthly_token_limit' => 1000,
+        'openai_api_key' => 'sk-test',
+    ]);
     $team->users()->attach($user);
 
     $prompt = Prompt::factory()->for($team)->create([
@@ -43,6 +48,7 @@ test('content generation job stops when team is over limit', function () {
     ]);
 
     mock(OpenAIService::class, function ($mock) {
+        $mock->shouldReceive('configureForTeam')->andReturnSelf();
         $mock->shouldReceive('generateContent')->never();
         $mock->shouldReceive('trackUsage')->never();
     });
@@ -52,7 +58,7 @@ test('content generation job stops when team is over limit', function () {
     });
 
     (new GenerateContentPiece($piece))->handle(
-        app(OpenAIService::class),
+        app(AIServiceFactory::class),
         app(WebContentExtractor::class),
         app(TokenLimitService::class)
     );

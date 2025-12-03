@@ -2,6 +2,7 @@
 
 use App\Jobs\MonitorSource;
 use App\Models\Source;
+use App\Services\AIServiceFactory;
 use App\Services\OpenAIService;
 use App\Services\WebsiteParserService;
 use Illuminate\Support\Facades\Http;
@@ -186,9 +187,14 @@ test('analyze webpage endpoint calls openai service', function () {
         ]);
     $mockOpenAI->shouldReceive('trackUsage')->once();
 
+    $factory = Mockery::mock(AIServiceFactory::class);
+    $factory->shouldReceive('forOpenAI')->andReturn($mockOpenAI);
+
     $this->app->instance(OpenAIService::class, $mockOpenAI);
+    $this->app->instance(AIServiceFactory::class, $factory);
 
     [$user, $team] = createUserWithTeam();
+    $team->update(['openai_api_key' => 'sk-test']);
 
     $response = $this->actingAs($user)->postJson('/sources/analyze-webpage', [
         'url' => 'https://example.com/',

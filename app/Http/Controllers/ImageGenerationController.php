@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AINotConfiguredException;
 use App\Http\Requests\ImageGeneration\StoreImageGenerationRequest;
 use App\Http\Requests\ImageGeneration\UpdateImageGenerationRequest;
 use App\Jobs\GenerateAIImage;
 use App\Models\ContentPiece;
 use App\Models\ImageGeneration;
 use App\Models\Prompt;
-use App\Services\OpenAIService;
+use App\Services\AIServiceFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ImageGenerationController extends Controller
 {
-    public function store(StoreImageGenerationRequest $request, ContentPiece $contentPiece, OpenAIService $openAI): JsonResponse
+    public function store(StoreImageGenerationRequest $request, ContentPiece $contentPiece, AIServiceFactory $aiFactory): JsonResponse
     {
         $this->authorize('update', $contentPiece);
 
@@ -34,6 +35,12 @@ class ImageGenerationController extends Controller
             return response()->json([
                 'message' => 'Content piece has no edited text. Please add content in the Editing tab first.',
             ], 422);
+        }
+
+        try {
+            $openAI = $aiFactory->forOpenAI($team);
+        } catch (AINotConfiguredException $e) {
+            return $this->aiNotConfiguredResponse($e);
         }
 
         // Generate image prompt using OpenAI
@@ -88,7 +95,7 @@ class ImageGenerationController extends Controller
         ]);
     }
 
-    public function generate(Request $request, ContentPiece $contentPiece, ImageGeneration $imageGeneration): JsonResponse
+    public function generate(Request $request, ContentPiece $contentPiece, ImageGeneration $imageGeneration, AIServiceFactory $aiFactory): JsonResponse
     {
         $this->authorize('update', $contentPiece);
 
@@ -106,6 +113,12 @@ class ImageGenerationController extends Controller
             return response()->json([
                 'message' => 'Image is already being generated.',
             ], 422);
+        }
+
+        try {
+            $aiFactory->forGemini($contentPiece->team);
+        } catch (AINotConfiguredException $e) {
+            return $this->aiNotConfiguredResponse($e);
         }
 
         // Queue the job
@@ -183,5 +196,14 @@ class ImageGenerationController extends Controller
             'created_at' => $imageGeneration->created_at?->toDateTimeString(),
             'updated_at' => $imageGeneration->updated_at?->toDateTimeString(),
         ];
+    }
+
+    private function aiNotConfiguredResponse(AINotConfiguredException $exception): JsonResponse
+    {
+        return response()->json([
+            'message' => $exception->getMessage(),
+            'settings_url' => $exception->settingsUrl,
+            'provider' => $exception->provider,
+        ], 422);
     }
 }

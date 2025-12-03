@@ -24,6 +24,11 @@ class TeamFactory extends Factory
             'post_auto_hide_days' => null,
             'monthly_token_limit' => 10000000,
             'relevancy_prompt' => null,
+            'openai_api_key' => null,
+            'openai_model' => 'gpt-5-mini',
+            'gemini_api_key' => null,
+            'gemini_image_model' => 'gemini-3-pro-image-preview',
+            'gemini_image_size' => '1K',
         ];
     }
 

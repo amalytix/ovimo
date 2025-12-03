@@ -214,7 +214,7 @@ class ContentPieceController extends Controller
     {
         $this->authorize('view', $contentPiece);
 
-        $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary,external_title,internal_title', 'media.tags', 'imageGenerations.prompt', 'imageGenerations.media']);
+        $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary,external_title,internal_title', 'media.tags', 'imageGenerations.prompt', 'imageGenerations.media', 'team']);
 
         $teamId = auth()->user()->current_team_id;
 
@@ -313,6 +313,11 @@ class ContentPieceController extends Controller
             'integrations' => [
                 'linkedin' => $linkedinIntegrations,
             ],
+            'ai' => [
+                'has_openai' => $contentPiece->team->hasOpenAIConfigured(),
+                'has_gemini' => $contentPiece->team->hasGeminiConfigured(),
+                'settings_url' => '/team-settings?tab=ai',
+            ],
         ]);
     }
 
@@ -386,6 +391,10 @@ class ContentPieceController extends Controller
 
         if (! $contentPiece->prompt) {
             return back()->with('error', 'Please select a prompt template first.');
+        }
+
+        if (! $contentPiece->team->hasOpenAIConfigured()) {
+            return back()->with('error', 'OpenAI API key is not configured for this team. Add one in the AI tab of Team Settings.');
         }
 
         return $this->generateContentForPiece($contentPiece, $request->query('tab'));

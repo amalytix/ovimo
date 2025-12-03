@@ -2,9 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\AINotConfiguredException;
 use App\Exceptions\TokenLimitExceededException;
 use App\Models\Post;
-use App\Services\OpenAIService;
+use App\Services\AIServiceFactory;
 use App\Services\TokenLimitService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -22,7 +23,7 @@ class SummarizePost implements ShouldQueue
         public Post $post
     ) {}
 
-    public function handle(OpenAIService $openAI, TokenLimitService $tokenLimitService): void
+    public function handle(AIServiceFactory $aiFactory, TokenLimitService $tokenLimitService): void
     {
         // Skip if already summarized
         if ($this->post->summary !== null) {
@@ -32,6 +33,7 @@ class SummarizePost implements ShouldQueue
         $team = $this->post->source->team;
 
         try {
+            $openAI = $aiFactory->forOpenAI($team);
             $tokenLimitService->assertWithinLimit($team, 0, null, 'post_summarization');
 
             $result = $openAI->summarizePost($this->post->uri, $team);
@@ -54,6 +56,10 @@ class SummarizePost implements ShouldQueue
             );
 
             Log::info("Summarized post {$this->post->id}: score {$result['relevancy_score']}, tokens: {$result['total_tokens']}");
+        } catch (AINotConfiguredException $e) {
+            Log::warning("Skipping summarization for post {$this->post->id}: {$e->getMessage()}");
+
+            return;
         } catch (\Throwable $e) {
             if ($e instanceof TokenLimitExceededException) {
                 Log::warning("Skipping summarization for post {$this->post->id}: token limit exceeded");

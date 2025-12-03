@@ -34,6 +34,13 @@ class SettingsController extends Controller
                 'relevancy_prompt' => $team->relevancy_prompt,
                 'positive_keywords' => $team->positive_keywords,
                 'negative_keywords' => $team->negative_keywords,
+                'openai_api_key_masked' => $team->getMaskedOpenAIKey(),
+                'openai_model' => $team->openai_model,
+                'gemini_api_key_masked' => $team->getMaskedGeminiKey(),
+                'gemini_image_model' => $team->gemini_image_model,
+                'gemini_image_size' => $team->gemini_image_size,
+                'has_openai' => $team->hasOpenAIConfigured(),
+                'has_gemini' => $team->hasGeminiConfigured(),
                 'users' => $team->users->map(fn ($u) => [
                     'id' => $u->id,
                     'name' => $u->name,
@@ -76,7 +83,15 @@ class SettingsController extends Controller
             abort(403, 'Only the team owner can update settings.');
         }
 
-        $team->update($request->validated());
+        $payload = $request->validated();
+
+        foreach (['openai_api_key', 'gemini_api_key'] as $key) {
+            if (array_key_exists($key, $payload) && $payload[$key] === '') {
+                $payload[$key] = null;
+            }
+        }
+
+        $team->update($payload);
 
         return back()->with('success', 'Team settings updated successfully.');
     }

@@ -15,13 +15,18 @@ test('authenticated users can store image generation', function () {
     Queue::fake();
 
     [$user, $team] = createUserWithTeam();
+    $team->update([
+        'openai_api_key' => 'sk-openai',
+        'gemini_api_key' => 'gm-key',
+    ]);
     $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
     $contentPiece = ContentPiece::factory()->create([
         'team_id' => $team->id,
         'edited_text' => 'Test content for image generation',
     ]);
 
-    $this->mock(OpenAIService::class, function ($mock) {
+    $openAI = $this->mock(OpenAIService::class, function ($mock) {
+        $mock->shouldReceive('configureForTeam')->andReturnSelf();
         $mock->shouldReceive('generateImagePrompt')
             ->once()
             ->andReturn([
@@ -49,6 +54,24 @@ test('authenticated users can store image generation', function () {
         'aspect_ratio' => '16:9',
         'status' => 'DRAFT',
     ]);
+});
+
+test('image generation store returns 422 when openai is missing', function () {
+    [$user, $team] = createUserWithTeam();
+    $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
+    $contentPiece = ContentPiece::factory()->create([
+        'team_id' => $team->id,
+        'edited_text' => 'Content',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson("/content-pieces/{$contentPiece->id}/image-generations", [
+            'prompt_id' => $prompt->id,
+            'aspect_ratio' => '16:9',
+        ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonPath('settings_url', '/team-settings?tab=ai');
 });
 
 test('store image generation validates prompt exists', function () {
@@ -113,6 +136,7 @@ test('authenticated users can trigger image generation', function () {
     Queue::fake();
 
     [$user, $team] = createUserWithTeam();
+    $team->update(['gemini_api_key' => 'gm-key']);
     $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
     $imageGeneration = ImageGeneration::factory()->create([
         'content_piece_id' => $contentPiece->id,

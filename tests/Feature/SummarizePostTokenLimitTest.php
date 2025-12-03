@@ -5,6 +5,7 @@ use App\Models\Post;
 use App\Models\Team;
 use App\Models\TokenUsageLog;
 use App\Models\User;
+use App\Services\AIServiceFactory;
 use App\Services\OpenAIService;
 use App\Services\TokenLimitService;
 
@@ -14,7 +15,11 @@ test('summarization job stops when team is over limit', function () {
     /** @var User $user */
     $user = User::factory()->create();
     /** @var Team $team */
-    $team = Team::factory()->create(['owner_id' => $user->id, 'monthly_token_limit' => 1000]);
+    $team = Team::factory()->create([
+        'owner_id' => $user->id,
+        'monthly_token_limit' => 1000,
+        'openai_api_key' => 'sk-test',
+    ]);
     $team->users()->attach($user);
 
     $source = $team->sources()->create([
@@ -45,12 +50,13 @@ test('summarization job stops when team is over limit', function () {
     ]);
 
     mock(OpenAIService::class, function ($mock) {
+        $mock->shouldReceive('configureForTeam')->andReturnSelf();
         $mock->shouldReceive('summarizePost')->never();
         $mock->shouldReceive('trackUsage')->never();
     });
 
     (new SummarizePost($post))->handle(
-        app(OpenAIService::class),
+        app(AIServiceFactory::class),
         app(TokenLimitService::class)
     );
 

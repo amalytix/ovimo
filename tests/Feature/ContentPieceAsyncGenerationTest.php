@@ -35,6 +35,7 @@ test('prevents concurrent generation for same content piece', function () {
         'prompt_id' => $prompt->id,
         'generation_status' => 'PROCESSING',
     ]);
+    $team->update(['openai_api_key' => 'sk-test']);
 
     $response = $this->actingAs($user)->post("/content-pieces/{$contentPiece->id}/generate");
 

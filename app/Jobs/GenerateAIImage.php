@@ -2,11 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\AINotConfiguredException;
 use App\Exceptions\TokenLimitExceededException;
 use App\Models\ImageGeneration;
 use App\Models\Media;
 use App\Models\MediaTag;
-use App\Services\GeminiService;
+use App\Services\AIServiceFactory;
 use App\Services\TokenLimitService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -28,7 +29,7 @@ class GenerateAIImage implements ShouldQueue
         public ImageGeneration $imageGeneration
     ) {}
 
-    public function handle(GeminiService $gemini, TokenLimitService $tokenLimitService): void
+    public function handle(AIServiceFactory $aiFactory, TokenLimitService $tokenLimitService): void
     {
         Log::info("Starting image generation job for {$this->imageGeneration->id}");
 
@@ -40,6 +41,8 @@ class GenerateAIImage implements ShouldQueue
         try {
             $contentPiece = $this->imageGeneration->contentPiece;
             $team = $contentPiece->team;
+
+            $gemini = $aiFactory->forGemini($team);
 
             $tokenLimitService->assertWithinLimit($team, 0, null, 'image_generation');
 
@@ -82,6 +85,15 @@ class GenerateAIImage implements ShouldQueue
                 'image_generation_id' => $this->imageGeneration->id,
                 'media_id' => $media->id,
             ]);
+        } catch (AINotConfiguredException $e) {
+            $this->imageGeneration->update([
+                'status' => ImageGeneration::STATUS_FAILED,
+                'error_message' => 'Gemini is not configured for this team. Add an API key in the AI tab of Team Settings.',
+            ]);
+
+            Log::warning("Skipping image generation {$this->imageGeneration->id}: {$e->getMessage()}");
+
+            return;
         } catch (\Throwable $e) {
             if ($e instanceof TokenLimitExceededException) {
                 $this->imageGeneration->update([

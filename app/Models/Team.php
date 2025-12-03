@@ -22,6 +22,11 @@ class Team extends Model
         'relevancy_prompt',
         'positive_keywords',
         'negative_keywords',
+        'openai_api_key',
+        'openai_model',
+        'gemini_api_key',
+        'gemini_image_model',
+        'gemini_image_size',
     ];
 
     protected function casts(): array
@@ -30,7 +35,41 @@ class Team extends Model
             'post_auto_hide_days' => 'integer',
             'monthly_token_limit' => 'integer',
             'is_active' => 'boolean',
+            'openai_api_key' => 'encrypted',
+            'gemini_api_key' => 'encrypted',
         ];
+    }
+
+    public function hasOpenAIConfigured(): bool
+    {
+        return filled($this->openai_api_key);
+    }
+
+    public function hasGeminiConfigured(): bool
+    {
+        return filled($this->gemini_api_key);
+    }
+
+    public function getMaskedOpenAIKey(): ?string
+    {
+        if (! $this->openai_api_key) {
+            return null;
+        }
+
+        $key = $this->openai_api_key;
+
+        return '****...'.substr($key, -min(8, strlen($key)));
+    }
+
+    public function getMaskedGeminiKey(): ?string
+    {
+        if (! $this->gemini_api_key) {
+            return null;
+        }
+
+        $key = $this->gemini_api_key;
+
+        return '****...'.substr($key, -min(8, strlen($key)));
     }
 
     public function owner(): BelongsTo

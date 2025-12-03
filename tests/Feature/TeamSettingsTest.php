@@ -39,6 +39,68 @@ test('team owner can update settings', function () {
     ]);
 });
 
+test('team owner can update ai credentials', function () {
+    [$user, $team] = createUserWithTeam();
+
+    $response = $this->actingAs($user)->put('/team-settings', [
+        'name' => 'Team Name',
+        'openai_api_key' => 'sk-test-openai',
+        'openai_model' => 'gpt-5.1',
+        'gemini_api_key' => 'test-gemini-key',
+        'gemini_image_model' => 'gemini-3-pro-image-preview',
+        'gemini_image_size' => '2K',
+    ]);
+
+    $response->assertRedirect();
+
+    $team->refresh();
+
+    expect($team->openai_api_key)->toBe('sk-test-openai')
+        ->and($team->openai_model)->toBe('gpt-5.1')
+        ->and($team->gemini_api_key)->toBe('test-gemini-key')
+        ->and($team->gemini_image_model)->toBe('gemini-3-pro-image-preview')
+        ->and($team->gemini_image_size)->toBe('2K');
+});
+
+test('leaving api keys blank keeps existing values', function () {
+    [$user, $team] = createUserWithTeam();
+    $team->update([
+        'openai_api_key' => 'sk-existing',
+        'gemini_api_key' => 'gm-existing',
+    ]);
+
+    $this->actingAs($user)->put('/team-settings', [
+        'name' => 'Team Name',
+    ])->assertRedirect();
+
+    $team->refresh();
+
+    expect($team->openai_api_key)->toBe('sk-existing')
+        ->and($team->gemini_api_key)->toBe('gm-existing');
+});
+
+test('api keys can be cleared', function () {
+    [$user, $team] = createUserWithTeam();
+    $team->update([
+        'openai_api_key' => 'sk-existing',
+        'gemini_api_key' => 'gm-existing',
+    ]);
+
+    $this->actingAs($user)->put('/team-settings', [
+        'name' => 'Team Name',
+        'openai_api_key' => '',
+        'gemini_api_key' => '',
+        'openai_model' => 'gpt-5.1',
+        'gemini_image_model' => 'gemini-3-pro-image-preview',
+        'gemini_image_size' => '1K',
+    ])->assertRedirect();
+
+    $team->refresh();
+
+    expect($team->openai_api_key)->toBeNull()
+        ->and($team->gemini_api_key)->toBeNull();
+});
+
 test('non-owner cannot update team settings', function () {
     [$owner, $team] = createUserWithTeam();
     $member = User::factory()->create(['current_team_id' => $team->id]);

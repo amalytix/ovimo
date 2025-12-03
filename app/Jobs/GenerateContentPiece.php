@@ -4,9 +4,10 @@ namespace App\Jobs;
 
 use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
+use App\Exceptions\AINotConfiguredException;
 use App\Exceptions\TokenLimitExceededException;
 use App\Models\ContentPiece;
-use App\Services\OpenAIService;
+use App\Services\AIServiceFactory;
 use App\Services\TokenLimitService;
 use App\Services\WebContentExtractor;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,7 +28,7 @@ class GenerateContentPiece implements ShouldQueue
         public ContentPiece $contentPiece
     ) {}
 
-    public function handle(OpenAIService $openAI, WebContentExtractor $extractor, TokenLimitService $tokenLimitService): void
+    public function handle(AIServiceFactory $aiFactory, WebContentExtractor $extractor, TokenLimitService $tokenLimitService): void
     {
         // Update status to PROCESSING
         $this->contentPiece->update([
@@ -37,7 +38,11 @@ class GenerateContentPiece implements ShouldQueue
         ]);
 
         try {
-            $tokenLimitService->assertWithinLimit($this->contentPiece->team, 0, null, 'content_generation');
+            $team = $this->contentPiece->team;
+
+            $openAI = $aiFactory->forOpenAI($team);
+
+            $tokenLimitService->assertWithinLimit($team, 0, null, 'content_generation');
 
             // 1. Build context from linked posts
             $context = $this->buildContextFromPosts($extractor);
@@ -56,7 +61,6 @@ class GenerateContentPiece implements ShouldQueue
             ]);
 
             // 5. Track usage
-            $team = $this->contentPiece->team;
             $openAI->trackUsage(
                 $result['input_tokens'],
                 $result['output_tokens'],
@@ -71,6 +75,16 @@ class GenerateContentPiece implements ShouldQueue
             ContentPieceGenerated::dispatch($this->contentPiece);
 
             Log::info("Generated content for piece {$this->contentPiece->id}: {$result['total_tokens']} tokens");
+        } catch (AINotConfiguredException $e) {
+            $this->contentPiece->update([
+                'generation_status' => 'FAILED',
+                'generation_error' => 'OpenAI is not configured for this team. Add an API key in the AI tab of Team Settings.',
+                'generation_error_occurred_at' => now(),
+            ]);
+
+            Log::warning("Skipping content generation for piece {$this->contentPiece->id}: {$e->getMessage()}");
+
+            return;
         } catch (\Throwable $e) {
             if ($e instanceof TokenLimitExceededException) {
                 $this->contentPiece->update([
