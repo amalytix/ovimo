@@ -130,28 +130,30 @@ test('authenticated users can create a content piece', function () {
 
     $response = $this->actingAs($user)->post('/content-pieces', [
         'internal_name' => 'Test Content Piece',
-        'prompt_id' => $prompt->id,
-        'briefing_text' => 'Some briefing text',
-        'channel' => 'BLOG_POST',
         'target_language' => 'ENGLISH',
-        'media_ids' => [$media->id],
+        'sources' => [
+            [
+                'type' => 'MANUAL',
+                'title' => 'Test Source',
+                'content' => 'Some background content',
+            ],
+        ],
     ]);
 
     $contentPiece = ContentPiece::where('internal_name', 'Test Content Piece')->first();
-    $response->assertRedirect("/content-pieces/{$contentPiece->id}/edit");
+    $response->assertRedirect("/content-pieces/{$contentPiece->id}/edit?tab=derivatives");
 
     $this->assertDatabaseHas('content_pieces', [
         'team_id' => $team->id,
         'internal_name' => 'Test Content Piece',
-        'prompt_id' => $prompt->id,
-        'channel' => 'BLOG_POST',
         'target_language' => 'ENGLISH',
         'status' => 'NOT_STARTED',
     ]);
 
-    $this->assertDatabaseHas('content_piece_media', [
+    $this->assertDatabaseHas('background_sources', [
         'content_piece_id' => $contentPiece->id,
-        'media_id' => $media->id,
+        'type' => 'MANUAL',
+        'title' => 'Test Source',
     ]);
 });
 
@@ -160,19 +162,21 @@ test('content piece creation validates required fields', function () {
 
     $response = $this->actingAs($user)->post('/content-pieces', []);
 
-    $response->assertSessionHasErrors(['internal_name', 'channel', 'target_language']);
+    $response->assertSessionHasErrors(['internal_name', 'target_language']);
 });
 
-test('content piece creation validates channel is valid', function () {
+test('content piece creation validates source type', function () {
     [$user, $team] = createUserWithTeam();
 
     $response = $this->actingAs($user)->post('/content-pieces', [
         'internal_name' => 'Test',
-        'channel' => 'INVALID_CHANNEL',
         'target_language' => 'ENGLISH',
+        'sources' => [
+            ['type' => 'INVALID_TYPE'],
+        ],
     ]);
 
-    $response->assertSessionHasErrors(['channel']);
+    $response->assertSessionHasErrors(['sources.0.type']);
 });
 
 test('content piece creation validates target language', function () {
@@ -180,7 +184,6 @@ test('content piece creation validates target language', function () {
 
     $response = $this->actingAs($user)->post('/content-pieces', [
         'internal_name' => 'Test',
-        'channel' => 'BLOG_POST',
         'target_language' => 'SPANISH',
     ]);
 

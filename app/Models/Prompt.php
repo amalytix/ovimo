@@ -18,6 +18,7 @@ class Prompt extends Model
 
     protected $fillable = [
         'team_id',
+        'channel_id',
         'type',
         'internal_name',
         'channel',
@@ -35,6 +36,11 @@ class Prompt extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(Channel::class);
     }
 
     public function contentPieces(): HasMany

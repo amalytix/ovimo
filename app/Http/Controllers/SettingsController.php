@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ImportSourcesRequest;
 use App\Http\Requests\UpdateTeamSettingsRequest;
+use App\Models\Channel;
 use App\Models\SocialIntegration;
 use App\Models\Source;
 use App\Models\Tag;
@@ -71,6 +72,20 @@ class SettingsController extends Controller
                         'token_expires_at',
                     ]),
             ],
+            'channels' => Channel::query()
+                ->where('team_id', $team->id)
+                ->ordered()
+                ->withCount('derivatives')
+                ->get()
+                ->map(fn (Channel $channel) => [
+                    'id' => $channel->id,
+                    'name' => $channel->name,
+                    'icon' => $channel->icon,
+                    'color' => $channel->color,
+                    'sort_order' => $channel->sort_order,
+                    'is_active' => $channel->is_active,
+                    'derivatives_count' => $channel->derivatives_count,
+                ]),
         ]);
     }
 

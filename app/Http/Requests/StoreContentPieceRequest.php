@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Database\Query\Builder;
+use App\Models\BackgroundSource;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,21 +23,21 @@ class StoreContentPieceRequest extends FormRequest
      */
     public function rules(): array
     {
+        $teamId = auth()->user()->current_team_id;
+
         return [
             'internal_name' => ['required', 'string', 'max:255'],
-            'prompt_id' => ['nullable', 'exists:prompts,id'],
-            'briefing_text' => ['nullable', 'string', 'max:5000'],
-            'channel' => ['required', 'in:BLOG_POST,LINKEDIN_POST,YOUTUBE_SCRIPT'],
             'target_language' => ['required', 'in:ENGLISH,GERMAN'],
-            'post_ids' => ['nullable', 'array'],
-            'post_ids.*' => ['exists:posts,id'],
             'published_at' => ['nullable', 'date', 'after_or_equal:now'],
-            'research_text' => ['nullable', 'string'],
-            'edited_text' => ['nullable', 'string'],
-            'media_ids' => ['nullable', 'array'],
-            'media_ids.*' => [
-                Rule::exists('media', 'id')->where(fn (Builder $query) => $query->where('team_id', auth()->user()->current_team_id)),
-            ],
+
+            // Background sources
+            'sources' => ['nullable', 'array'],
+            'sources.*.type' => ['required', Rule::in([BackgroundSource::TYPE_POST, BackgroundSource::TYPE_MANUAL])],
+            'sources.*.post_id' => ['nullable', 'exists:posts,id'],
+            'sources.*.title' => ['nullable', 'string', 'max:500'],
+            'sources.*.content' => ['nullable', 'string'],
+            'sources.*.url' => ['nullable', 'url', 'max:2000'],
+            'sources.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 

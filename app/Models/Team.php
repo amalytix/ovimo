@@ -97,6 +97,11 @@ class Team extends Model
         return $this->hasMany(Prompt::class);
     }
 
+    public function channels(): HasMany
+    {
+        return $this->hasMany(Channel::class);
+    }
+
     public function media(): HasMany
     {
         return $this->hasMany(Media::class);

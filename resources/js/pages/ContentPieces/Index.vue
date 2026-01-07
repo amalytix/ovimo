@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ContentPieceBulkActions from '@/components/ContentPiece/ContentPieceBulkActions.vue';
+import ContentPieceMatrixView from '@/components/ContentPiece/ContentPieceMatrixView.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -30,6 +31,21 @@ import axios from 'axios';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
+type Derivative = {
+    id: number;
+    channel_id: number;
+    status: 'NOT_STARTED' | 'DRAFT' | 'FINAL' | 'PUBLISHED' | 'NOT_PLANNED';
+    generation_status: 'IDLE' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+};
+
+type Channel = {
+    id: number;
+    name: string;
+    slug: string;
+    icon: string | null;
+    color: string | null;
+};
+
 interface ContentPiece {
     id: number;
     internal_name: string;
@@ -40,6 +56,7 @@ interface ContentPiece {
     created_at: string;
     published_at: string | null;
     published_at_human: string | null;
+    derivatives?: Derivative[];
 }
 
 interface PaginationLink {
@@ -58,11 +75,12 @@ interface Props {
             total?: number;
         };
     };
+    channels: Channel[];
     filters: {
         status?: string;
         channel?: string;
         search?: string;
-        view?: 'list' | 'week' | 'month';
+        view?: 'list' | 'week' | 'month' | 'matrix';
         sort_by?: string | null;
         sort_direction?: 'asc' | 'desc' | null;
     };
@@ -78,6 +96,7 @@ const search = ref(props.filters.search || '');
 const status = ref(props.filters.status || 'all');
 const channel = ref(props.filters.channel || 'all');
 const view = ref<Props['filters']['view']>(props.filters.view || 'list');
+const showMatrixView = computed(() => view.value === 'matrix');
 const sortBy = ref(props.filters.sort_by || 'published_at');
 const sortDirection = ref<Props['filters']['sort_direction']>(
     props.filters.sort_direction || 'asc',
@@ -119,7 +138,7 @@ watch([status, channel], () => {
     applyFilters();
 });
 
-const switchView = (nextView: 'list' | 'month' | 'week') => {
+const switchView = (nextView: 'list' | 'month' | 'week' | 'matrix') => {
     if (view.value === nextView) {
         return;
     }
@@ -349,6 +368,13 @@ watch(
                             @click="switchView('month')"
                         >
                             Month
+                        </Button>
+                        <Button
+                            :variant="view === 'matrix' ? 'default' : 'outline'"
+                            class="rounded-none"
+                            @click="switchView('matrix')"
+                        >
+                            Matrix
                         </Button>
                     </div>
                     <Link href="/content-pieces/create">
@@ -603,6 +629,25 @@ watch(
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :links="contentPieces.links"
+                    :from="contentPieces.meta?.from"
+                    :to="contentPieces.meta?.to"
+                    :total="contentPieces.meta?.total"
+                />
+            </div>
+
+            <div v-else-if="showMatrixView" class="space-y-4">
+                <ContentPieceMatrixView
+                    :content-pieces="contentPieces.data"
+                    :channels="channels"
+                    :selected-ids="selectedIds"
+                    :all-selected="allSelected"
+                    @toggle-selection="toggleSelection"
+                    @toggle-all="toggleAll"
+                    @delete="deleteContentPiece"
+                />
 
                 <Pagination
                     :links="contentPieces.links"

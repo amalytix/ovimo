@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\BackgroundSourceController;
+use App\Http\Controllers\ChannelController;
+use App\Http\Controllers\ContentDerivativeController;
 use App\Http\Controllers\ContentPieceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImageGenerationController;
@@ -52,6 +55,29 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('content-pieces/bulk-unset-publish-date', [ContentPieceController::class, 'bulkUnsetPublishDate'])->name('content-pieces.bulk-unset-publish-date');
     Route::post('content-pieces/bulk-update-status', [ContentPieceController::class, 'bulkUpdateStatus'])->name('content-pieces.bulk-update-status');
     Route::post('content-pieces/{content_piece}/publish', [ContentPieceController::class, 'publish'])->name('content-pieces.publish');
+
+    // Content derivative routes
+    Route::prefix('content-pieces/{contentPiece}')->name('content-pieces.')->group(function () {
+        Route::post('derivatives', [ContentDerivativeController::class, 'store'])->name('derivatives.store');
+        Route::put('derivatives/{derivative}', [ContentDerivativeController::class, 'update'])->name('derivatives.update');
+        Route::delete('derivatives/{derivative}', [ContentDerivativeController::class, 'destroy'])->name('derivatives.destroy');
+        Route::post('derivatives/{derivative}/generate', [ContentDerivativeController::class, 'generate'])
+            ->middleware('token.limit')
+            ->name('derivatives.generate');
+        Route::get('derivatives/{derivative}/status', [ContentDerivativeController::class, 'status'])->name('derivatives.status');
+
+        Route::post('sources', [BackgroundSourceController::class, 'store'])->name('sources.store');
+        Route::put('sources/{source}', [BackgroundSourceController::class, 'update'])->name('sources.update');
+        Route::delete('sources/{source}', [BackgroundSourceController::class, 'destroy'])->name('sources.destroy');
+        Route::post('sources/reorder', [BackgroundSourceController::class, 'reorder'])->name('sources.reorder');
+    });
+
+    // Channel management routes
+    Route::get('channels', [ChannelController::class, 'index'])->name('channels.index');
+    Route::post('channels', [ChannelController::class, 'store'])->name('channels.store');
+    Route::put('channels/{channel}', [ChannelController::class, 'update'])->name('channels.update');
+    Route::delete('channels/{channel}', [ChannelController::class, 'destroy'])->name('channels.destroy');
+    Route::post('channels/reorder', [ChannelController::class, 'reorder'])->name('channels.reorder');
 
     // Image generation routes for content pieces
     Route::post('content-pieces/{content_piece}/image-generations', [ImageGenerationController::class, 'store'])

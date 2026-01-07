@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import CopyContentDialog from '@/components/ContentPiece/CopyContentDialog.vue';
+import DerivativesTab from '@/components/ContentPiece/DerivativesTab.vue';
+import DerivativeStatusMatrix from '@/components/ContentPiece/DerivativeStatusMatrix.vue';
 import EditingTab from '@/components/ContentPiece/EditingTab.vue';
 import GeneralInfoHeader from '@/components/ContentPiece/GeneralInfoHeader.vue';
 import ImagesTab from '@/components/ContentPiece/ImagesTab.vue';
 import MediaGalleryPicker from '@/components/ContentPiece/MediaGalleryPicker.vue';
 import ResearchTab from '@/components/ContentPiece/ResearchTab.vue';
+import SourcesTab from '@/components/ContentPiece/SourcesTab.vue';
 import LinkedInIntegrationSelector from '@/components/Publishing/LinkedInIntegrationSelector.vue';
 import PublishingScheduler from '@/components/Publishing/PublishingScheduler.vue';
 import PublishingStatus from '@/components/Publishing/PublishingStatus.vue';
@@ -23,6 +26,39 @@ type Prompt = {
     id: number;
     name: string;
     channel: string;
+    channel_id?: number | null;
+};
+
+type Channel = {
+    id: number;
+    name: string;
+    slug: string;
+    icon: string | null;
+    color: string | null;
+};
+
+type ContentDerivative = {
+    id: number;
+    content_piece_id: number;
+    channel_id: number;
+    prompt_id: number | null;
+    title: string | null;
+    text: string | null;
+    status: 'NOT_STARTED' | 'DRAFT' | 'FINAL' | 'PUBLISHED' | 'NOT_PLANNED';
+    planned_publish_at: string | null;
+    generation_status: 'IDLE' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    generation_error: string | null;
+};
+
+type BackgroundSource = {
+    id: number;
+    type: 'POST' | 'MANUAL';
+    post_id: number | null;
+    post: Post | null;
+    title: string | null;
+    content: string | null;
+    url: string | null;
+    sort_order: number;
 };
 
 type ImagePrompt = {
@@ -87,6 +123,10 @@ type AiState = {
 
 interface Props {
     contentPiece: ContentPiece;
+    channels: Channel[];
+    derivatives: ContentDerivative[];
+    backgroundSources: BackgroundSource[];
+    availablePostsForSources: Post[];
     prompts: Prompt[];
     imagePrompts: ImagePrompt[];
     imageGenerations: ImageGeneration[];
@@ -147,18 +187,21 @@ const form = useForm({
 
 const currentUrl = new URL(usePage().url, window.location.origin);
 const initialTab = currentUrl.searchParams.get('tab');
-const activeTab = ref<'research' | 'editing' | 'images' | 'publishing'>(
-    initialTab === 'edit' || initialTab === 'editing'
-        ? 'editing'
-        : initialTab === 'images'
-          ? 'images'
-          : initialTab === 'publishing'
-            ? 'publishing'
-            : 'research',
+type TabValue = 'sources' | 'derivatives' | 'research' | 'editing' | 'images' | 'publishing';
+const activeTab = ref<TabValue>(
+    initialTab === 'sources'
+        ? 'sources'
+        : initialTab === 'derivatives'
+          ? 'derivatives'
+          : initialTab === 'edit' || initialTab === 'editing'
+            ? 'editing'
+            : initialTab === 'images'
+              ? 'images'
+              : initialTab === 'publishing'
+                ? 'publishing'
+                : 'sources',
 );
-const updateTabInUrl = (
-    tab: 'research' | 'editing' | 'images' | 'publishing',
-) => {
+const updateTabInUrl = (tab: TabValue) => {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
     window.history.replaceState(
@@ -166,6 +209,16 @@ const updateTabInUrl = (
         '',
         `${url.pathname}?${url.searchParams.toString()}`,
     );
+};
+
+const localDerivatives = ref<ContentDerivative[]>([...props.derivatives]);
+
+const handleDerivativesUpdated = (derivatives: ContentDerivative[]) => {
+    localDerivatives.value = derivatives;
+};
+
+const goToDerivativesTab = (channelId?: number) => {
+    activeTab.value = 'derivatives';
 };
 
 const imageGenerations = ref<ImageGeneration[]>([...props.imageGenerations]);
@@ -430,15 +483,50 @@ const generateContent = () => {
 
             <Tabs
                 v-model="activeTab"
-                default-value="research"
+                default-value="sources"
                 class="space-y-4"
             >
-                <TabsList>
-                    <TabsTrigger value="research">Research</TabsTrigger>
-                    <TabsTrigger value="editing">Editing</TabsTrigger>
-                    <TabsTrigger value="images">Images</TabsTrigger>
-                    <TabsTrigger value="publishing">Publishing</TabsTrigger>
-                </TabsList>
+                <div class="flex items-center justify-between">
+                    <TabsList>
+                        <TabsTrigger value="sources">Sources</TabsTrigger>
+                        <TabsTrigger value="derivatives">Derivatives</TabsTrigger>
+                        <TabsTrigger value="research">Research (Legacy)</TabsTrigger>
+                        <TabsTrigger value="editing">Editing</TabsTrigger>
+                        <TabsTrigger value="images">Images</TabsTrigger>
+                        <TabsTrigger value="publishing">Publishing</TabsTrigger>
+                    </TabsList>
+                    <DerivativeStatusMatrix
+                        v-if="channels.length > 0"
+                        :channels="channels"
+                        :derivatives="localDerivatives"
+                        @channel-click="goToDerivativesTab"
+                    />
+                </div>
+
+                <TabsContent
+                    value="sources"
+                    class="space-y-4 rounded-xl border bg-card p-4 shadow-sm"
+                >
+                    <SourcesTab
+                        :content-piece-id="contentPiece.id"
+                        :sources="backgroundSources"
+                        :available-posts="availablePostsForSources"
+                    />
+                </TabsContent>
+
+                <TabsContent
+                    value="derivatives"
+                    class="space-y-4 rounded-xl border bg-card p-4 shadow-sm"
+                >
+                    <DerivativesTab
+                        :content-piece-id="contentPiece.id"
+                        :channels="channels"
+                        :derivatives="localDerivatives"
+                        :prompts="prompts"
+                        :ai="ai"
+                        @derivatives-updated="handleDerivativesUpdated"
+                    />
+                </TabsContent>
 
                 <TabsContent
                     value="research"

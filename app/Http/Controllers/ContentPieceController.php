@@ -8,6 +8,7 @@ use App\Http\Requests\StoreContentPieceRequest;
 use App\Http\Requests\UpdateContentPieceRequest;
 use App\Jobs\GenerateContentPiece;
 use App\Jobs\PublishContentToLinkedIn;
+use App\Models\Channel;
 use App\Models\ContentPiece;
 use App\Models\Media;
 use App\Models\MediaTag;
@@ -34,7 +35,7 @@ class ContentPieceController extends Controller
             'status' => ['nullable', 'in:NOT_STARTED,DRAFT,FINAL'],
             'channel' => ['nullable', 'in:BLOG_POST,LINKEDIN_POST,YOUTUBE_SCRIPT'],
             'search' => ['nullable', 'string'],
-            'view' => ['nullable', 'in:list,week,month'],
+            'view' => ['nullable', 'in:list,week,month,matrix'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'sort_by' => ['nullable', 'in:published_at'],
@@ -44,9 +45,12 @@ class ContentPieceController extends Controller
 
         $teamId = auth()->user()->current_team_id;
 
+        $isMatrixView = ($validated['view'] ?? null) === 'matrix';
+
         $query = ContentPiece::query()
             ->where('team_id', $teamId)
-            ->with('prompt:id,internal_name');
+            ->with(['prompt:id,internal_name'])
+            ->when($isMatrixView, fn ($q) => $q->with(['derivatives:id,content_piece_id,channel_id,status,generation_status']));
 
         $sortBy = $validated['sort_by'] ?? null;
         $sortDirection = $validated['sort_direction'] ?? 'asc';
@@ -97,10 +101,24 @@ class ContentPieceController extends Controller
                 'created_at' => $piece->created_at->diffForHumans(),
                 'published_at' => $piece->published_at?->toIso8601String(),
                 'published_at_human' => $piece->published_at?->diffForHumans(),
+                ...($isMatrixView ? [
+                    'derivatives' => $piece->derivatives->map(fn ($d) => [
+                        'id' => $d->id,
+                        'channel_id' => $d->channel_id,
+                        'status' => $d->status,
+                        'generation_status' => $d->generation_status,
+                    ]),
+                ] : []),
             ]);
+
+        // Get channels for matrix view
+        $channels = $isMatrixView
+            ? Channel::where('team_id', $teamId)->active()->ordered()->get(['id', 'name', 'slug', 'icon', 'color'])
+            : collect();
 
         return Inertia::render('ContentPieces/Index', [
             'contentPieces' => $contentPieces,
+            'channels' => $channels,
             'filters' => [
                 'status' => $validated['status'] ?? null,
                 'channel' => $validated['channel'] ?? null,
@@ -191,45 +209,59 @@ class ContentPieceController extends Controller
 
         $contentPiece = ContentPiece::create([
             'team_id' => $teamId,
-            ...Arr::except($validated, ['post_ids', 'media_ids']),
+            'internal_name' => $validated['internal_name'],
+            'target_language' => $validated['target_language'],
+            'published_at' => $validated['published_at'] ?? null,
             'status' => 'NOT_STARTED',
-            'research_text' => $validated['research_text'] ?? null,
-            'edited_text' => $validated['edited_text'] ?? null,
+            // Legacy fields - set defaults for backward compatibility
+            'channel' => 'BLOG_POST',
         ]);
 
-        // Attach selected posts
-        if (array_key_exists('post_ids', $validated)) {
-            $contentPiece->posts()->attach($validated['post_ids']);
+        // Create background sources
+        if (! empty($validated['sources'])) {
+            foreach ($validated['sources'] as $index => $sourceData) {
+                $contentPiece->backgroundSources()->create([
+                    'type' => $sourceData['type'],
+                    'post_id' => $sourceData['post_id'] ?? null,
+                    'title' => $sourceData['title'] ?? null,
+                    'content' => $sourceData['content'] ?? null,
+                    'url' => $sourceData['url'] ?? null,
+                    'sort_order' => $sourceData['sort_order'] ?? $index,
+                ]);
+            }
         }
 
-        if (array_key_exists('media_ids', $validated)) {
-            $contentPiece->media()->sync($validated['media_ids']);
-        }
-
-        // Check if we should generate content immediately
-        if ($request->boolean('generate_content') && $contentPiece->prompt_id) {
-            $contentPiece->load('prompt', 'posts', 'media');
-
-            return $this->generateContentForPiece($contentPiece);
-        }
-
-        return redirect()->route('content-pieces.edit', $contentPiece)
-            ->with('success', 'Content piece created. You can now generate the content.');
+        return redirect()->route('content-pieces.edit', ['content_piece' => $contentPiece, 'tab' => 'derivatives'])
+            ->with('success', 'Content piece created. Add derivatives to generate content for different channels.');
     }
 
     public function edit(ContentPiece $contentPiece): Response
     {
         $this->authorize('view', $contentPiece);
 
-        $contentPiece->load(['prompt:id,internal_name,prompt_text', 'posts:id,uri,summary,external_title,internal_title', 'media.tags', 'imageGenerations.prompt', 'imageGenerations.media', 'team']);
+        $contentPiece->load([
+            'prompt:id,internal_name,prompt_text',
+            'posts:id,uri,summary,external_title,internal_title',
+            'media.tags',
+            'imageGenerations.prompt',
+            'imageGenerations.media',
+            'team',
+            'derivatives.channel',
+            'backgroundSources.post',
+        ]);
 
         $teamId = auth()->user()->current_team_id;
+
+        $channels = Channel::where('team_id', $teamId)
+            ->active()
+            ->ordered()
+            ->get(['id', 'name', 'slug', 'icon', 'color']);
 
         $prompts = Prompt::where('team_id', $teamId)
             ->where('type', Prompt::TYPE_CONTENT)
             ->orderByDesc('is_default')
             ->orderByDesc('created_at')
-            ->get(['id', 'internal_name as name', 'channel']);
+            ->get(['id', 'internal_name as name', 'channel', 'channel_id']);
 
         $imagePrompts = Prompt::where('team_id', $teamId)
             ->where('type', Prompt::TYPE_IMAGE)
@@ -266,6 +298,15 @@ class ContentPieceController extends Controller
                 'token_expires_at',
             ]);
 
+        // Get available posts for sources tab
+        $availablePostsForSources = \App\Models\Post::query()
+            ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
+            ->where('status', 'CREATE_CONTENT')
+            ->whereNotNull('summary')
+            ->orderByDesc('found_at')
+            ->take(100)
+            ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
+
         return Inertia::render('ContentPieces/Edit', [
             'contentPiece' => [
                 'id' => $contentPiece->id,
@@ -291,6 +332,36 @@ class ContentPieceController extends Controller
                 'published_platforms' => $contentPiece->published_platforms,
                 'publish_at' => $contentPiece->published_at?->toIso8601String(),
             ],
+            'channels' => $channels,
+            'derivatives' => $contentPiece->derivatives->map(fn ($d) => [
+                'id' => $d->id,
+                'content_piece_id' => $d->content_piece_id,
+                'channel_id' => $d->channel_id,
+                'prompt_id' => $d->prompt_id,
+                'title' => $d->title,
+                'text' => $d->text,
+                'status' => $d->status,
+                'planned_publish_at' => $d->planned_publish_at?->toIso8601String(),
+                'generation_status' => $d->generation_status,
+                'generation_error' => $d->generation_error,
+            ]),
+            'backgroundSources' => $contentPiece->backgroundSources->map(fn ($s) => [
+                'id' => $s->id,
+                'type' => $s->type,
+                'post_id' => $s->post_id,
+                'post' => $s->post ? [
+                    'id' => $s->post->id,
+                    'uri' => $s->post->uri,
+                    'summary' => $s->post->summary,
+                    'external_title' => $s->post->external_title,
+                    'internal_title' => $s->post->internal_title,
+                ] : null,
+                'title' => $s->title,
+                'content' => $s->content,
+                'url' => $s->url,
+                'sort_order' => $s->sort_order,
+            ]),
+            'availablePostsForSources' => $availablePostsForSources,
             'prompts' => $prompts,
             'imagePrompts' => $imagePrompts,
             'imageGenerations' => $contentPiece->imageGenerations->map(fn ($gen) => [

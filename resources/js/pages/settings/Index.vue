@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ChannelController from '@/actions/App/Http/Controllers/ChannelController';
 import TeamInvitationController from '@/actions/App/Http/Controllers/TeamInvitationController';
 import TeamMemberController from '@/actions/App/Http/Controllers/TeamMemberController';
 import InputError from '@/components/InputError.vue';
@@ -31,7 +32,7 @@ import { disconnect as disconnectLinkedIn } from '@/routes/integrations/linkedin
 import { type BreadcrumbItem } from '@/types';
 import type { SocialIntegration } from '@/types/social';
 import { Form, Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { Pencil, PlayCircle, Trash2 } from 'lucide-vue-next';
+import { GripVertical, Pencil, PlayCircle, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface TeamUser {
@@ -78,6 +79,16 @@ interface Webhook {
     secret: string | null;
 }
 
+interface Channel {
+    id: number;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    sort_order: number;
+    is_active: boolean;
+    derivatives_count: number;
+}
+
 interface Props {
     team: Team;
     pendingInvitations: PendingInvitation[];
@@ -88,6 +99,7 @@ interface Props {
     integrations: {
         linkedin: SocialIntegration[];
     };
+    channels: Channel[];
 }
 
 const props = defineProps<Props>();
@@ -408,6 +420,99 @@ const formatExpiry = (expiresAt: string) => {
         return diffDays === 1 ? 'in 1 day' : `in ${diffDays} days`;
     }
 };
+
+// Channel management
+const showChannelModal = ref(false);
+const editingChannel = ref<Channel | null>(null);
+
+const channelForm = useForm({
+    name: '',
+    icon: '',
+    color: '#3b82f6',
+    is_active: true,
+});
+
+const openCreateChannelModal = () => {
+    editingChannel.value = null;
+    channelForm.reset();
+    channelForm.clearErrors();
+    channelForm.defaults({
+        name: '',
+        icon: '',
+        color: '#3b82f6',
+        is_active: true,
+    });
+    showChannelModal.value = true;
+};
+
+const openEditChannelModal = (channel: Channel) => {
+    editingChannel.value = channel;
+    channelForm.reset();
+    channelForm.clearErrors();
+    channelForm.defaults({
+        name: channel.name,
+        icon: channel.icon || '',
+        color: channel.color || '#3b82f6',
+        is_active: channel.is_active,
+    });
+    showChannelModal.value = true;
+};
+
+const submitChannel = () => {
+    if (editingChannel.value) {
+        channelForm.put(ChannelController.update.url(editingChannel.value.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showChannelModal.value = false;
+            },
+        });
+    } else {
+        channelForm.post(ChannelController.store.url(), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showChannelModal.value = false;
+            },
+        });
+    }
+};
+
+const deleteChannel = (channel: Channel) => {
+    if (channel.derivatives_count > 0) {
+        alert(`Cannot delete "${channel.name}" because it has ${channel.derivatives_count} derivative(s). Remove the derivatives first.`);
+        return;
+    }
+    if (confirm(`Are you sure you want to delete the "${channel.name}" channel?`)) {
+        router.delete(ChannelController.destroy.url(channel.id), {
+            preserveScroll: true,
+        });
+    }
+};
+
+const channelModalTitle = computed(() =>
+    editingChannel.value ? 'Edit Channel' : 'Create Channel',
+);
+const channelModalDescription = computed(() =>
+    editingChannel.value
+        ? 'Update the channel configuration.'
+        : 'Create a new channel for content derivatives.',
+);
+const channelSubmitButtonText = computed(() => {
+    if (channelForm.processing) {
+        return editingChannel.value ? 'Updating...' : 'Creating...';
+    }
+    return editingChannel.value ? 'Update Channel' : 'Create Channel';
+});
+
+const channelColors = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#8b5cf6', // purple
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#ec4899', // pink
+    '#6366f1', // indigo
+    '#14b8a6', // teal
+];
 </script>
 
 <template>
@@ -426,6 +531,7 @@ const formatExpiry = (expiresAt: string) => {
                 <TabsList class="mb-6">
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="members">Members</TabsTrigger>
+                    <TabsTrigger value="channels">Channels</TabsTrigger>
                     <TabsTrigger value="keywords">Keyword Filters</TabsTrigger>
                     <TabsTrigger value="ai">AI</TabsTrigger>
                     <TabsTrigger value="integrations">Integrations</TabsTrigger>
@@ -735,6 +841,108 @@ const formatExpiry = (expiresAt: string) => {
                                     </p>
                                 </Transition>
                             </Form>
+                        </div>
+                    </div>
+                </TabsContent>
+
+                <!-- Channels Tab -->
+                <TabsContent value="channels">
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-medium">Content Channels</h2>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    Define the output channels for content derivatives (e.g., LinkedIn, Blog, YouTube).
+                                </p>
+                            </div>
+                            <Button v-if="isOwner" @click="openCreateChannelModal">
+                                <Plus class="mr-1 h-4 w-4" />
+                                Add Channel
+                            </Button>
+                        </div>
+
+                        <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th class="w-12 px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                            <!-- Drag handle column -->
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                            Name
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                            Color
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                            Status
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                            Derivatives
+                                        </th>
+                                        <th v-if="isOwner" class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
+                                    <tr v-for="channel in channels" :key="channel.id">
+                                        <td class="px-4 py-4">
+                                            <GripVertical class="h-4 w-4 text-gray-400" />
+                                        </td>
+                                        <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-white">
+                                            <div class="flex items-center gap-2">
+                                                <span v-if="channel.icon">{{ channel.icon }}</span>
+                                                {{ channel.name }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div
+                                                class="h-6 w-6 rounded-full border border-gray-300 dark:border-gray-600"
+                                                :style="{ backgroundColor: channel.color || '#3b82f6' }"
+                                            />
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <Badge
+                                                :variant="channel.is_active ? 'default' : 'secondary'"
+                                                :class="channel.is_active ? 'bg-green-600' : ''"
+                                            >
+                                                {{ channel.is_active ? 'Active' : 'Inactive' }}
+                                            </Badge>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                                            {{ channel.derivatives_count }}
+                                        </td>
+                                        <td v-if="isOwner" class="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    @click="openEditChannelModal(channel)"
+                                                >
+                                                    <Pencil class="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    class="text-destructive hover:text-destructive"
+                                                    @click="deleteChannel(channel)"
+                                                >
+                                                    <Trash2 class="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="channels.length === 0">
+                                        <td
+                                            :colspan="isOwner ? 6 : 5"
+                                            class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                                        >
+                                            No channels configured. Click "Add Channel" to create your first channel.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </TabsContent>
@@ -1712,6 +1920,75 @@ const formatExpiry = (expiresAt: string) => {
                             :disabled="webhookForm.processing"
                         >
                             {{ submitButtonText }}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Channel Create/Edit Modal -->
+        <Dialog v-model:open="showChannelModal">
+            <DialogContent class="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>{{ channelModalTitle }}</DialogTitle>
+                    <DialogDescription>{{ channelModalDescription }}</DialogDescription>
+                </DialogHeader>
+
+                <form @submit.prevent="submitChannel" class="space-y-4">
+                    <div class="space-y-2">
+                        <Label for="channel_name">Name</Label>
+                        <Input
+                            id="channel_name"
+                            v-model="channelForm.name"
+                            type="text"
+                            placeholder="E.g., LinkedIn Post"
+                        />
+                        <InputError :message="channelForm.errors.name" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="channel_icon">Icon (Emoji)</Label>
+                        <Input
+                            id="channel_icon"
+                            v-model="channelForm.icon"
+                            type="text"
+                            placeholder="E.g., 📝"
+                            maxlength="4"
+                        />
+                        <InputError :message="channelForm.errors.icon" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label>Color</Label>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="color in channelColors"
+                                :key="color"
+                                type="button"
+                                class="h-8 w-8 rounded-full border-2 transition"
+                                :class="channelForm.color === color ? 'border-gray-900 dark:border-white' : 'border-transparent'"
+                                :style="{ backgroundColor: color }"
+                                @click="channelForm.color = color"
+                            />
+                        </div>
+                        <InputError :message="channelForm.errors.color" />
+                    </div>
+
+                    <div v-if="editingChannel" class="flex items-center gap-2">
+                        <Checkbox
+                            id="channel_is_active"
+                            :default-value="channelForm.is_active"
+                            @update:model-value="channelForm.is_active = $event === true"
+                        />
+                        <Label for="channel_is_active" class="cursor-pointer">Active</Label>
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" @click="showChannelModal = false">
+                            Cancel
+                        </Button>
+                        <Button type="submit" :disabled="channelForm.processing">
+                            {{ channelSubmitButtonText }}
                         </Button>
                     </DialogFooter>
                 </form>

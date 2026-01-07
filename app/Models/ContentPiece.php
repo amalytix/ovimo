@@ -77,4 +77,14 @@ class ContentPiece extends Model
     {
         return $this->hasMany(ImageGeneration::class);
     }
+
+    public function derivatives(): HasMany
+    {
+        return $this->hasMany(ContentDerivative::class);
+    }
+
+    public function backgroundSources(): HasMany
+    {
+        return $this->hasMany(BackgroundSource::class)->ordered();
+    }
 }
