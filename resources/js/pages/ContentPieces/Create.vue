@@ -28,6 +28,12 @@ type Post = {
     internal_title: string | null;
 };
 
+type AiState = {
+    has_openai: boolean;
+    has_gemini: boolean;
+    settings_url: string;
+};
+
 interface Props {
     prompts: Prompt[];
     availablePosts: Post[];
@@ -35,9 +41,12 @@ interface Props {
     initialTitle?: string | null;
     media: MediaItem[];
     mediaTags: MediaTag[];
+    ai: AiState;
 }
 
 const props = defineProps<Props>();
+
+const ai = props.ai;
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Content Pieces', href: '/content-pieces' },
@@ -261,6 +270,7 @@ const cancel = () => {
                         :prompts="prompts"
                         :posts="availablePosts"
                         :generation-status="generation"
+                        :ai="ai"
                         @copy-to-editor="openCopyDialog"
                         @generate="saveAndGenerate"
                     />

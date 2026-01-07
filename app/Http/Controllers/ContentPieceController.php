@@ -167,6 +167,8 @@ class ContentPieceController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        $team = auth()->user()->currentTeam;
+
         return Inertia::render('ContentPieces/Create', [
             'prompts' => $prompts,
             'availablePosts' => $availablePosts,
@@ -174,6 +176,11 @@ class ContentPieceController extends Controller
             'initialTitle' => $firstPostTitle,
             'media' => $availableMedia->map(fn (Media $media) => $this->transformMedia($media)),
             'mediaTags' => $mediaTags,
+            'ai' => [
+                'has_openai' => $team->hasOpenAIConfigured(),
+                'has_gemini' => $team->hasGeminiConfigured(),
+                'settings_url' => '/team-settings?tab=ai',
+            ],
         ]);
     }
 
