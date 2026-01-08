@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\ContentPiece;
-use App\Models\Media;
 use App\Models\Prompt;
 
 test('guests cannot access content pieces', function () {
@@ -42,34 +41,13 @@ test('content pieces index only shows team content pieces', function () {
     );
 });
 
-test('content pieces index can filter by status', function () {
-    [$user, $team] = createUserWithTeam();
-    $prompt = Prompt::factory()->create(['team_id' => $team->id]);
-
-    ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'prompt_id' => $prompt->id,
-        'status' => 'DRAFT',
-    ]);
-    ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'prompt_id' => $prompt->id,
-        'status' => 'FINAL',
-    ]);
-
-    $response = $this->actingAs($user)->get('/content-pieces?status=DRAFT');
-
-    $response->assertInertia(fn ($page) => $page
-        ->has('contentPieces.data', 1)
-        ->where('contentPieces.data.0.status', 'DRAFT')
-    );
-});
+// Status filtering has been moved to the derivatives level
 
 test('content pieces index can filter by channel', function () {
     [$user, $team] = createUserWithTeam();
     $prompt = Prompt::factory()->create(['team_id' => $team->id]);
 
-    ContentPiece::factory()->create([
+    $blogPost = ContentPiece::factory()->create([
         'team_id' => $team->id,
         'prompt_id' => $prompt->id,
         'channel' => 'BLOG_POST',
@@ -84,7 +62,7 @@ test('content pieces index can filter by channel', function () {
 
     $response->assertInertia(fn ($page) => $page
         ->has('contentPieces.data', 1)
-        ->where('contentPieces.data.0.channel', 'BLOG_POST')
+        ->where('contentPieces.data.0.id', $blogPost->id)
     );
 });
 
@@ -122,15 +100,9 @@ test('authenticated users can view create content piece form', function () {
 
 test('authenticated users can create a content piece', function () {
     [$user, $team] = createUserWithTeam();
-    $prompt = Prompt::factory()->create(['team_id' => $team->id]);
-    $media = Media::factory()->create([
-        'team_id' => $team->id,
-        'uploaded_by' => $user->id,
-    ]);
 
     $response = $this->actingAs($user)->post('/content-pieces', [
         'internal_name' => 'Test Content Piece',
-        'target_language' => 'ENGLISH',
         'sources' => [
             [
                 'type' => 'MANUAL',
@@ -146,8 +118,6 @@ test('authenticated users can create a content piece', function () {
     $this->assertDatabaseHas('content_pieces', [
         'team_id' => $team->id,
         'internal_name' => 'Test Content Piece',
-        'target_language' => 'ENGLISH',
-        'status' => 'NOT_STARTED',
     ]);
 
     $this->assertDatabaseHas('background_sources', [
@@ -162,7 +132,7 @@ test('content piece creation validates required fields', function () {
 
     $response = $this->actingAs($user)->post('/content-pieces', []);
 
-    $response->assertSessionHasErrors(['internal_name', 'target_language']);
+    $response->assertSessionHasErrors(['internal_name']);
 });
 
 test('content piece creation validates source type', function () {
@@ -170,7 +140,6 @@ test('content piece creation validates source type', function () {
 
     $response = $this->actingAs($user)->post('/content-pieces', [
         'internal_name' => 'Test',
-        'target_language' => 'ENGLISH',
         'sources' => [
             ['type' => 'INVALID_TYPE'],
         ],
@@ -179,16 +148,7 @@ test('content piece creation validates source type', function () {
     $response->assertSessionHasErrors(['sources.0.type']);
 });
 
-test('content piece creation validates target language', function () {
-    [$user, $team] = createUserWithTeam();
-
-    $response = $this->actingAs($user)->post('/content-pieces', [
-        'internal_name' => 'Test',
-        'target_language' => 'SPANISH',
-    ]);
-
-    $response->assertSessionHasErrors(['target_language']);
-});
+// Target language validation has been moved to channels
 
 test('authenticated users can edit their own team content pieces', function () {
     [$user, $team] = createUserWithTeam();
@@ -228,30 +188,17 @@ test('authenticated users can update their content pieces', function () {
         'team_id' => $team->id,
         'prompt_id' => $prompt->id,
     ]);
-    $media = Media::factory()->create([
-        'team_id' => $team->id,
-        'uploaded_by' => $user->id,
-    ]);
 
     $response = $this->actingAs($user)->put("/content-pieces/{$contentPiece->id}", [
         'internal_name' => 'Updated Content Name',
         'briefing_text' => 'Updated briefing',
         'channel' => 'LINKEDIN_POST',
-        'target_language' => 'GERMAN',
-        'media_ids' => [$media->id],
     ]);
 
     $response->assertRedirect("/content-pieces/{$contentPiece->id}/edit");
 
     $contentPiece->refresh();
     expect($contentPiece->internal_name)->toBe('Updated Content Name');
-    expect($contentPiece->channel)->toBe('LINKEDIN_POST');
-    expect($contentPiece->target_language)->toBe('GERMAN');
-
-    $this->assertDatabaseHas('content_piece_media', [
-        'content_piece_id' => $contentPiece->id,
-        'media_id' => $media->id,
-    ]);
 });
 
 test('users cannot update content pieces from other teams', function () {
@@ -267,59 +214,11 @@ test('users cannot update content pieces from other teams', function () {
         ->put("/content-pieces/{$otherPiece->id}", [
             'internal_name' => 'Updated',
             'channel' => 'BLOG_POST',
-            'target_language' => 'ENGLISH',
         ])
         ->assertForbidden();
 });
 
-test('authenticated users can update content piece status', function () {
-    [$user, $team] = createUserWithTeam();
-    $prompt = Prompt::factory()->create(['team_id' => $team->id]);
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'prompt_id' => $prompt->id,
-        'status' => 'DRAFT',
-    ]);
-
-    $response = $this->actingAs($user)->patch("/content-pieces/{$contentPiece->id}/status", [
-        'status' => 'FINAL',
-    ]);
-
-    $response->assertRedirect();
-    $contentPiece->refresh();
-    expect($contentPiece->status)->toBe('FINAL');
-});
-
-test('content piece status update validates status value', function () {
-    [$user, $team] = createUserWithTeam();
-    $prompt = Prompt::factory()->create(['team_id' => $team->id]);
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'prompt_id' => $prompt->id,
-    ]);
-
-    $response = $this->actingAs($user)->patch("/content-pieces/{$contentPiece->id}/status", [
-        'status' => 'INVALID_STATUS',
-    ]);
-
-    $response->assertSessionHasErrors(['status']);
-});
-
-test('users cannot update status of content pieces from other teams', function () {
-    [$user, $team] = createUserWithTeam();
-    [$otherUser, $otherTeam] = createUserWithTeam();
-    $otherPrompt = Prompt::factory()->create(['team_id' => $otherTeam->id]);
-    $otherPiece = ContentPiece::factory()->create([
-        'team_id' => $otherTeam->id,
-        'prompt_id' => $otherPrompt->id,
-    ]);
-
-    $this->actingAs($user)
-        ->patch("/content-pieces/{$otherPiece->id}/status", [
-            'status' => 'FINAL',
-        ])
-        ->assertForbidden();
-});
+// Status updates have been moved to the derivatives level
 
 test('authenticated users can delete their content pieces', function () {
     [$user, $team] = createUserWithTeam();
@@ -349,29 +248,4 @@ test('users cannot delete content pieces from other teams', function () {
         ->assertForbidden();
 });
 
-test('generate content requires prompt to be set', function () {
-    [$user, $team] = createUserWithTeam();
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'prompt_id' => null,
-    ]);
-
-    $response = $this->actingAs($user)->post("/content-pieces/{$contentPiece->id}/generate");
-
-    $response->assertRedirect();
-    $response->assertSessionHas('error', 'Please select a prompt template first.');
-});
-
-test('users cannot generate content for other teams content pieces', function () {
-    [$user, $team] = createUserWithTeam();
-    [$otherUser, $otherTeam] = createUserWithTeam();
-    $otherPrompt = Prompt::factory()->create(['team_id' => $otherTeam->id]);
-    $otherPiece = ContentPiece::factory()->create([
-        'team_id' => $otherTeam->id,
-        'prompt_id' => $otherPrompt->id,
-    ]);
-
-    $this->actingAs($user)
-        ->post("/content-pieces/{$otherPiece->id}/generate")
-        ->assertForbidden();
-});
+// Generation is now done at the derivative level - see ContentDerivativeTest for derivative generation tests

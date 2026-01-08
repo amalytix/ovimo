@@ -1,10 +1,12 @@
 <?php
 
 use App\Jobs\GenerateAIImage;
+use App\Models\BackgroundSource;
 use App\Models\ContentPiece;
 use App\Models\ImageGeneration;
 use App\Models\Prompt;
 use App\Services\OpenAIService;
+use App\Services\WebContentExtractor;
 use Illuminate\Support\Facades\Queue;
 
 test('guests cannot access image generation endpoints', function () {
@@ -20,9 +22,10 @@ test('authenticated users can store image generation', function () {
         'gemini_api_key' => 'gm-key',
     ]);
     $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'edited_text' => 'Test content for image generation',
+    $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
+    BackgroundSource::factory()->create([
+        'content_piece_id' => $contentPiece->id,
+        'content' => 'Test content for image generation',
     ]);
 
     $openAI = $this->mock(OpenAIService::class, function ($mock) {
@@ -59,9 +62,10 @@ test('authenticated users can store image generation', function () {
 test('image generation store returns 422 when openai is missing', function () {
     [$user, $team] = createUserWithTeam();
     $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'edited_text' => 'Content',
+    $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
+    BackgroundSource::factory()->create([
+        'content_piece_id' => $contentPiece->id,
+        'content' => 'Content',
     ]);
 
     $response = $this->actingAs($user)
@@ -76,9 +80,10 @@ test('image generation store returns 422 when openai is missing', function () {
 
 test('store image generation validates prompt exists', function () {
     [$user, $team] = createUserWithTeam();
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'edited_text' => 'Test content',
+    $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
+    BackgroundSource::factory()->create([
+        'content_piece_id' => $contentPiece->id,
+        'content' => 'Test content',
     ]);
 
     $response = $this->actingAs($user)
@@ -94,9 +99,10 @@ test('store image generation validates prompt exists', function () {
 test('store image generation validates aspect ratio', function () {
     [$user, $team] = createUserWithTeam();
     $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'edited_text' => 'Test content',
+    $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
+    BackgroundSource::factory()->create([
+        'content_piece_id' => $contentPiece->id,
+        'content' => 'Test content',
     ]);
 
     $response = $this->actingAs($user)
@@ -107,6 +113,123 @@ test('store image generation validates aspect ratio', function () {
 
     $response->assertUnprocessable()
         ->assertJsonValidationErrors(['aspect_ratio']);
+});
+
+test('store image generation requires sources', function () {
+    [$user, $team] = createUserWithTeam();
+    $team->update(['openai_api_key' => 'sk-openai']);
+    $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
+    $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
+    // No background sources or posts attached
+
+    $response = $this->actingAs($user)
+        ->postJson("/content-pieces/{$contentPiece->id}/image-generations", [
+            'prompt_id' => $prompt->id,
+            'aspect_ratio' => '16:9',
+        ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonPath('message', 'Content piece has no sources. Please add sources in the Sources tab first.');
+});
+
+test('store image generation works with attached posts', function () {
+    Queue::fake();
+
+    [$user, $team] = createUserWithTeam();
+    $team->update([
+        'openai_api_key' => 'sk-openai',
+        'gemini_api_key' => 'gm-key',
+    ]);
+    $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
+    $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
+    $source = \App\Models\Source::factory()->create(['team_id' => $team->id]);
+    $post = \App\Models\Post::factory()->create([
+        'source_id' => $source->id,
+        'uri' => 'https://example.com/article',
+        'summary' => 'Post content for image generation',
+    ]);
+    $contentPiece->posts()->attach($post);
+
+    $this->mock(WebContentExtractor::class, function ($mock) {
+        $mock->shouldReceive('extractArticleAsMarkdown')
+            ->with('https://example.com/article')
+            ->once()
+            ->andReturn('Fetched article content from the web');
+    });
+
+    $this->mock(OpenAIService::class, function ($mock) {
+        $mock->shouldReceive('configureForTeam')->andReturnSelf();
+        $mock->shouldReceive('generateImagePrompt')
+            ->once()
+            ->andReturn([
+                'prompt' => 'A beautiful landscape',
+                'input_tokens' => 100,
+                'output_tokens' => 50,
+                'total_tokens' => 150,
+                'model' => 'gpt-4o-mini',
+            ]);
+        $mock->shouldReceive('trackUsage')->once();
+    });
+
+    $response = $this->actingAs($user)
+        ->postJson("/content-pieces/{$contentPiece->id}/image-generations", [
+            'prompt_id' => $prompt->id,
+            'aspect_ratio' => '16:9',
+        ]);
+
+    $response->assertSuccessful();
+});
+
+test('store image generation fetches article content for POST-type background sources', function () {
+    Queue::fake();
+
+    [$user, $team] = createUserWithTeam();
+    $team->update([
+        'openai_api_key' => 'sk-openai',
+        'gemini_api_key' => 'gm-key',
+    ]);
+    $prompt = Prompt::factory()->image()->create(['team_id' => $team->id]);
+    $contentPiece = ContentPiece::factory()->create(['team_id' => $team->id]);
+    $source = \App\Models\Source::factory()->create(['team_id' => $team->id]);
+    $post = \App\Models\Post::factory()->create([
+        'source_id' => $source->id,
+        'uri' => 'https://example.com/blog-post',
+        'summary' => null, // No summary, should fetch from URL
+    ]);
+    BackgroundSource::factory()->create([
+        'content_piece_id' => $contentPiece->id,
+        'type' => BackgroundSource::TYPE_POST,
+        'post_id' => $post->id,
+    ]);
+
+    $this->mock(WebContentExtractor::class, function ($mock) {
+        $mock->shouldReceive('extractArticleAsMarkdown')
+            ->with('https://example.com/blog-post')
+            ->once()
+            ->andReturn('# Blog Post Title\n\nThis is the full article content fetched from the web.');
+    });
+
+    $this->mock(OpenAIService::class, function ($mock) {
+        $mock->shouldReceive('configureForTeam')->andReturnSelf();
+        $mock->shouldReceive('generateImagePrompt')
+            ->once()
+            ->andReturn([
+                'prompt' => 'A blog post illustration',
+                'input_tokens' => 100,
+                'output_tokens' => 50,
+                'total_tokens' => 150,
+                'model' => 'gpt-4o-mini',
+            ]);
+        $mock->shouldReceive('trackUsage')->once();
+    });
+
+    $response = $this->actingAs($user)
+        ->postJson("/content-pieces/{$contentPiece->id}/image-generations", [
+            'prompt_id' => $prompt->id,
+            'aspect_ratio' => '16:9',
+        ]);
+
+    $response->assertSuccessful();
 });
 
 test('authenticated users can update image generation prompt text', function () {

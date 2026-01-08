@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,34 +19,14 @@ class ContentPiece extends Model
         'internal_name',
         'briefing_text',
         'channel',
-        'target_language',
-        'status',
-        'research_text',
-        'edited_text',
-        'generation_status',
-        'generation_error',
-        'generation_error_occurred_at',
         'published_at',
-        'publish_to_platforms',
-        'published_platforms',
     ];
 
     public function casts(): array
     {
         return [
             'published_at' => 'immutable_datetime',
-            'generation_error_occurred_at' => 'immutable_datetime',
-            'publish_to_platforms' => 'array',
-            'published_platforms' => 'array',
         ];
-    }
-
-    public function scopeOrderedForPublishing(Builder $query): Builder
-    {
-        return $query
-            ->orderByRaw('published_at IS NOT NULL')
-            ->orderBy('published_at')
-            ->orderByDesc('created_at');
     }
 
     public function team(): BelongsTo
@@ -65,14 +44,6 @@ class ContentPiece extends Model
         return $this->belongsToMany(Post::class);
     }
 
-    public function media(): BelongsToMany
-    {
-        return $this->belongsToMany(Media::class)
-            ->withTimestamps()
-            ->withPivot('sort_order')
-            ->orderByPivot('sort_order');
-    }
-
     public function imageGenerations(): HasMany
     {
         return $this->hasMany(ImageGeneration::class);
@@ -86,5 +57,59 @@ class ContentPiece extends Model
     public function backgroundSources(): HasMany
     {
         return $this->hasMany(BackgroundSource::class)->ordered();
+    }
+
+    /**
+     * Get combined text from all sources for AI context.
+     * Includes background sources and directly attached posts.
+     * Each source is limited to maxWordsPerSource words, and total is limited to maxTotalWords.
+     */
+    public function getCombinedSourceText(int $maxWordsPerSource = 3000, int $maxTotalWords = 10000): string
+    {
+        $combinedParts = [];
+        $totalWords = 0;
+
+        // Helper to add content with word limits
+        $addContent = function (string $content) use (&$combinedParts, &$totalWords, $maxWordsPerSource, $maxTotalWords): bool {
+            if (empty(trim($content))) {
+                return true; // Continue processing
+            }
+
+            $words = preg_split('/\s+/', trim($content), -1, PREG_SPLIT_NO_EMPTY);
+            if (count($words) > $maxWordsPerSource) {
+                $words = array_slice($words, 0, $maxWordsPerSource);
+            }
+
+            $remainingWords = $maxTotalWords - $totalWords;
+            if ($remainingWords <= 0) {
+                return false; // Stop processing
+            }
+
+            if (count($words) > $remainingWords) {
+                $words = array_slice($words, 0, $remainingWords);
+            }
+
+            $totalWords += count($words);
+            $combinedParts[] = implode(' ', $words);
+
+            return true;
+        };
+
+        // First, add content from background sources
+        foreach ($this->backgroundSources as $source) {
+            $content = $source->getDisplayContent();
+            if ($content && ! $addContent($content)) {
+                break;
+            }
+        }
+
+        // Then, add content from directly attached posts
+        foreach ($this->posts as $post) {
+            if ($post->summary && ! $addContent($post->summary)) {
+                break;
+            }
+        }
+
+        return implode("\n\n", $combinedParts);
     }
 }

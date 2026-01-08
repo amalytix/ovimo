@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Channel;
 use App\Models\Prompt;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,13 +25,14 @@ class StorePromptRequest extends FormRequest
     public function rules(): array
     {
         $type = $this->input('type', Prompt::TYPE_CONTENT);
+        $teamId = auth()->user()->current_team_id;
 
         return [
             'internal_name' => ['required', 'string', 'max:255'],
             'type' => ['sometimes', 'string', Rule::in([Prompt::TYPE_CONTENT, Prompt::TYPE_IMAGE])],
-            'channel' => $type === Prompt::TYPE_CONTENT
-                ? ['required', 'string', 'in:BLOG_POST,LINKEDIN_POST,YOUTUBE_SCRIPT']
-                : ['nullable', 'string', 'in:BLOG_POST,LINKEDIN_POST,YOUTUBE_SCRIPT'],
+            'channel_id' => $type === Prompt::TYPE_CONTENT
+                ? ['required', 'integer', Rule::exists(Channel::class, 'id')->where('team_id', $teamId)]
+                : ['nullable', 'integer', Rule::exists(Channel::class, 'id')->where('team_id', $teamId)],
             'prompt_text' => ['required', 'string', 'max:10000'],
             'is_default' => ['sometimes', 'boolean'],
         ];

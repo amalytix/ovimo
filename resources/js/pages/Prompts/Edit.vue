@@ -14,16 +14,24 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
 
+interface Channel {
+    id: number;
+    name: string;
+    icon: string | null;
+    color: string | null;
+}
+
 interface Prompt {
     id: number;
     internal_name: string;
     type: 'CONTENT' | 'IMAGE';
-    channel: string;
+    channel_id: number | null;
     prompt_text: string;
 }
 
 interface Props {
     prompt: Prompt;
+    channels: Channel[];
 }
 
 const props = defineProps<Props>();
@@ -36,7 +44,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const form = useForm({
     internal_name: props.prompt.internal_name,
     type: props.prompt.type,
-    channel: props.prompt.channel,
+    channel_id: props.prompt.channel_id,
     prompt_text: props.prompt.prompt_text,
 });
 
@@ -93,21 +101,28 @@ const submit = () => {
 
                 <div v-if="form.type === 'CONTENT'" class="space-y-2">
                     <Label for="channel">Channel</Label>
-                    <Select v-model="form.channel">
+                    <Select v-model="form.channel_id">
                         <SelectTrigger>
                             <SelectValue placeholder="Select channel" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="BLOG_POST">Blog Post</SelectItem>
-                            <SelectItem value="LINKEDIN_POST"
-                                >LinkedIn Post</SelectItem
+                            <SelectItem
+                                v-for="channel in props.channels"
+                                :key="channel.id"
+                                :value="channel.id"
                             >
-                            <SelectItem value="YOUTUBE_SCRIPT"
-                                >YouTube Script</SelectItem
-                            >
+                                {{ channel.name }}
+                            </SelectItem>
                         </SelectContent>
                     </Select>
-                    <InputError :message="form.errors.channel" />
+                    <p
+                        v-if="props.channels.length === 0"
+                        class="text-xs text-amber-600 dark:text-amber-400"
+                    >
+                        No channels configured. Create channels in Team Settings
+                        first.
+                    </p>
+                    <InputError :message="form.errors.channel_id" />
                 </div>
 
                 <div class="space-y-2">

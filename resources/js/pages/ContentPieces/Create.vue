@@ -11,13 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -63,8 +56,6 @@ type FormSource = PostSource | ManualSource;
 
 const form = useForm({
     internal_name: props.initialTitle || '',
-    target_language: 'ENGLISH',
-    published_at: '' as string | null,
 });
 
 // Sources management (local state, sent on submit)
@@ -148,12 +139,6 @@ const getPostTitle = (source: PostSource): string => {
     return source.post.internal_title || source.post.external_title || 'Untitled';
 };
 
-const serializePublishedAt = (value: string | null) => {
-    if (!value) return null;
-    const date = new Date(value);
-    return date.toISOString();
-};
-
 const save = () => {
     // Transform sources for API
     const sourcesData = sources.value.map((source, index) => ({
@@ -167,8 +152,6 @@ const save = () => {
 
     router.post('/content-pieces', {
         internal_name: form.internal_name,
-        target_language: form.target_language,
-        published_at: serializePublishedAt(form.published_at),
         sources: sourcesData,
     }, {
         preserveScroll: true,
@@ -196,7 +179,7 @@ const cancel = () => {
             <div class="rounded-xl border bg-card p-6 shadow-sm">
                 <h2 class="mb-4 text-lg font-medium">Basic Information</h2>
                 <div class="grid gap-6 md:grid-cols-2">
-                    <div class="space-y-2 md:col-span-2">
+                    <div class="space-y-2">
                         <Label for="internal_name">Name</Label>
                         <Input
                             id="internal_name"
@@ -208,28 +191,6 @@ const cancel = () => {
                         <p v-if="form.errors.internal_name" class="text-sm text-destructive">
                             {{ form.errors.internal_name }}
                         </p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label for="target_language">Target Language</Label>
-                        <Select v-model="form.target_language">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select language" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ENGLISH">English</SelectItem>
-                                <SelectItem value="GERMAN">German</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label for="published_at">Planned Publish Date (optional)</Label>
-                        <Input
-                            id="published_at"
-                            v-model="form.published_at"
-                            type="datetime-local"
-                        />
                     </div>
                 </div>
             </div>

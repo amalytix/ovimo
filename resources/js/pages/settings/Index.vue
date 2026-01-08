@@ -82,6 +82,7 @@ interface Webhook {
 interface Channel {
     id: number;
     name: string;
+    language: 'ENGLISH' | 'GERMAN';
     icon: string | null;
     color: string | null;
     sort_order: number;
@@ -427,6 +428,7 @@ const editingChannel = ref<Channel | null>(null);
 
 const channelForm = useForm({
     name: '',
+    language: 'ENGLISH' as 'ENGLISH' | 'GERMAN',
     icon: '',
     color: '#3b82f6',
     is_active: true,
@@ -434,27 +436,29 @@ const channelForm = useForm({
 
 const openCreateChannelModal = () => {
     editingChannel.value = null;
-    channelForm.reset();
-    channelForm.clearErrors();
     channelForm.defaults({
         name: '',
+        language: 'ENGLISH',
         icon: '',
         color: '#3b82f6',
         is_active: true,
     });
+    channelForm.reset();
+    channelForm.clearErrors();
     showChannelModal.value = true;
 };
 
 const openEditChannelModal = (channel: Channel) => {
     editingChannel.value = channel;
-    channelForm.reset();
-    channelForm.clearErrors();
     channelForm.defaults({
         name: channel.name,
+        language: channel.language,
         icon: channel.icon || '',
         color: channel.color || '#3b82f6',
         is_active: channel.is_active,
     });
+    channelForm.reset();
+    channelForm.clearErrors();
     showChannelModal.value = true;
 };
 
@@ -872,6 +876,9 @@ const channelColors = [
                                             Name
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+                                            Language
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                                             Color
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
@@ -895,6 +902,9 @@ const channelColors = [
                                                 <span v-if="channel.icon">{{ channel.icon }}</span>
                                                 {{ channel.name }}
                                             </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
+                                            {{ channel.language === 'ENGLISH' ? 'English' : 'German' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div
@@ -935,7 +945,7 @@ const channelColors = [
                                     </tr>
                                     <tr v-if="channels.length === 0">
                                         <td
-                                            :colspan="isOwner ? 6 : 5"
+                                            :colspan="isOwner ? 7 : 6"
                                             class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
                                         >
                                             No channels configured. Click "Add Channel" to create your first channel.
@@ -1944,6 +1954,20 @@ const channelColors = [
                             placeholder="E.g., LinkedIn Post"
                         />
                         <InputError :message="channelForm.errors.name" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="channel_language">Language</Label>
+                        <Select v-model="channelForm.language">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ENGLISH">English</SelectItem>
+                                <SelectItem value="GERMAN">German</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <InputError :message="channelForm.errors.language" />
                     </div>
 
                     <div class="space-y-2">

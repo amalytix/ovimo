@@ -10,13 +10,19 @@ use App\Models\ContentPiece;
 use App\Models\ImageGeneration;
 use App\Models\Prompt;
 use App\Services\AIServiceFactory;
+use App\Services\WebContentExtractor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ImageGenerationController extends Controller
 {
-    public function store(StoreImageGenerationRequest $request, ContentPiece $contentPiece, AIServiceFactory $aiFactory): JsonResponse
-    {
+    public function store(
+        StoreImageGenerationRequest $request,
+        ContentPiece $contentPiece,
+        AIServiceFactory $aiFactory,
+        WebContentExtractor $extractor
+    ): JsonResponse {
         $this->authorize('update', $contentPiece);
 
         $validated = $request->validated();
@@ -28,12 +34,12 @@ class ImageGenerationController extends Controller
             ->where('type', Prompt::TYPE_IMAGE)
             ->firstOrFail();
 
-        // Get the content to use as context
-        $contentText = $contentPiece->edited_text ?? '';
+        // Build context from sources (fetches article content for POST-type sources)
+        $contentText = $this->buildContextFromSources($contentPiece, $extractor);
 
         if (empty(trim($contentText))) {
             return response()->json([
-                'message' => 'Content piece has no edited text. Please add content in the Editing tab first.',
+                'message' => 'Content piece has no sources. Please add sources in the Sources tab first.',
             ], 422);
         }
 
@@ -157,11 +163,6 @@ class ImageGenerationController extends Controller
             abort(404);
         }
 
-        // Optionally detach media from content piece if requested
-        if ($request->boolean('detach_media') && $imageGeneration->media_id) {
-            $contentPiece->media()->detach($imageGeneration->media_id);
-        }
-
         $imageGeneration->delete();
 
         return response()->json([
@@ -205,5 +206,96 @@ class ImageGenerationController extends Controller
             'settings_url' => $exception->settingsUrl,
             'provider' => $exception->provider,
         ], 422);
+    }
+
+    /**
+     * Build context from content piece sources for image prompt generation.
+     * For POST-type sources, fetches article content from the URL.
+     * For MANUAL-type sources, uses the stored content.
+     */
+    private function buildContextFromSources(ContentPiece $contentPiece, WebContentExtractor $extractor): string
+    {
+        $maxWordsPerSource = 3000;
+        $maxTotalWords = 10000;
+        $combinedParts = [];
+        $totalWords = 0;
+
+        // Helper to add content with word limits
+        $addContent = function (string $content) use (&$combinedParts, &$totalWords, $maxWordsPerSource, $maxTotalWords): bool {
+            if (empty(trim($content))) {
+                return true;
+            }
+
+            $words = preg_split('/\s+/', trim($content), -1, PREG_SPLIT_NO_EMPTY);
+            if (count($words) > $maxWordsPerSource) {
+                $words = array_slice($words, 0, $maxWordsPerSource);
+            }
+
+            $remainingWords = $maxTotalWords - $totalWords;
+            if ($remainingWords <= 0) {
+                return false;
+            }
+
+            if (count($words) > $remainingWords) {
+                $words = array_slice($words, 0, $remainingWords);
+            }
+
+            $totalWords += count($words);
+            $combinedParts[] = implode(' ', $words);
+
+            return true;
+        };
+
+        // Process background sources
+        foreach ($contentPiece->backgroundSources as $source) {
+            if ($source->isPost() && $source->post) {
+                // Fetch article content from URL
+                try {
+                    $articleContent = $extractor->extractArticleAsMarkdown($source->post->uri);
+                    if (! $addContent($articleContent)) {
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Failed to extract article for image generation: {$e->getMessage()}", [
+                        'uri' => $source->post->uri,
+                        'content_piece_id' => $contentPiece->id,
+                    ]);
+                    // Fall back to summary if available
+                    if ($source->post->summary && ! $addContent($source->post->summary)) {
+                        break;
+                    }
+                }
+            } elseif ($source->isManual() && $source->content) {
+                if (! $addContent($source->content)) {
+                    break;
+                }
+            }
+        }
+
+        // Also include directly attached posts
+        foreach ($contentPiece->posts as $post) {
+            if ($post->uri) {
+                try {
+                    $articleContent = $extractor->extractArticleAsMarkdown($post->uri);
+                    if (! $addContent($articleContent)) {
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Failed to extract article for image generation: {$e->getMessage()}", [
+                        'uri' => $post->uri,
+                        'content_piece_id' => $contentPiece->id,
+                    ]);
+                    if ($post->summary && ! $addContent($post->summary)) {
+                        break;
+                    }
+                }
+            } elseif ($post->summary) {
+                if (! $addContent($post->summary)) {
+                    break;
+                }
+            }
+        }
+
+        return implode("\n\n", $combinedParts);
     }
 }

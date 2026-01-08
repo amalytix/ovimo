@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Channel;
 use App\Models\Prompt;
 
 test('guests cannot access prompts', function () {
@@ -42,10 +43,11 @@ test('authenticated users can view create prompt form', function () {
 
 test('authenticated users can create a prompt', function () {
     [$user, $team] = createUserWithTeam();
+    $channel = Channel::factory()->create(['team_id' => $team->id]);
 
     $response = $this->actingAs($user)->post('/prompts', [
         'internal_name' => 'Test Prompt',
-        'channel' => 'BLOG_POST',
+        'channel_id' => $channel->id,
         'prompt_text' => 'Generate a blog post about {{context}}',
     ]);
 
@@ -54,7 +56,7 @@ test('authenticated users can create a prompt', function () {
     $this->assertDatabaseHas('prompts', [
         'team_id' => $team->id,
         'internal_name' => 'Test Prompt',
-        'channel' => 'BLOG_POST',
+        'channel_id' => $channel->id,
         'prompt_text' => 'Generate a blog post about {{context}}',
     ]);
 });
@@ -64,19 +66,19 @@ test('prompt creation validates required fields', function () {
 
     $response = $this->actingAs($user)->post('/prompts', []);
 
-    $response->assertSessionHasErrors(['internal_name', 'channel', 'prompt_text']);
+    $response->assertSessionHasErrors(['internal_name', 'channel_id', 'prompt_text']);
 });
 
-test('prompt creation validates channel is valid', function () {
+test('prompt creation validates channel_id is valid', function () {
     [$user, $team] = createUserWithTeam();
 
     $response = $this->actingAs($user)->post('/prompts', [
         'internal_name' => 'Test',
-        'channel' => 'INVALID_CHANNEL',
+        'channel_id' => 99999,
         'prompt_text' => 'Test prompt',
     ]);
 
-    $response->assertSessionHasErrors(['channel']);
+    $response->assertSessionHasErrors(['channel_id']);
 });
 
 test('authenticated users can edit their own team prompts', function () {
@@ -104,11 +106,13 @@ test('users cannot edit prompts from other teams', function () {
 
 test('authenticated users can update their prompts', function () {
     [$user, $team] = createUserWithTeam();
-    $prompt = Prompt::factory()->create(['team_id' => $team->id]);
+    $channel = Channel::factory()->create(['team_id' => $team->id]);
+    $newChannel = Channel::factory()->create(['team_id' => $team->id]);
+    $prompt = Prompt::factory()->create(['team_id' => $team->id, 'channel_id' => $channel->id]);
 
     $response = $this->actingAs($user)->put("/prompts/{$prompt->id}", [
         'internal_name' => 'Updated Prompt Name',
-        'channel' => 'LINKEDIN_POST',
+        'channel_id' => $newChannel->id,
         'prompt_text' => 'Updated prompt text',
     ]);
 
@@ -116,19 +120,20 @@ test('authenticated users can update their prompts', function () {
 
     $prompt->refresh();
     expect($prompt->internal_name)->toBe('Updated Prompt Name');
-    expect($prompt->channel)->toBe('LINKEDIN_POST');
+    expect($prompt->channel_id)->toBe($newChannel->id);
     expect($prompt->prompt_text)->toBe('Updated prompt text');
 });
 
 test('users cannot update prompts from other teams', function () {
     [$user, $team] = createUserWithTeam();
+    $channel = Channel::factory()->create(['team_id' => $team->id]);
     [$otherUser, $otherTeam] = createUserWithTeam();
     $otherPrompt = Prompt::factory()->create(['team_id' => $otherTeam->id]);
 
     $this->actingAs($user)
         ->put("/prompts/{$otherPrompt->id}", [
             'internal_name' => 'Updated',
-            'channel' => 'BLOG_POST',
+            'channel_id' => $channel->id,
             'prompt_text' => 'Updated',
         ])
         ->assertForbidden();

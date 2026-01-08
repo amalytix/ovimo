@@ -20,10 +20,6 @@ class ContentPieceFactory extends Factory
             'internal_name' => fake()->words(3, true),
             'briefing_text' => fake()->paragraphs(2, true),
             'channel' => fake()->randomElement(['BLOG_POST', 'LINKEDIN_POST', 'YOUTUBE_SCRIPT']),
-            'target_language' => fake()->randomElement(['ENGLISH', 'GERMAN']),
-            'status' => fake()->randomElement(['NOT_STARTED', 'DRAFT', 'FINAL']),
-            'research_text' => null,
-            'edited_text' => null,
             'published_at' => fake()->optional(0.3)->dateTimeBetween('now', '+30 days'),
         ];
     }

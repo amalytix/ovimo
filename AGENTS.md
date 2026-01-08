@@ -1,13 +1,4 @@
 <laravel-boost-guidelines>
-
-## Architecture Documentation
-
-**For comprehensive application architecture documentation, see [docs/architecture.md](docs/architecture.md).**
-
-This includes domain model relationships, backend/frontend structure, database schema, and key patterns.
-
----
-
 === foundation rules ===
 
 # Laravel Boost Guidelines
@@ -49,7 +40,6 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ## Frontend Bundling
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
-- Please always run "npm run build" yourself after changes to the frontend assets.
 
 ## Replies
 - Be concise in your explanations - focus on what's important rather than explaining obvious details.
@@ -127,6 +117,14 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - Typically, keys in an Enum should be TitleCase. For example: `FavoritePerson`, `BestLake`, `Monthly`.
 
 
+=== herd rules ===
+
+## Laravel Herd
+
+- The application is served by Laravel Herd and will be available at: https?://[kebab-case-project-dir].test. Use the `get-absolute-url` tool to generate URLs for the user to ensure valid URLs.
+- You must not run any commands to make the site available via HTTP(s). It is _always_ available through Laravel Herd.
+
+
 === inertia-laravel/core rules ===
 
 ## Inertia Core
@@ -181,7 +179,6 @@ Route::get('/users', function () {
 - Avoid `DB::`; prefer `Model::query()`. Generate code that leverages Laravel's ORM capabilities rather than bypassing them.
 - Generate code that prevents N+1 query problems by using eager loading.
 - Use Laravel's query builder for very complex database operations.
-- Always warn the user before running migrate:fresh. That command drops all tables and recreates them, wiping all data.
 
 ### Model Creation
 - When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `list-artisan-commands` to check the available options to `php artisan make:model`.
@@ -403,7 +400,6 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 - Vue components must have a single root element.
 - Use `router.visit()` or `<Link>` for navigation instead of traditional links.
-- **IMPORTANT: Reka UI components (Checkbox, Select, etc.) use `modelValue`/`update:modelValue`, NOT `checked`/`update:checked`.** See `docs/ui-components.md` for complete patterns and examples.
 
 <code-snippet name="Inertia Client Navigation" lang="vue">
 

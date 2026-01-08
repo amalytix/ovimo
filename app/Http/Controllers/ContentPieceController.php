@@ -3,25 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ContentPiece\BulkActionRequest;
-use App\Http\Requests\ContentPiece\PublishContentPieceRequest;
 use App\Http\Requests\StoreContentPieceRequest;
 use App\Http\Requests\UpdateContentPieceRequest;
-use App\Jobs\GenerateContentPiece;
-use App\Jobs\PublishContentToLinkedIn;
 use App\Models\Channel;
+use App\Models\ContentDerivative;
 use App\Models\ContentPiece;
 use App\Models\Media;
 use App\Models\MediaTag;
 use App\Models\Prompt;
-use App\Models\SocialIntegration;
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,10 +27,9 @@ class ContentPieceController extends Controller
         $this->authorize('viewAny', ContentPiece::class);
 
         $validated = $request->validate([
-            'status' => ['nullable', 'in:NOT_STARTED,DRAFT,FINAL'],
             'channel' => ['nullable', 'in:BLOG_POST,LINKEDIN_POST,YOUTUBE_SCRIPT'],
             'search' => ['nullable', 'string'],
-            'view' => ['nullable', 'in:list,week,month,matrix'],
+            'view' => ['nullable', 'in:list,week,month'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'sort_by' => ['nullable', 'in:published_at'],
@@ -45,19 +39,12 @@ class ContentPieceController extends Controller
 
         $teamId = auth()->user()->current_team_id;
 
-        $isMatrixView = ($validated['view'] ?? null) === 'matrix';
-
         $query = ContentPiece::query()
             ->where('team_id', $teamId)
-            ->with(['prompt:id,internal_name'])
-            ->when($isMatrixView, fn ($q) => $q->with(['derivatives:id,content_piece_id,channel_id,status,generation_status']));
+            ->with(['prompt:id,internal_name', 'derivatives:id,content_piece_id,channel_id,status,generation_status']);
 
         $sortBy = $validated['sort_by'] ?? null;
         $sortDirection = $validated['sort_direction'] ?? 'asc';
-
-        if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
-        }
 
         if (! empty($validated['channel'])) {
             $query->where('channel', $validated['channel']);
@@ -85,7 +72,10 @@ class ContentPieceController extends Controller
                 ->orderBy('published_at', $sortDirection)
                 ->orderByDesc('created_at');
         } else {
-            $query->orderedForPublishing();
+            $query
+                ->orderByRaw('published_at IS NOT NULL')
+                ->orderBy('published_at')
+                ->orderByDesc('created_at');
         }
 
         $contentPieces = $query
@@ -94,33 +84,22 @@ class ContentPieceController extends Controller
             ->through(fn (ContentPiece $piece) => [
                 'id' => $piece->id,
                 'internal_name' => $piece->internal_name,
-                'channel' => $piece->channel,
-                'target_language' => $piece->target_language,
-                'status' => $piece->status,
-                'prompt_name' => $piece->prompt?->internal_name,
                 'created_at' => $piece->created_at->diffForHumans(),
-                'published_at' => $piece->published_at?->toIso8601String(),
-                'published_at_human' => $piece->published_at?->diffForHumans(),
-                ...($isMatrixView ? [
-                    'derivatives' => $piece->derivatives->map(fn ($d) => [
-                        'id' => $d->id,
-                        'channel_id' => $d->channel_id,
-                        'status' => $d->status,
-                        'generation_status' => $d->generation_status,
-                    ]),
-                ] : []),
+                'derivatives' => $piece->derivatives->map(fn ($d) => [
+                    'id' => $d->id,
+                    'channel_id' => $d->channel_id,
+                    'status' => $d->status,
+                    'generation_status' => $d->generation_status,
+                ]),
             ]);
 
-        // Get channels for matrix view
-        $channels = $isMatrixView
-            ? Channel::where('team_id', $teamId)->active()->ordered()->get(['id', 'name', 'slug', 'icon', 'color'])
-            : collect();
+        // Get channels for derivative status display
+        $channels = Channel::where('team_id', $teamId)->active()->ordered()->get(['id', 'name', 'language', 'icon', 'color']);
 
         return Inertia::render('ContentPieces/Index', [
             'contentPieces' => $contentPieces,
             'channels' => $channels,
             'filters' => [
-                'status' => $validated['status'] ?? null,
                 'channel' => $validated['channel'] ?? null,
                 'search' => $validated['search'] ?? null,
                 'view' => $validated['view'] ?? 'list',
@@ -210,10 +189,8 @@ class ContentPieceController extends Controller
         $contentPiece = ContentPiece::create([
             'team_id' => $teamId,
             'internal_name' => $validated['internal_name'],
-            'target_language' => $validated['target_language'],
             'published_at' => $validated['published_at'] ?? null,
-            'status' => 'NOT_STARTED',
-            // Legacy fields - set defaults for backward compatibility
+            // Legacy field - set default for backward compatibility
             'channel' => 'BLOG_POST',
         ]);
 
@@ -242,11 +219,11 @@ class ContentPieceController extends Controller
         $contentPiece->load([
             'prompt:id,internal_name,prompt_text',
             'posts:id,uri,summary,external_title,internal_title',
-            'media.tags',
             'imageGenerations.prompt',
             'imageGenerations.media',
             'team',
             'derivatives.channel',
+            'derivatives.media.tags',
             'backgroundSources.post',
         ]);
 
@@ -255,7 +232,7 @@ class ContentPieceController extends Controller
         $channels = Channel::where('team_id', $teamId)
             ->active()
             ->ordered()
-            ->get(['id', 'name', 'slug', 'icon', 'color']);
+            ->get(['id', 'name', 'language', 'icon', 'color']);
 
         $prompts = Prompt::where('team_id', $teamId)
             ->where('type', Prompt::TYPE_CONTENT)
@@ -282,22 +259,6 @@ class ContentPieceController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $linkedinIntegrations = SocialIntegration::query()
-            ->active()
-            ->where('team_id', $teamId)
-            ->orderByDesc('created_at')
-            ->get([
-                'id',
-                'platform',
-                'platform_user_id',
-                'platform_username',
-                'profile_data',
-                'scopes',
-                'is_active',
-                'created_at',
-                'token_expires_at',
-            ]);
-
         // Get available posts for sources tab
         $availablePostsForSources = \App\Models\Post::query()
             ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
@@ -313,24 +274,10 @@ class ContentPieceController extends Controller
                 'internal_name' => $contentPiece->internal_name,
                 'briefing_text' => $contentPiece->briefing_text,
                 'channel' => $contentPiece->channel,
-                'target_language' => $contentPiece->target_language,
-                'status' => $contentPiece->status,
-                'research_text' => $contentPiece->research_text,
-                'edited_text' => $contentPiece->edited_text,
                 'prompt_id' => $contentPiece->prompt_id,
                 'prompt' => $contentPiece->prompt,
                 'posts' => $contentPiece->posts,
-                'media' => $contentPiece->media->map(fn (Media $media) => [
-                    ...$this->transformMedia($media),
-                    'pivot' => [
-                        'sort_order' => $media->pivot->sort_order,
-                    ],
-                ]),
                 'published_at' => $contentPiece->published_at?->toIso8601String(),
-                'publish_state' => $this->derivePublishState($contentPiece),
-                'publish_to_platforms' => $contentPiece->publish_to_platforms,
-                'published_platforms' => $contentPiece->published_platforms,
-                'publish_at' => $contentPiece->published_at?->toIso8601String(),
             ],
             'channels' => $channels,
             'derivatives' => $contentPiece->derivatives->map(fn ($d) => [
@@ -344,6 +291,7 @@ class ContentPieceController extends Controller
                 'planned_publish_at' => $d->planned_publish_at?->toIso8601String(),
                 'generation_status' => $d->generation_status,
                 'generation_error' => $d->generation_error,
+                'media' => $d->media->map(fn (Media $media) => $this->transformMedia($media)),
             ]),
             'backgroundSources' => $contentPiece->backgroundSources->map(fn ($s) => [
                 'id' => $s->id,
@@ -388,9 +336,6 @@ class ContentPieceController extends Controller
             'availablePosts' => $availablePosts,
             'media' => $availableMedia->map(fn (Media $media) => $this->transformMedia($media)),
             'mediaTags' => $mediaTags,
-            'integrations' => [
-                'linkedin' => $linkedinIntegrations,
-            ],
             'ai' => [
                 'has_openai' => $contentPiece->team->hasOpenAIConfigured(),
                 'has_gemini' => $contentPiece->team->hasGeminiConfigured(),
@@ -405,15 +350,11 @@ class ContentPieceController extends Controller
 
         $validated = $request->validated();
 
-        $contentPiece->update(Arr::except($validated, ['post_ids', 'media_ids']));
+        $contentPiece->update(Arr::except($validated, ['post_ids']));
 
         // Sync selected posts
         if (array_key_exists('post_ids', $validated)) {
             $contentPiece->posts()->sync($validated['post_ids']);
-        }
-
-        if (array_key_exists('media_ids', $validated)) {
-            $contentPiece->media()->sync($validated['media_ids']);
         }
 
         return redirect()->route('content-pieces.edit', [
@@ -421,126 +362,6 @@ class ContentPieceController extends Controller
             'tab' => $request->query('tab'),
         ])
             ->with('success', 'Content piece updated successfully.');
-    }
-
-    public function publish(PublishContentPieceRequest $request, ContentPiece $contentPiece): RedirectResponse
-    {
-        $this->authorize('update', $contentPiece);
-
-        $validated = $request->validated();
-        $teamId = auth()->user()->current_team_id;
-
-        $integration = SocialIntegration::query()
-            ->active()
-            ->where('team_id', $teamId)
-            ->findOrFail($validated['integration_id']);
-
-        $publishTo = $contentPiece->publish_to_platforms ?? [];
-        $publishTo['linkedin'] = $integration->id;
-
-        if (! empty($validated['schedule_at'])) {
-            $contentPiece->update([
-                'publish_to_platforms' => $publishTo,
-                'published_at' => Carbon::parse($validated['schedule_at']),
-            ]);
-
-            return redirect()->route('content-pieces.edit', [
-                'content_piece' => $contentPiece,
-                'tab' => $request->query('tab'),
-            ])->with('success', 'Publishing scheduled.');
-        }
-
-        $contentPiece->update([
-            'publish_to_platforms' => $publishTo,
-            'published_at' => now(),
-        ]);
-
-        PublishContentToLinkedIn::dispatch($contentPiece, $integration);
-
-        return redirect()->route('content-pieces.edit', [
-            'content_piece' => $contentPiece,
-            'tab' => $request->query('tab'),
-        ])->with('success', 'Publishing started.');
-    }
-
-    public function generate(Request $request, ContentPiece $contentPiece): RedirectResponse
-    {
-        $this->authorize('generate', $contentPiece);
-
-        if (! $contentPiece->prompt) {
-            return back()->with('error', 'Please select a prompt template first.');
-        }
-
-        if (! $contentPiece->team->hasOpenAIConfigured()) {
-            return back()->with('error', 'OpenAI API key is not configured for this team. Add one in the AI tab of Team Settings.');
-        }
-
-        return $this->generateContentForPiece($contentPiece, $request->query('tab'));
-    }
-
-    private function generateContentForPiece(ContentPiece $contentPiece, ?string $tab = null): RedirectResponse
-    {
-        // Use database transaction with pessimistic locking for concurrency protection
-        return DB::transaction(function () use ($contentPiece, $tab) {
-            $locked = ContentPiece::lockForUpdate()->find($contentPiece->id);
-
-            // Check if generation is already in progress
-            if (in_array($locked->generation_status, ['QUEUED', 'PROCESSING'])) {
-                return redirect()->route('content-pieces.edit', [
-                    'content_piece' => $locked,
-                    'tab' => $tab,
-                ])->with('error', 'Generation already in progress. Please wait for it to complete.');
-            }
-
-            // Update status and dispatch job
-            $locked->update(['generation_status' => 'QUEUED']);
-            GenerateContentPiece::dispatch($locked);
-
-            // Return with polling metadata
-            return redirect()->route('content-pieces.edit', [
-                'content_piece' => $locked,
-                'tab' => $tab,
-            ])->with([
-                'success' => 'Content generation started. This may take 1-3 minutes.',
-                'polling' => [
-                    'content_piece_id' => $locked->id,
-                    'status' => 'QUEUED',
-                ],
-            ]);
-        });
-    }
-
-    public function updateStatus(Request $request, ContentPiece $contentPiece): RedirectResponse
-    {
-        $this->authorize('update', $contentPiece);
-
-        $request->validate([
-            'status' => ['required', 'in:NOT_STARTED,DRAFT,FINAL'],
-        ]);
-
-        $contentPiece->update(['status' => $request->status]);
-
-        return redirect()->route('content-pieces.edit', [
-            'content_piece' => $contentPiece,
-            'tab' => $request->query('tab'),
-        ])->with('success', 'Status updated successfully.');
-    }
-
-    public function status(ContentPiece $contentPiece): JsonResponse
-    {
-        $this->authorize('view', $contentPiece);
-
-        return response()->json([
-            'generation_status' => $contentPiece->generation_status,
-            'research_text' => $contentPiece->research_text,
-            'edited_text' => $contentPiece->edited_text,
-            'status' => $contentPiece->status,
-            'error' => $contentPiece->generation_error,
-            'error_occurred_at' => $contentPiece->generation_error_occurred_at,
-            'publish_state' => $this->derivePublishState($contentPiece),
-            'published_platforms' => $contentPiece->published_platforms,
-            'publish_at' => $contentPiece->publish_at,
-        ]);
     }
 
     public function calendar(Request $request): JsonResponse
@@ -563,25 +384,27 @@ class ContentPieceController extends Controller
             $endDate = $currentDate->endOfMonth()->endOfWeek(CarbonInterface::SUNDAY);
         }
 
-        $contentPieces = ContentPiece::query()
-            ->where('team_id', $teamId)
-            ->whereNotNull('published_at')
-            ->whereBetween('published_at', [$startDate, $endDate])
-            ->with('prompt:id,internal_name')
-            ->orderedForPublishing()
+        $derivatives = ContentDerivative::query()
+            ->whereHas('contentPiece', fn ($q) => $q->where('team_id', $teamId))
+            ->whereNotNull('planned_publish_at')
+            ->whereBetween('planned_publish_at', [$startDate, $endDate])
+            ->with(['channel:id,name,icon,color', 'contentPiece:id,internal_name'])
+            ->orderBy('planned_publish_at')
+            ->orderByDesc('created_at')
             ->get();
 
-        $events = $contentPieces
-            ->groupBy(fn (ContentPiece $piece) => $piece->published_at?->toDateString())
-            ->map(fn ($group) => $group->map(fn (ContentPiece $piece) => [
-                'id' => $piece->id,
-                'internal_name' => $piece->internal_name,
-                'channel' => $piece->channel,
-                'target_language' => $piece->target_language,
-                'status' => $piece->status,
-                'prompt_name' => $piece->prompt?->internal_name,
-                'published_at' => $piece->published_at?->toIso8601String(),
-                'published_at_human' => $piece->published_at?->diffForHumans(),
+        $events = $derivatives
+            ->groupBy(fn (ContentDerivative $derivative) => $derivative->planned_publish_at?->toDateString())
+            ->map(fn ($group) => $group->map(fn (ContentDerivative $derivative) => [
+                'id' => $derivative->id,
+                'title' => $derivative->title ?: $derivative->contentPiece->internal_name,
+                'content_piece_id' => $derivative->content_piece_id,
+                'channel_id' => $derivative->channel_id,
+                'channel_name' => $derivative->channel->name,
+                'channel_icon' => $derivative->channel->icon,
+                'channel_color' => $derivative->channel->color,
+                'status' => $derivative->status,
+                'planned_publish_at' => $derivative->planned_publish_at?->toIso8601String(),
             ])->values())
             ->toArray();
 
@@ -636,36 +459,6 @@ class ContentPieceController extends Controller
         }
 
         return response()->json(['message' => 'Publish dates removed successfully.']);
-    }
-
-    public function bulkUpdateStatus(BulkActionRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-        $teamId = auth()->user()->current_team_id;
-
-        $contentPieces = ContentPiece::where('team_id', $teamId)
-            ->whereIn('id', $validated['content_piece_ids'])
-            ->get();
-
-        foreach ($contentPieces as $contentPiece) {
-            $this->authorize('update', $contentPiece);
-            $contentPiece->update(['status' => $validated['status']]);
-        }
-
-        return response()->json(['message' => 'Status updated successfully.']);
-    }
-
-    private function derivePublishState(ContentPiece $contentPiece): string
-    {
-        if ($contentPiece->published_platforms && count($contentPiece->published_platforms) > 0) {
-            return 'published';
-        }
-
-        if ($contentPiece->published_at) {
-            return $contentPiece->published_at->isFuture() ? 'scheduled' : 'publishing';
-        }
-
-        return 'not_published';
     }
 
     private function transformMedia(Media $media): array

@@ -27,7 +27,6 @@ class StoreContentPieceRequest extends FormRequest
 
         return [
             'internal_name' => ['required', 'string', 'max:255'],
-            'target_language' => ['required', 'in:ENGLISH,GERMAN'],
             'published_at' => ['nullable', 'date', 'after_or_equal:now'],
 
             // Background sources

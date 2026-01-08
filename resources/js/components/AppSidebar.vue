@@ -18,6 +18,7 @@ import {
     Activity,
     BarChart3,
     FileText,
+    History,
     Image,
     LayoutGrid,
     MessageSquare,
@@ -45,14 +46,9 @@ const mainNavItems: NavItem[] = [
         icon: Rss,
     },
     {
-        title: 'Posts',
+        title: 'News',
         href: '/posts',
         icon: FileText,
-    },
-    {
-        title: 'Prompts',
-        href: '/prompts',
-        icon: MessageSquare,
     },
     {
         title: 'Content',
@@ -65,6 +61,11 @@ const mainNavItems: NavItem[] = [
         icon: Image,
     },
     {
+        title: 'Prompts',
+        href: '/prompts',
+        icon: MessageSquare,
+    },
+    {
         title: 'Settings',
         href: '/team-settings',
         icon: Settings,
@@ -73,6 +74,11 @@ const mainNavItems: NavItem[] = [
 
 const footerNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
+        {
+            title: 'Activities',
+            href: '/derivative-activities',
+            icon: History,
+        },
         {
             title: 'Logs',
             href: '/activity-logs',

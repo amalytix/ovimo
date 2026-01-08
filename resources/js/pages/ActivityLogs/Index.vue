@@ -9,7 +9,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 import { Pagination } from '@/components/ui/pagination';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -154,11 +154,19 @@ const formatMetadata = (metadata: Record<string, any> | null) => {
                     </div>
                     <div>
                         <Label for="from" class="mb-2">From Date</Label>
-                        <Input id="from" v-model="fromDate" type="date" />
+                        <DatePicker
+                            id="from"
+                            v-model="fromDate"
+                            placeholder="Select start date"
+                        />
                     </div>
                     <div>
                         <Label for="to" class="mb-2">To Date</Label>
-                        <Input id="to" v-model="toDate" type="date" />
+                        <DatePicker
+                            id="to"
+                            v-model="toDate"
+                            placeholder="Select end date"
+                        />
                     </div>
                     <div class="flex items-end gap-2">
                         <Button @click="applyFilters" class="w-full md:w-auto"

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ContentDerivative;
 use App\Models\ContentPiece;
 use App\Models\Post;
 use App\Models\Source;
 use App\Models\TokenUsageLog;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,17 +55,23 @@ class DashboardController extends Controller
             ->where('created_at', '>=', now()->startOfMonth())
             ->count();
 
-        /** @var Collection<int, array{id:int,internal_name:string,channel:string,published_at:?\DateTimeInterface,status:string,published_platforms:?array}> */
-        $contentPiecesToday = ContentPiece::query()
-            ->where('team_id', $teamId)
-            ->whereDate('published_at', today())
-            ->where(function ($query) {
-                $query->whereNull('published_platforms')
-                    ->orWhereRaw("json_extract(published_platforms, '$.linkedin') IS NULL");
-            })
-            ->orderBy('published_at')
-            ->orderBy('created_at')
-            ->get(['id', 'internal_name', 'channel', 'published_at', 'status', 'published_platforms']);
+        // Get derivatives scheduled for today that haven't been published yet
+        $derivativesToday = ContentDerivative::query()
+            ->whereHas('contentPiece', fn ($q) => $q->where('team_id', $teamId))
+            ->whereDate('planned_publish_at', today())
+            ->where('is_published', false)
+            ->with(['contentPiece:id,internal_name', 'channel:id,name'])
+            ->orderBy('planned_publish_at')
+            ->get()
+            ->map(fn (ContentDerivative $derivative) => [
+                'id' => $derivative->id,
+                'content_piece_id' => $derivative->content_piece_id,
+                'internal_name' => $derivative->contentPiece->internal_name,
+                'channel' => $derivative->channel->name,
+                'planned_publish_at' => $derivative->planned_publish_at,
+                'is_published' => $derivative->is_published,
+                'status' => $derivative->status,
+            ]);
 
         return Inertia::render('Dashboard', [
             'stats' => [
@@ -90,7 +96,7 @@ class DashboardController extends Controller
                     'this_month' => $contentPiecesThisMonth,
                 ],
             ],
-            'content_pieces_today' => $contentPiecesToday,
+            'derivatives_today' => $derivativesToday,
         ]);
     }
 }

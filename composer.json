@@ -98,6 +98,11 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "audit": {
+            "ignore": [
+                "PKSA-dxyf-6n16-t87m"
+            ]
         }
     },
     "minimum-stability": "stable",

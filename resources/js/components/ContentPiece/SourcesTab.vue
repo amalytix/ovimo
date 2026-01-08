@@ -98,7 +98,7 @@ const addManualSource = () => {
 };
 
 const removeSource = (sourceId: number) => {
-    router.delete(destroySource.url(props.contentPieceId, sourceId), {
+    router.delete(destroySource.url([props.contentPieceId, sourceId]), {
         preserveScroll: true,
     });
 };

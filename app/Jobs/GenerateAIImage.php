@@ -69,10 +69,7 @@ class GenerateAIImage implements ShouldQueue
             // Tag with "AI generated"
             $this->tagMediaAsAIGenerated($media);
 
-            // Attach to content piece
-            $contentPiece->media()->syncWithoutDetaching([$media->id]);
-
-            // Update image generation as completed
+            // Update image generation as completed (media is tracked via media_id)
             $this->imageGeneration->update([
                 'status' => ImageGeneration::STATUS_COMPLETED,
                 'media_id' => $media->id,

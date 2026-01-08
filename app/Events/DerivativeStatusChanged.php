@@ -2,16 +2,18 @@
 
 namespace App\Events;
 
-use App\Models\ContentPiece;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Models\ContentDerivative;
+use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ContentPieceGenerated implements ShouldQueue
+class DerivativeStatusChanged
 {
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public ContentPiece $contentPiece
+        public ContentDerivative $derivative,
+        public string $oldStatus,
+        public ?User $user = null
     ) {}
 }

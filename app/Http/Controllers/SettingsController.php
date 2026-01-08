@@ -80,6 +80,7 @@ class SettingsController extends Controller
                 ->map(fn (Channel $channel) => [
                     'id' => $channel->id,
                     'name' => $channel->name,
+                    'language' => $channel->language,
                     'icon' => $channel->icon,
                     'color' => $channel->color,
                     'sort_order' => $channel->sort_order,

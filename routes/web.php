@@ -6,6 +6,8 @@ use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\ContentDerivativeController;
 use App\Http\Controllers\ContentPieceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DerivativeActivitiesController;
+use App\Http\Controllers\DerivativeActivityController;
 use App\Http\Controllers\ImageGenerationController;
 use App\Http\Controllers\Integrations\LinkedInController;
 use App\Http\Controllers\MediaController;
@@ -45,16 +47,9 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::resource('prompts', PromptController::class)->except(['show']);
     Route::post('prompts/{prompt}/set-default', [PromptController::class, 'setDefault'])->name('prompts.set-default');
     Route::resource('content-pieces', ContentPieceController::class)->except(['show']);
-    Route::post('content-pieces/{content_piece}/generate', [ContentPieceController::class, 'generate'])
-        ->middleware('token.limit')
-        ->name('content-pieces.generate');
     Route::get('content-pieces/calendar', [ContentPieceController::class, 'calendar'])->name('content-pieces.calendar');
-    Route::get('content-pieces/{content_piece}/status', [ContentPieceController::class, 'status'])->name('content-pieces.status');
-    Route::patch('content-pieces/{content_piece}/status', [ContentPieceController::class, 'updateStatus'])->name('content-pieces.update-status');
     Route::post('content-pieces/bulk-delete', [ContentPieceController::class, 'bulkDelete'])->name('content-pieces.bulk-delete');
     Route::post('content-pieces/bulk-unset-publish-date', [ContentPieceController::class, 'bulkUnsetPublishDate'])->name('content-pieces.bulk-unset-publish-date');
-    Route::post('content-pieces/bulk-update-status', [ContentPieceController::class, 'bulkUpdateStatus'])->name('content-pieces.bulk-update-status');
-    Route::post('content-pieces/{content_piece}/publish', [ContentPieceController::class, 'publish'])->name('content-pieces.publish');
 
     // Content derivative routes
     Route::prefix('content-pieces/{contentPiece}')->name('content-pieces.')->group(function () {
@@ -65,6 +60,8 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
             ->middleware('token.limit')
             ->name('derivatives.generate');
         Route::get('derivatives/{derivative}/status', [ContentDerivativeController::class, 'status'])->name('derivatives.status');
+        Route::get('derivatives/{derivative}/activities', [DerivativeActivityController::class, 'index'])->name('derivatives.activities.index');
+        Route::post('derivatives/{derivative}/activities', [DerivativeActivityController::class, 'store'])->name('derivatives.activities.store');
 
         Route::post('sources', [BackgroundSourceController::class, 'store'])->name('sources.store');
         Route::put('sources/{source}', [BackgroundSourceController::class, 'update'])->name('sources.update');
@@ -99,6 +96,7 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::get('usage', [UsageController::class, 'index'])->name('usage.index');
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+    Route::get('derivative-activities', [DerivativeActivitiesController::class, 'index'])->name('derivative-activities.index');
 
     Route::get('team-settings', [SettingsController::class, 'index'])->name('team-settings.index');
     Route::put('team-settings', [SettingsController::class, 'update'])->name('team-settings.update');

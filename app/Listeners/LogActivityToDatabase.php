@@ -5,6 +5,9 @@ namespace App\Listeners;
 use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
 use App\Events\ContentPublishedToLinkedIn;
+use App\Events\DerivativeGenerated;
+use App\Events\DerivativeGenerationFailed;
+use App\Events\DerivativeStatusChanged;
 use App\Events\LinkedInIntegrationConnected;
 use App\Events\LinkedInIntegrationDisconnected;
 use App\Events\LinkedInPublishingFailed;
@@ -374,6 +377,48 @@ class LogActivityToDatabase implements ShouldQueue
                 'description' => "'{$event->user->name}' left the team",
                 'metadata' => [
                     'user_email' => $event->user->email,
+                ],
+            ],
+
+            $event instanceof DerivativeGenerated => [
+                'team_id' => $event->derivative->contentPiece->team_id,
+                'user_id' => $event->user?->id,
+                'content_derivative_id' => $event->derivative->id,
+                'event_type' => 'derivative.generated',
+                'level' => 'info',
+                'description' => "Content generated for {$event->derivative->channel->name}",
+                'metadata' => [
+                    'channel_name' => $event->derivative->channel->name,
+                    'content_piece_id' => $event->derivative->content_piece_id,
+                ],
+            ],
+
+            $event instanceof DerivativeGenerationFailed => [
+                'team_id' => $event->derivative->contentPiece->team_id,
+                'user_id' => $event->user?->id,
+                'content_derivative_id' => $event->derivative->id,
+                'event_type' => 'derivative.generation_failed',
+                'level' => 'error',
+                'description' => "Generation failed: {$event->exception->getMessage()}",
+                'metadata' => [
+                    'channel_name' => $event->derivative->channel->name,
+                    'content_piece_id' => $event->derivative->content_piece_id,
+                    'error_type' => get_class($event->exception),
+                ],
+            ],
+
+            $event instanceof DerivativeStatusChanged => [
+                'team_id' => $event->derivative->contentPiece->team_id,
+                'user_id' => $event->user?->id,
+                'content_derivative_id' => $event->derivative->id,
+                'event_type' => 'derivative.status_changed',
+                'level' => 'info',
+                'description' => "Status changed from {$event->oldStatus} to {$event->derivative->status}",
+                'metadata' => [
+                    'channel_name' => $event->derivative->channel->name,
+                    'content_piece_id' => $event->derivative->content_piece_id,
+                    'old_status' => $event->oldStatus,
+                    'new_status' => $event->derivative->status,
                 ],
             ],
 

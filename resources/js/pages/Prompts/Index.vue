@@ -6,10 +6,18 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Pencil, Star, Trash2 } from 'lucide-vue-next';
 
+interface Channel {
+    id: number;
+    name: string;
+    icon: string | null;
+    color: string | null;
+}
+
 interface Prompt {
     id: number;
     internal_name: string;
     type: 'CONTENT' | 'IMAGE';
+    channel: Channel | null;
     prompt_text: string;
     content_pieces_count: number;
     created_at: string;
@@ -77,6 +85,11 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                             <th
                                 class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
                             >
+                                Channel
+                            </th>
+                            <th
+                                class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Content Preview
                             </th>
                             <th
@@ -129,6 +142,19 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                                             ? 'Image'
                                             : 'Content'
                                     }}
+                                </span>
+                            </td>
+                            <td
+                                class="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400"
+                            >
+                                <span v-if="prompt.channel">
+                                    {{ prompt.channel.name }}
+                                </span>
+                                <span
+                                    v-else
+                                    class="text-gray-400 dark:text-gray-500"
+                                >
+                                    —
                                 </span>
                             </td>
                             <td
@@ -193,7 +219,7 @@ const truncateContent = (content: string, maxLength: number = 100) => {
                         </tr>
                         <tr v-if="prompts.data.length === 0">
                             <td
-                                colspan="7"
+                                colspan="8"
                                 class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
                             >
                                 No prompts found. Click "Add Prompt" to create

@@ -35,6 +35,8 @@ class StoreContentDerivativeRequest extends FormRequest
                 ContentDerivative::STATUS_NOT_PLANNED,
             ])],
             'planned_publish_at' => ['nullable', 'date'],
+            'media_ids' => ['sometimes', 'array'],
+            'media_ids.*' => ['integer', Rule::exists('media', 'id')->where('team_id', $teamId)],
         ];
     }
 

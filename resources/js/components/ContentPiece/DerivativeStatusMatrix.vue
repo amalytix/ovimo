@@ -37,7 +37,7 @@ const getStatusColor = (status: ContentDerivative['status'] | null) => {
         case 'NOT_STARTED':
             return 'bg-gray-400';
         case 'DRAFT':
-            return 'bg-blue-500';
+            return 'bg-orange-500';
         case 'FINAL':
             return 'bg-green-500';
         case 'PUBLISHED':

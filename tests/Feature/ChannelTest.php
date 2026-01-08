@@ -34,6 +34,7 @@ test('authenticated users can create a channel', function () {
 
     $response = $this->actingAs($user)->post('/channels', [
         'name' => 'Test Channel',
+        'language' => 'ENGLISH',
         'icon' => '📝',
         'color' => '#3b82f6',
     ]);
@@ -43,6 +44,7 @@ test('authenticated users can create a channel', function () {
     $this->assertDatabaseHas('channels', [
         'team_id' => $team->id,
         'name' => 'Test Channel',
+        'language' => 'ENGLISH',
         'icon' => '📝',
         'color' => '#3b82f6',
         'is_active' => true,
@@ -63,6 +65,7 @@ test('authenticated users can update their channels', function () {
 
     $response = $this->actingAs($user)->put("/channels/{$channel->id}", [
         'name' => 'Updated Channel',
+        'language' => 'GERMAN',
         'icon' => '🚀',
         'color' => '#10b981',
         'is_active' => false,
@@ -72,6 +75,7 @@ test('authenticated users can update their channels', function () {
 
     $channel->refresh();
     expect($channel->name)->toBe('Updated Channel');
+    expect($channel->language)->toBe('GERMAN');
     expect($channel->icon)->toBe('🚀');
     expect($channel->color)->toBe('#10b981');
     expect($channel->is_active)->toBeFalse();
@@ -85,6 +89,7 @@ test('users cannot update channels from other teams', function () {
     $this->actingAs($user)
         ->put("/channels/{$otherChannel->id}", [
             'name' => 'Updated',
+            'language' => 'ENGLISH',
         ])
         ->assertForbidden();
 });

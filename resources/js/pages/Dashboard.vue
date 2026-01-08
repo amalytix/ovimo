@@ -23,13 +23,14 @@ interface Props {
             last_30_days: number;
         };
     };
-    content_pieces_today: {
+    derivatives_today: {
         id: number;
+        content_piece_id: number;
         internal_name: string;
         channel: string;
-        published_at: string | null;
+        planned_publish_at: string | null;
+        is_published: boolean;
         status: string;
-        published_platforms: Record<string, unknown> | null;
     }[];
 }
 
@@ -260,7 +261,7 @@ const formatTime = (value: string | null): string => {
                     </div>
 
                     <div
-                        v-if="content_pieces_today.length === 0"
+                        v-if="derivatives_today.length === 0"
                         class="mt-4 rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-500 dark:border-gray-800 dark:text-gray-300"
                     >
                         No content is scheduled to publish today.
@@ -271,28 +272,28 @@ const formatTime = (value: string | null): string => {
                         class="mt-4 divide-y divide-gray-100 dark:divide-gray-800"
                     >
                         <div
-                            v-for="piece in content_pieces_today"
-                            :key="piece.id"
+                            v-for="derivative in derivatives_today"
+                            :key="derivative.id"
                             class="flex items-center justify-between py-3"
                         >
                             <div>
                                 <p
                                     class="text-sm font-semibold text-gray-900 dark:text-white"
                                 >
-                                    {{ piece.internal_name }}
+                                    {{ derivative.internal_name }}
                                 </p>
                                 <p
                                     class="text-xs text-gray-500 dark:text-gray-400"
                                 >
-                                    {{ piece.channel }} ·
-                                    {{ formatTime(piece.published_at) }}
+                                    {{ derivative.channel }} ·
+                                    {{ formatTime(derivative.planned_publish_at) }}
                                 </p>
                             </div>
                             <span
                                 class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
                             >
                                 {{
-                                    piece.published_platforms
+                                    derivative.is_published
                                         ? 'Published'
                                         : 'Scheduled'
                                 }}

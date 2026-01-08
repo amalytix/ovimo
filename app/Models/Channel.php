@@ -15,6 +15,7 @@ class Channel extends Model
     protected $fillable = [
         'team_id',
         'name',
+        'language',
         'icon',
         'color',
         'sort_order',

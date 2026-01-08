@@ -27,6 +27,7 @@ class ChannelFactory extends Factory
         return [
             'team_id' => Team::factory(),
             'name' => $name,
+            'language' => fake()->randomElement(['ENGLISH', 'GERMAN']),
             'icon' => fake()->randomElement(['file-text', 'linkedin', 'youtube', 'message-circle', 'twitter', 'mail']),
             'color' => fake()->randomElement(['blue-500', 'sky-600', 'red-500', 'orange-500', 'slate-700', 'green-500']),
             'sort_order' => self::$sortOrder++,

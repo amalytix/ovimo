@@ -29,6 +29,7 @@ const props = defineProps<{
     modelValue: string;
     placeholder?: string;
     contentType?: 'html' | 'markdown';
+    disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -39,13 +40,16 @@ const emit = defineEmits<{
 
 const isMarkdownMode = ref(false);
 const markdownValue = ref(props.modelValue ?? '');
+const isEmittingFromMarkdown = ref(false);
 
 const editor = useEditor({
     content: props.modelValue || '',
     contentType: props.contentType === 'markdown' ? 'markdown' : 'html',
+    editable: !props.disabled,
     extensions: [
         StarterKit.configure({
             codeBlock: true,
+            link: false,
         }),
         Typography,
         Link.configure({
@@ -134,7 +138,11 @@ watch(
         }
 
         if (isMarkdownMode.value) {
-            markdownValue.value = value || '';
+            // Don't overwrite markdownValue if we're the ones who emitted
+            if (!isEmittingFromMarkdown.value) {
+                markdownValue.value = value || '';
+            }
+            isEmittingFromMarkdown.value = false;
             return;
         }
 
@@ -154,6 +162,28 @@ watch(
     },
 );
 
+// When in markdown mode, convert and emit HTML as user types
+watch(markdownValue, (value) => {
+    if (!isMarkdownMode.value || !editor?.value) return;
+    // Convert markdown to HTML via the editor
+    editor.value.commands.setContent(value || '', {
+        contentType: 'markdown',
+    });
+    // Set flag to prevent feedback loop
+    isEmittingFromMarkdown.value = true;
+    emit('update:modelValue', editor.value.getHTML());
+});
+
+// Toggle editor editable state when disabled prop changes
+watch(
+    () => props.disabled,
+    (disabled) => {
+        if (editor?.value) {
+            editor.value.setEditable(!disabled);
+        }
+    },
+);
+
 onBeforeUnmount(() => {
     editor?.value?.destroy();
 });
@@ -163,6 +193,7 @@ onBeforeUnmount(() => {
     <div class="flex flex-col gap-3">
         <div
             class="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2"
+            :class="{ 'pointer-events-none opacity-50': disabled }"
         >
             <Button
                 variant="ghost"
@@ -315,11 +346,15 @@ onBeforeUnmount(() => {
             </Button>
         </div>
 
-        <div class="rounded-lg border bg-card">
+        <div
+            class="rounded-lg border bg-card"
+            :class="{ 'opacity-50': disabled }"
+        >
             <div v-if="isMarkdownMode" class="p-3">
                 <textarea
                     v-model="markdownValue"
-                    class="min-h-[320px] w-full rounded-md border border-input bg-background p-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                    :disabled="disabled"
+                    class="min-h-[320px] w-full rounded-md border border-input bg-background p-3 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed"
                     placeholder="Write in markdown..."
                 />
             </div>

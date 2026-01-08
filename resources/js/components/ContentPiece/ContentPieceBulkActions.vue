@@ -7,8 +7,6 @@ defineProps<{
 
 const emit = defineEmits<{
     (event: 'delete'): void;
-    (event: 'unset-publish-date'): void;
-    (event: 'update-status'): void;
     (event: 'clear'): void;
 }>();
 </script>
@@ -25,18 +23,6 @@ const emit = defineEmits<{
                 {{ count }} item{{ count === 1 ? '' : 's' }} selected
             </div>
             <div class="flex items-center gap-3">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="emit('unset-publish-date')"
-                    >Unset Publish Date</Button
-                >
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="emit('update-status')"
-                    >Update Status</Button
-                >
                 <Button variant="destructive" size="sm" @click="emit('delete')"
                     >Delete Selected</Button
                 >

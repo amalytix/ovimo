@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Events\ContentPieceGenerated;
 use App\Events\ContentPieceGenerationFailed;
 use App\Events\ContentPublishedToLinkedIn;
+use App\Events\DerivativeGenerated;
+use App\Events\DerivativeGenerationFailed;
+use App\Events\DerivativeStatusChanged;
 use App\Events\LinkedInIntegrationConnected;
 use App\Events\LinkedInIntegrationDisconnected;
 use App\Events\LinkedInPublishingFailed;
@@ -89,6 +92,11 @@ class AppServiceProvider extends ServiceProvider
             WebhookDeliveryFailed::class,
             TokenLimitExceeded::class,
             LinkedInPublishingFailed::class,
+
+            // Derivative events
+            DerivativeGenerated::class,
+            DerivativeGenerationFailed::class,
+            DerivativeStatusChanged::class,
         ], LogActivityToDatabase::class);
     }
 }

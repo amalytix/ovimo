@@ -55,21 +55,12 @@ const props = defineProps<{
     contentPieceId: number;
     imagePrompts: ImagePrompt[];
     imageGenerations: ImageGeneration[];
-    attachedMediaIds: number[];
-    hasEditedText: boolean;
     ai: AiState;
 }>();
 
 const emit = defineEmits<{
     (event: 'generations-updated', generations: ImageGeneration[]): void;
-    (event: 'attach-media', media: ImageMedia): void;
-    (event: 'detach-media', mediaId: number): void;
 }>();
-
-const isAttached = (mediaId: number | null) => {
-    if (!mediaId) return false;
-    return props.attachedMediaIds.includes(mediaId);
-};
 
 const generations = ref<ImageGeneration[]>([...props.imageGenerations]);
 const selectedPromptId = ref<number | null>(props.imagePrompts[0]?.id ?? null);
@@ -93,7 +84,6 @@ const aspectRatios = [
 
 const canGeneratePrompt = computed(() => {
     return (
-        props.hasEditedText &&
         selectedPromptId.value !== null &&
         !isGeneratingPrompt.value &&
         props.ai.has_openai
@@ -116,7 +106,7 @@ const completedGenerations = computed(() => {
 const generateTextPrompt = async () => {
     if (!canGeneratePrompt.value) {
         error.value = props.ai.has_openai
-            ? 'Add edited text and select a prompt first.'
+            ? 'Select an image prompt first.'
             : 'OpenAI API key is missing. Add one in Team Settings > AI.';
         errorSettingsUrl.value = props.ai.has_openai
             ? null
@@ -370,15 +360,6 @@ onUnmounted(() => {
                     </a>
                 </div>
 
-                <!-- Warning if no edited text -->
-                <div
-                    v-if="!hasEditedText"
-                    class="rounded-md bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
-                >
-                    Please add content in the Editing tab before generating
-                    images.
-                </div>
-
                 <!-- Prompt Template Selection -->
                 <div class="space-y-2">
                     <Label for="image_prompt_id">Image Prompt</Label>
@@ -555,29 +536,6 @@ onUnmounted(() => {
                                 target="_blank"
                             >
                                 View
-                            </Button>
-                            <Button
-                                v-if="isAttached(generation.media_id)"
-                                variant="outline"
-                                size="sm"
-                                class="border-green-500 bg-green-500/20 text-white hover:bg-green-500/40"
-                                @click="
-                                    generation.media_id &&
-                                    emit('detach-media', generation.media_id)
-                                "
-                            >
-                                Attached ✓
-                            </Button>
-                            <Button
-                                v-else
-                                variant="secondary"
-                                size="sm"
-                                @click="
-                                    generation.media &&
-                                    emit('attach-media', generation.media)
-                                "
-                            >
-                                Attach
                             </Button>
                             <Button
                                 variant="destructive"

@@ -2,18 +2,19 @@
 
 namespace App\Events;
 
-use App\Models\ContentPiece;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Models\ContentDerivative;
+use App\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Throwable;
 
-class ContentPieceGenerationFailed implements ShouldQueue
+class DerivativeGenerationFailed
 {
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public ContentPiece $contentPiece,
-        public Throwable $exception
+        public ContentDerivative $derivative,
+        public Throwable $exception,
+        public ?User $user = null
     ) {}
 }

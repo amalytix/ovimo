@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import type { MediaFilters as Filters } from '@/composables/useMediaFilters';
 import type { MediaTag } from '@/types/media';
@@ -93,18 +94,18 @@ const updateTags = (value: number[]) => {
                 </Button>
             </div>
             <div class="flex items-center gap-2">
-                <Input
-                    :model-value="filters.date_from"
-                    type="date"
-                    class="w-36"
-                    @update:model-value="updateFilter('date_from', $event)"
+                <DatePicker
+                    :model-value="filters.date_from ?? undefined"
+                    placeholder="From"
+                    class="w-40"
+                    @update:model-value="updateFilter('date_from', $event ?? null)"
                 />
                 <span class="text-sm text-gray-500">to</span>
-                <Input
-                    :model-value="filters.date_to"
-                    type="date"
-                    class="w-36"
-                    @update:model-value="updateFilter('date_to', $event)"
+                <DatePicker
+                    :model-value="filters.date_to ?? undefined"
+                    placeholder="To"
+                    class="w-40"
+                    @update:model-value="updateFilter('date_to', $event ?? null)"
                 />
             </div>
             <Button

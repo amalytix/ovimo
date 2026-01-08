@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
+import MediaGalleryPicker from '@/components/ContentPiece/MediaGalleryPicker.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,15 +15,22 @@ import {
 } from '@/components/ui/select';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import {
+    derivativeStatusOptions,
+    getStatusDotColor,
+    type DerivativeStatus,
+} from '@/composables/useDerivativeStatus';
+import {
     generate as generateDerivative,
     status as derivativeStatus,
     store as storeDerivative,
     update as updateDerivative,
 } from '@/actions/App/Http/Controllers/ContentDerivativeController';
+import type { MediaItem, MediaTag } from '@/types/media';
 import { router, useForm } from '@inertiajs/vue3';
-import { AlertCircle, CheckCircle2, Clock, Pencil, Plus, Sparkles, X } from 'lucide-vue-next';
+import { AlertCircle, CheckCircle2, Clock, Image, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import TiptapEditor from './TiptapEditor.vue';
+import ActivityFeed from './ActivityFeed/ActivityFeed.vue';
 
 type Channel = {
     id: number;
@@ -44,10 +53,11 @@ type ContentDerivative = {
     prompt_id: number | null;
     title: string | null;
     text: string | null;
-    status: 'NOT_STARTED' | 'DRAFT' | 'FINAL' | 'PUBLISHED' | 'NOT_PLANNED';
+    status: DerivativeStatus;
     planned_publish_at: string | null;
     generation_status: 'IDLE' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
     generation_error: string | null;
+    media: MediaItem[];
 };
 
 type AiState = {
@@ -61,6 +71,9 @@ const props = defineProps<{
     derivatives: ContentDerivative[];
     prompts: Prompt[];
     ai: AiState;
+    media: MediaItem[];
+    mediaTags: MediaTag[];
+    initialChannelId?: number;
 }>();
 
 const emit = defineEmits<{
@@ -68,7 +81,11 @@ const emit = defineEmits<{
 }>();
 
 const localDerivatives = ref<ContentDerivative[]>([...props.derivatives]);
-const selectedChannelId = ref<number | null>(props.channels[0]?.id ?? null);
+const selectedChannelId = ref<number | null>(
+    props.initialChannelId && props.channels.some(c => c.id === props.initialChannelId)
+        ? props.initialChannelId
+        : props.channels[0]?.id ?? null
+);
 const pollingIntervals = ref<Map<number, number>>(new Map());
 
 const selectedChannel = computed(() =>
@@ -90,19 +107,13 @@ const derivativeForm = useForm({
     status: 'NOT_STARTED' as ContentDerivative['status'],
     prompt_id: null as number | null,
     planned_publish_at: '',
+    media_ids: [] as number[],
 });
 
-const statusOptions = [
-    { value: 'NOT_STARTED', label: 'Not Started', color: 'bg-gray-400' },
-    { value: 'DRAFT', label: 'Draft', color: 'bg-blue-500' },
-    { value: 'FINAL', label: 'Final', color: 'bg-green-500' },
-    { value: 'PUBLISHED', label: 'Published', color: 'bg-purple-500' },
-    { value: 'NOT_PLANNED', label: 'Not Planned', color: 'bg-gray-300' },
-];
+const mediaPickerOpen = ref(false);
+const contentTypeForEditor = ref<'html' | 'markdown'>('html');
+const activityFeedRef = ref<InstanceType<typeof ActivityFeed> | null>(null);
 
-const getStatusColor = (status: ContentDerivative['status']) => {
-    return statusOptions.find(s => s.value === status)?.color ?? 'bg-gray-400';
-};
 
 const getGenerationStatusBadge = (derivative: ContentDerivative) => {
     switch (derivative.generation_status) {
@@ -129,26 +140,6 @@ const canGenerate = computed(() => {
     return !isGenerating.value;
 });
 
-// Sync form when selected derivative changes
-watch(selectedDerivative, (derivative) => {
-    if (derivative) {
-        derivativeForm.title = derivative.title ?? '';
-        derivativeForm.text = derivative.text ?? '';
-        derivativeForm.status = derivative.status;
-        derivativeForm.prompt_id = derivative.prompt_id;
-        derivativeForm.planned_publish_at = derivative.planned_publish_at
-            ? formatDateTimeLocal(derivative.planned_publish_at)
-            : '';
-    } else {
-        derivativeForm.reset();
-    }
-}, { immediate: true });
-
-// Watch for prop changes
-watch(() => props.derivatives, (newDerivatives) => {
-    localDerivatives.value = [...newDerivatives];
-}, { deep: true });
-
 const formatDateTimeLocal = (value: string | Date | null) => {
     if (!value) return '';
     const date = value instanceof Date ? value : new Date(value);
@@ -159,6 +150,60 @@ const formatDateTimeLocal = (value: string | Date | null) => {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
+
+// Sync form when selected derivative changes
+watch(selectedDerivative, (derivative) => {
+    if (derivative) {
+        derivativeForm.title = derivative.title ?? '';
+        // Detect if text is markdown (doesn't start with HTML tag)
+        // TiptapEditor HTML always starts with tags like <p>, <h1>, etc.
+        const text = derivative.text ?? '';
+        const looksLikeMarkdown = text && !text.trimStart().startsWith('<');
+        contentTypeForEditor.value = looksLikeMarkdown ? 'markdown' : 'html';
+        derivativeForm.text = text;
+        derivativeForm.status = derivative.status;
+        derivativeForm.prompt_id = derivative.prompt_id;
+        derivativeForm.planned_publish_at = derivative.planned_publish_at
+            ? formatDateTimeLocal(derivative.planned_publish_at)
+            : '';
+        derivativeForm.media_ids = derivative.media?.map(m => m.id) ?? [];
+    } else {
+        derivativeForm.reset();
+        contentTypeForEditor.value = 'html';
+    }
+}, { immediate: true });
+
+// Get attached media items for the selected derivative
+const attachedMedia = computed(() => {
+    if (!selectedDerivative.value) return [];
+    return props.media.filter(m => derivativeForm.media_ids.includes(m.id));
+});
+
+const openMediaPicker = () => {
+    mediaPickerOpen.value = true;
+};
+
+const applyMediaSelection = (selectedMedia: MediaItem[]) => {
+    derivativeForm.media_ids = selectedMedia.map(m => m.id);
+    mediaPickerOpen.value = false;
+};
+
+const removeMedia = (mediaId: number) => {
+    derivativeForm.media_ids = derivativeForm.media_ids.filter(id => id !== mediaId);
+};
+
+// Watch for prop changes
+watch(() => props.derivatives, (newDerivatives) => {
+    localDerivatives.value = [...newDerivatives];
+}, { deep: true });
+
+// Update URL when selected channel changes
+watch(selectedChannelId, (channelId) => {
+    if (channelId === null) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('channel', String(channelId));
+    window.history.replaceState({}, '', url.toString());
+});
 
 const createDerivative = () => {
     if (!selectedChannelId.value) return;
@@ -175,16 +220,23 @@ const saveDerivative = () => {
     if (!selectedDerivative.value) return;
 
     router.put(
-        updateDerivative.url(props.contentPieceId, selectedDerivative.value.id),
+        updateDerivative.url([props.contentPieceId, selectedDerivative.value.id]),
         {
             title: derivativeForm.title,
             text: derivativeForm.text,
             status: derivativeForm.status,
             prompt_id: derivativeForm.prompt_id,
             planned_publish_at: derivativeForm.planned_publish_at || null,
+            media_ids: derivativeForm.media_ids,
         },
         {
             preserveScroll: true,
+            onSuccess: () => {
+                // Refresh activity feed after a short delay to allow queued events to be processed
+                setTimeout(() => {
+                    activityFeedRef.value?.refresh();
+                }, 500);
+            },
         }
     );
 };
@@ -194,7 +246,7 @@ const startPolling = (derivativeId: number) => {
 
     const interval = window.setInterval(async () => {
         try {
-            const response = await fetch(derivativeStatus.url(props.contentPieceId, derivativeId));
+            const response = await fetch(derivativeStatus.url([props.contentPieceId, derivativeId]));
             const data = await response.json();
 
             // Update local derivative
@@ -211,7 +263,11 @@ const startPolling = (derivativeId: number) => {
                 // Update form if this is the selected derivative
                 if (selectedDerivative.value?.id === derivativeId) {
                     if (data.title) derivativeForm.title = data.title;
-                    if (data.text) derivativeForm.text = data.text;
+                    if (data.text) {
+                        // Mark as markdown so TiptapEditor converts it properly
+                        contentTypeForEditor.value = 'markdown';
+                        derivativeForm.text = data.text;
+                    }
                 }
 
                 emit('derivatives-updated', localDerivatives.value);
@@ -240,7 +296,7 @@ const generate = () => {
     if (!selectedDerivative.value) return;
 
     router.post(
-        generateDerivative.url(props.contentPieceId, selectedDerivative.value.id),
+        generateDerivative.url([props.contentPieceId, selectedDerivative.value.id]),
         {},
         {
             preserveScroll: true,
@@ -312,7 +368,7 @@ onUnmounted(() => {
                     <span
                         v-if="localDerivatives.find(d => d.channel_id === channel.id)"
                         class="h-2 w-2 rounded-full"
-                        :class="getStatusColor(localDerivatives.find(d => d.channel_id === channel.id)!.status)"
+                        :class="getStatusDotColor(localDerivatives.find(d => d.channel_id === channel.id)!.status)"
                     />
                     <span
                         v-else
@@ -358,24 +414,13 @@ onUnmounted(() => {
                             {{ getGenerationStatusBadge(selectedDerivative)?.text }}
                         </Badge>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            :disabled="!canGenerate"
-                            @click="generate"
-                        >
-                            <Sparkles class="mr-1 h-4 w-4" />
-                            {{ isGenerating ? 'Generating...' : 'Generate' }}
-                        </Button>
-                        <Button
-                            size="sm"
-                            :disabled="derivativeForm.processing"
-                            @click="saveDerivative"
-                        >
-                            {{ derivativeForm.processing ? 'Saving...' : 'Save' }}
-                        </Button>
-                    </div>
+                    <Button
+                        size="sm"
+                        :disabled="derivativeForm.processing"
+                        @click="saveDerivative"
+                    >
+                        {{ derivativeForm.processing ? 'Saving...' : 'Save' }}
+                    </Button>
                 </div>
 
                 <!-- Error message -->
@@ -388,7 +433,7 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Form fields -->
-                <div class="grid gap-6 md:grid-cols-3">
+                <div class="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
                     <!-- Left column: Settings -->
                     <div class="space-y-4">
                         <!-- Status -->
@@ -400,12 +445,12 @@ onUnmounted(() => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem
-                                        v-for="option in statusOptions"
+                                        v-for="option in derivativeStatusOptions"
                                         :key="option.value"
                                         :value="option.value"
                                     >
                                         <div class="flex items-center gap-2">
-                                            <span class="h-2 w-2 rounded-full" :class="option.color" />
+                                            <span class="h-2 w-2 rounded-full" :class="option.dotColor" />
                                             {{ option.label }}
                                         </div>
                                     </SelectItem>
@@ -417,20 +462,31 @@ onUnmounted(() => {
                         <!-- Prompt -->
                         <div class="space-y-2">
                             <Label for="prompt_id">Prompt Template</Label>
-                            <Select v-model="derivativeForm.prompt_id">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select prompt" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="prompt in channelPrompts"
-                                        :key="prompt.id"
-                                        :value="prompt.id"
-                                    >
-                                        {{ prompt.name }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div class="flex items-center gap-2">
+                                <Select v-model="derivativeForm.prompt_id" class="flex-1">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select prompt" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="prompt in channelPrompts"
+                                            :key="prompt.id"
+                                            :value="prompt.id"
+                                        >
+                                            {{ prompt.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    variant="outline"
+                                    :disabled="!canGenerate"
+                                    @click="generate"
+                                >
+                                    <Spinner v-if="isGenerating" class="h-4 w-4" />
+                                    <Sparkles v-else class="h-4 w-4" />
+                                    Generate
+                                </Button>
+                            </div>
                             <InputError :message="derivativeForm.errors.prompt_id" />
                         </div>
 
@@ -442,23 +498,24 @@ onUnmounted(() => {
                                     Planned Publish Date
                                 </div>
                             </Label>
-                            <Input
+                            <DatePicker
                                 id="planned_publish_at"
                                 v-model="derivativeForm.planned_publish_at"
-                                type="datetime-local"
+                                placeholder="Select publish date"
                             />
                             <InputError :message="derivativeForm.errors.planned_publish_at" />
                         </div>
                     </div>
 
-                    <!-- Right column: Content -->
-                    <div class="space-y-4 md:col-span-2">
+                    <!-- Middle column: Content -->
+                    <div class="space-y-4 md:col-span-2 lg:col-span-2">
                         <!-- Title -->
                         <div class="space-y-2">
                             <Label for="title">Title</Label>
                             <Input
                                 id="title"
                                 v-model="derivativeForm.title"
+                                :disabled="isGenerating"
                                 placeholder="Enter title..."
                             />
                             <InputError :message="derivativeForm.errors.title" />
@@ -469,9 +526,92 @@ onUnmounted(() => {
                             <Label>Content</Label>
                             <TiptapEditor
                                 v-model="derivativeForm.text"
+                                :content-type="contentTypeForEditor"
+                                :disabled="isGenerating"
                                 placeholder="Start writing or generate content..."
+                                @content-type-change="contentTypeForEditor = $event"
                             />
                             <InputError :message="derivativeForm.errors.text" />
+                        </div>
+
+                        <!-- Media Attachments -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <Label>
+                                    <div class="flex items-center gap-1.5">
+                                        <Image class="h-4 w-4" />
+                                        Media Attachments
+                                    </div>
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="openMediaPicker"
+                                >
+                                    <Plus class="mr-1 h-4 w-4" />
+                                    Add Media
+                                </Button>
+                            </div>
+
+                            <div
+                                v-if="attachedMedia.length === 0"
+                                class="flex items-center justify-center rounded-lg border border-dashed py-8 text-center"
+                            >
+                                <p class="text-sm text-muted-foreground">
+                                    No media attached to this derivative.
+                                </p>
+                            </div>
+
+                            <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                                <div
+                                    v-for="item in attachedMedia"
+                                    :key="item.id"
+                                    class="group relative overflow-hidden rounded-lg border bg-muted/30"
+                                >
+                                    <img
+                                        v-if="item.mime_type.startsWith('image/')"
+                                        :src="item.temporary_url"
+                                        :alt="item.filename"
+                                        class="aspect-video w-full object-cover"
+                                    />
+                                    <div
+                                        v-else
+                                        class="flex aspect-video items-center justify-center bg-muted"
+                                    >
+                                        <span class="text-xs font-medium text-muted-foreground">
+                                            {{ item.mime_type.split('/')[1]?.toUpperCase() || 'FILE' }}
+                                        </span>
+                                    </div>
+                                    <div
+                                        class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                                    >
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            @click="removeMedia(item.id)"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <div class="p-2">
+                                        <p class="truncate text-xs text-muted-foreground">
+                                            {{ item.filename }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right column: Activity Feed -->
+                    <div class="hidden lg:block">
+                        <div class="sticky top-4 max-h-[calc(100vh-12rem)] rounded-lg border bg-card">
+                            <ActivityFeed
+                                ref="activityFeedRef"
+                                :content-piece-id="contentPieceId"
+                                :derivative-id="selectedDerivative.id"
+                            />
                         </div>
                     </div>
                 </div>
@@ -487,4 +627,14 @@ onUnmounted(() => {
             </p>
         </div>
     </div>
+
+    <MediaGalleryPicker
+        :open="mediaPickerOpen"
+        :selected-ids="derivativeForm.media_ids"
+        :media="media"
+        :tags="mediaTags"
+        :multi-select="true"
+        @update:open="mediaPickerOpen = $event"
+        @select="applyMediaSelection"
+    />
 </template>

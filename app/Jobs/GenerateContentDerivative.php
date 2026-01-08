@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Events\DerivativeGenerated;
+use App\Events\DerivativeGenerationFailed;
 use App\Exceptions\AINotConfiguredException;
 use App\Exceptions\TokenLimitExceededException;
 use App\Models\ContentDerivative;
@@ -64,6 +66,9 @@ class GenerateContentDerivative implements ShouldQueue
                 'generation_status' => ContentDerivative::GENERATION_COMPLETED,
             ]);
 
+            // Dispatch success event
+            event(new DerivativeGenerated($this->derivative));
+
             // 6. Track usage
             $openAI->trackUsage(
                 $result['input_tokens'],
@@ -112,6 +117,9 @@ class GenerateContentDerivative implements ShouldQueue
             'generation_error_occurred_at' => now(),
         ]);
 
+        // Dispatch failure event
+        event(new DerivativeGenerationFailed($this->derivative, $exception));
+
         Log::error("Derivative generation failed permanently for {$this->derivative->id}: {$exception->getMessage()}");
     }
 
@@ -141,7 +149,7 @@ class GenerateContentDerivative implements ShouldQueue
 
         $channel = $this->derivative->channel;
         $context .= "Target channel: {$channel->name}\n";
-        $context .= "Target language: {$contentPiece->target_language}\n";
+        $context .= "Target language: {$channel->language}\n";
 
         return $context;
     }
@@ -160,7 +168,7 @@ class GenerateContentDerivative implements ShouldQueue
         $promptText = $prompt->prompt_text;
         $promptText = str_replace('{{context}}', $context, $promptText);
         $promptText = str_replace('{{channel}}', $this->derivative->channel->name, $promptText);
-        $promptText = str_replace('{{language}}', $this->derivative->contentPiece->target_language, $promptText);
+        $promptText = str_replace('{{language}}', $this->derivative->channel->language, $promptText);
 
         return $promptText;
     }

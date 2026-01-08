@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContentDerivative extends Model
 {
@@ -89,6 +91,20 @@ class ContentDerivative extends Model
     public function prompt(): BelongsTo
     {
         return $this->belongsTo(Prompt::class);
+    }
+
+    public function media(): BelongsToMany
+    {
+        return $this->belongsToMany(Media::class, 'content_derivative_media')
+            ->withTimestamps()
+            ->withPivot('sort_order')
+            ->orderByPivot('sort_order');
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'content_derivative_id')
+            ->latest('created_at');
     }
 
     public function isGenerating(): bool

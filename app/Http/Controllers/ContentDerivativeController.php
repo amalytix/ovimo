@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DerivativeStatusChanged;
 use App\Http\Requests\ContentDerivative\StoreContentDerivativeRequest;
 use App\Http\Requests\ContentDerivative\UpdateContentDerivativeRequest;
 use App\Jobs\GenerateContentDerivative;
@@ -16,7 +17,7 @@ class ContentDerivativeController extends Controller
     {
         $this->authorize('create', [ContentDerivative::class, $contentPiece]);
 
-        ContentDerivative::create([
+        $derivative = ContentDerivative::create([
             'content_piece_id' => $contentPiece->id,
             'channel_id' => $request->validated('channel_id'),
             'prompt_id' => $request->validated('prompt_id'),
@@ -25,6 +26,11 @@ class ContentDerivativeController extends Controller
             'status' => $request->validated('status', ContentDerivative::STATUS_NOT_STARTED),
             'planned_publish_at' => $request->validated('planned_publish_at'),
         ]);
+
+        $validated = $request->validated();
+        if (array_key_exists('media_ids', $validated)) {
+            $derivative->media()->sync($validated['media_ids']);
+        }
 
         return redirect()->back()->with('success', 'Derivative created successfully.');
     }
@@ -36,6 +42,8 @@ class ContentDerivativeController extends Controller
     ): RedirectResponse {
         $this->authorize('update', $derivative);
 
+        $oldStatus = $derivative->status;
+
         $derivative->update([
             'prompt_id' => $request->validated('prompt_id'),
             'title' => $request->validated('title'),
@@ -43,6 +51,16 @@ class ContentDerivativeController extends Controller
             'status' => $request->validated('status'),
             'planned_publish_at' => $request->validated('planned_publish_at'),
         ]);
+
+        // Dispatch status change event if status changed
+        if ($oldStatus !== $derivative->status) {
+            event(new DerivativeStatusChanged($derivative, $oldStatus, auth()->user()));
+        }
+
+        $validated = $request->validated();
+        if (array_key_exists('media_ids', $validated)) {
+            $derivative->media()->sync($validated['media_ids']);
+        }
 
         return redirect()->back()->with('success', 'Derivative updated successfully.');
     }

@@ -2,8 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\ContentPiece;
-use App\Models\SocialIntegration;
+use App\Models\ContentDerivative;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -21,40 +20,25 @@ class ProcessScheduledPublishing implements ShouldQueue
 
     /**
      * Execute the job.
+     *
+     * Finds derivatives that are due for publishing and processes them.
+     * TODO: Implement actual publishing logic when social integrations are ready.
      */
     public function handle(): void
     {
-        $duePieces = ContentPiece::query()
-            ->whereNotNull('published_at')
-            ->where('published_at', '<=', now())
-            ->where(function ($query) {
-                $query->whereNull('published_platforms')
-                    ->orWhereRaw("json_extract(published_platforms, '$.linkedin') IS NULL");
-            })
-            ->with('team')
+        // Find derivatives that are due for publishing
+        $dueDerivatives = ContentDerivative::query()
+            ->whereNotNull('planned_publish_at')
+            ->where('planned_publish_at', '<=', now())
+            ->where('is_published', false)
+            ->where('status', ContentDerivative::STATUS_FINAL)
+            ->with(['contentPiece.team', 'channel'])
             ->get();
 
-        foreach ($duePieces as $contentPiece) {
-            $publishTo = $contentPiece->publish_to_platforms ?? [];
-            $integrationId = $publishTo['linkedin'] ?? null;
-
-            if (! $integrationId) {
-                continue;
-            }
-
-            $integration = SocialIntegration::query()
-                ->active()
-                ->where('id', $integrationId)
-                ->where('team_id', $contentPiece->team_id)
-                ->first();
-
-            if (! $integration) {
-                continue;
-            }
-
-            $contentPiece->update(['published_at' => $contentPiece->published_at]);
-
-            PublishContentToLinkedIn::dispatch($contentPiece, $integration);
+        foreach ($dueDerivatives as $derivative) {
+            // TODO: Implement publishing logic for each channel type
+            // For now, just mark as published when the time comes
+            // This will be expanded when social integrations are implemented per-channel
         }
     }
 }

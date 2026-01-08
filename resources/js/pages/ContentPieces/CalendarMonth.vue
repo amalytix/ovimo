@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
+import { getStatusBgColor, type DerivativeStatus } from '@/composables/useDerivativeStatus';
 import { calendar, edit } from '@/routes/content-pieces';
 import { Link } from '@inertiajs/vue3';
 import { computed, onMounted, ref, watch } from 'vue';
 
 interface CalendarEvent {
     id: number;
-    internal_name: string;
-    prompt_name: string | null;
-    published_at: string | null;
-    published_at_human: string | null;
-    status: string;
+    title: string;
+    content_piece_id: number;
+    channel_id: number;
+    channel_name: string;
+    channel_icon: string | null;
+    channel_color: string | null;
+    status: DerivativeStatus;
+    planned_publish_at: string | null;
 }
 
 interface CalendarDay {
@@ -244,28 +248,24 @@ watch(
                             <div
                                 v-for="event in day.events"
                                 :key="event.id"
-                                class="rounded-lg border border-gray-200 bg-white/80 p-2 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-900/70 dark:hover:border-blue-500"
+                                :class="getStatusBgColor(event.status)"
+                                class="rounded-lg border p-2 shadow-sm transition"
                             >
                                 <Link
-                                    :href="edit.url(event.id)"
-                                    class="text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-300"
+                                    :href="edit.url(event.content_piece_id, { query: { tab: 'derivatives', channel: event.channel_id } })"
+                                    class="block truncate text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-300"
                                 >
-                                    {{ event.internal_name }}
+                                    {{ event.title }}
                                 </Link>
                                 <div
-                                    class="mt-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
+                                    class="mt-1 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400"
                                 >
-                                    <span>{{
-                                        event.prompt_name || 'Prompt not set'
-                                    }}</span>
+                                    <span class="truncate">{{ event.channel_name }}</span>
                                     <span
-                                        v-if="
-                                            formatEventTime(event.published_at)
-                                        "
-                                        >{{
-                                            formatEventTime(event.published_at)
-                                        }}</span
+                                        v-if="formatEventTime(event.planned_publish_at)"
                                     >
+                                        {{ formatEventTime(event.planned_publish_at) }}
+                                    </span>
                                 </div>
                             </div>
                             <p

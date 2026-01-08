@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\ContentPiece;
-use App\Models\Prompt;
 use App\Models\TokenUsageLog;
 
 it('allows request when team has very high token limit', function () {
@@ -56,32 +54,6 @@ it('blocks request when team has exceeded token limit', function () {
         ->assertStatus(429);
 
     expect($response->json('message'))->toContain('Monthly token limit exceeded');
-});
-
-it('blocks content generation when token limit exceeded', function () {
-    [$user, $team] = createUserWithTeam();
-    $team->update(['monthly_token_limit' => 5000]);
-
-    TokenUsageLog::create([
-        'team_id' => $team->id,
-        'user_id' => $user->id,
-        'input_tokens' => 3000,
-        'output_tokens' => 2500,
-        'total_tokens' => 5500,
-        'model' => 'gpt-4',
-        'operation' => 'test',
-        'created_at' => now(),
-    ]);
-
-    $prompt = Prompt::factory()->create(['team_id' => $team->id]);
-    $contentPiece = ContentPiece::factory()->create([
-        'team_id' => $team->id,
-        'prompt_id' => $prompt->id,
-    ]);
-
-    $this->actingAs($user)
-        ->postJson("/content-pieces/{$contentPiece->id}/generate")
-        ->assertStatus(429);
 });
 
 it('only counts current month usage for token limit', function () {

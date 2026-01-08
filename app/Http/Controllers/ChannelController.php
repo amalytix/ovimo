@@ -25,6 +25,7 @@ class ChannelController extends Controller
             ->map(fn (Channel $channel) => [
                 'id' => $channel->id,
                 'name' => $channel->name,
+                'language' => $channel->language,
                 'icon' => $channel->icon,
                 'color' => $channel->color,
                 'sort_order' => $channel->sort_order,
@@ -48,6 +49,7 @@ class ChannelController extends Controller
         Channel::create([
             'team_id' => $teamId,
             'name' => $request->validated('name'),
+            'language' => $request->validated('language'),
             'icon' => $request->validated('icon'),
             'color' => $request->validated('color'),
             'sort_order' => $maxSortOrder + 1,
@@ -63,6 +65,7 @@ class ChannelController extends Controller
 
         $channel->update([
             'name' => $request->validated('name'),
+            'language' => $request->validated('language'),
             'icon' => $request->validated('icon'),
             'color' => $request->validated('color'),
             'is_active' => $request->validated('is_active', true),

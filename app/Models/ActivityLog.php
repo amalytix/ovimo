@@ -45,6 +45,12 @@ class ActivityLog extends Model
         'openai.request_failed' => 'OpenAI Request Failed',
         'webhook.delivery_failed' => 'Webhook Delivery Failed',
         'token.limit_exceeded' => 'Token Limit Exceeded',
+
+        // Derivative events
+        'derivative.generated' => 'Content Generated',
+        'derivative.generation_failed' => 'Generation Failed',
+        'derivative.status_changed' => 'Status Changed',
+        'derivative.comment' => 'Comment',
     ];
 
     protected $fillable = [
@@ -55,6 +61,7 @@ class ActivityLog extends Model
         'description',
         'source_id',
         'post_id',
+        'content_derivative_id',
         'ip_address',
         'user_agent',
         'metadata',
@@ -86,5 +93,10 @@ class ActivityLog extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
+    }
+
+    public function contentDerivative(): BelongsTo
+    {
+        return $this->belongsTo(ContentDerivative::class);
     }
 }
