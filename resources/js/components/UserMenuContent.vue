@@ -27,9 +27,6 @@ const page = usePage();
 
 const currentTeam = computed(() => page.props.auth.currentTeam);
 const teams = computed(() => page.props.auth.teams as { id: number; name: string }[]);
-const otherTeams = computed(() =>
-    teams.value.filter((team) => team.id !== currentTeam.value?.id),
-);
 
 const handleLogout = () => {
     router.flushAll();

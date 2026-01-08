@@ -37,7 +37,7 @@ type ContentPiece = {
     derivatives?: Derivative[];
 };
 
-const props = defineProps<{
+defineProps<{
     contentPieces: ContentPiece[];
     channels: Channel[];
     selectedIds: number[];

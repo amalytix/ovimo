@@ -226,7 +226,7 @@ const cancel = () => {
 
                         <div v-else class="space-y-2">
                             <div
-                                v-for="(source, index) in postSources"
+                                v-for="source in postSources"
                                 :key="`post-${source.post_id}`"
                                 class="flex items-start gap-3 rounded-lg border bg-card p-3"
                             >
