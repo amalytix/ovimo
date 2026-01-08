@@ -322,7 +322,7 @@ const cancel = () => {
 
     <!-- Add Post Dialog -->
     <Dialog v-model:open="showAddPostDialog">
-        <DialogContent class="max-w-lg">
+        <DialogContent style="max-width: 48rem;">
             <DialogHeader>
                 <DialogTitle>Add Research Post</DialogTitle>
                 <DialogDescription>
@@ -330,22 +330,21 @@ const cancel = () => {
                 </DialogDescription>
             </DialogHeader>
 
-            <div class="space-y-4">
+            <div class="space-y-4 overflow-hidden">
                 <Input
                     v-model="postSearchQuery"
                     placeholder="Search posts..."
-                    class="w-full"
                 />
 
-                <div class="max-h-64 space-y-2 overflow-y-auto">
+                <div class="max-h-80 space-y-2 overflow-y-auto overflow-x-hidden pr-2">
                     <div
                         v-for="post in filteredPosts"
                         :key="post.id"
-                        class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted"
+                        class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted overflow-hidden"
                         @click="addPost(post)"
                     >
                         <FileText class="h-5 w-5 shrink-0 text-gray-400" />
-                        <div class="min-w-0 flex-1">
+                        <div class="min-w-0 flex-1 overflow-hidden">
                             <p class="truncate font-medium">
                                 {{ post.internal_title || post.external_title || 'Untitled' }}
                             </p>

@@ -103,12 +103,12 @@ Route::middleware(['auth', 'verified', 'team.valid'])->group(function () {
     Route::post('team-settings/export-sources', [SettingsController::class, 'exportSources'])->name('team-settings.export-sources');
     Route::post('team-settings/import-sources', [SettingsController::class, 'importSources'])->name('team-settings.import-sources');
 
-    Route::get('posts', [PostController::class, 'index'])->name('posts.index');
-    Route::patch('posts/{post}/toggle-hidden', [PostController::class, 'toggleHidden'])->name('posts.toggle-hidden');
-    Route::patch('posts/{post}/status', [PostController::class, 'updateStatus'])->name('posts.update-status');
-    Route::post('posts/bulk-hide', [PostController::class, 'bulkHide'])->name('posts.bulk-hide');
-    Route::post('posts/bulk-delete', [PostController::class, 'bulkDelete'])->name('posts.bulk-delete');
-    Route::post('posts/hide-not-relevant', [PostController::class, 'hideNotRelevant'])->name('posts.hide-not-relevant');
+    Route::get('news', [PostController::class, 'index'])->name('posts.index');
+    Route::patch('news/{post}/toggle-hidden', [PostController::class, 'toggleHidden'])->name('posts.toggle-hidden');
+    Route::patch('news/{post}/status', [PostController::class, 'updateStatus'])->name('posts.update-status');
+    Route::post('news/bulk-hide', [PostController::class, 'bulkHide'])->name('posts.bulk-hide');
+    Route::post('news/bulk-delete', [PostController::class, 'bulkDelete'])->name('posts.bulk-delete');
+    Route::post('news/hide-not-relevant', [PostController::class, 'hideNotRelevant'])->name('posts.hide-not-relevant');
 
     Route::get('media', [MediaController::class, 'index'])->name('media.index');
     Route::post('media/presign', [MediaController::class, 'presign'])->name('media.presign');

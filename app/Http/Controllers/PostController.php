@@ -93,7 +93,7 @@ class PostController extends Controller
                 ],
             ]);
 
-        return Inertia::render('Posts/Index', [
+        return Inertia::render('News/Index', [
             'posts' => $posts,
             'sources' => Source::where('team_id', $teamId)->orderBy('internal_name')->get(['id', 'internal_name']),
             'tags' => Tag::where('team_id', $teamId)->get(['id', 'name']),

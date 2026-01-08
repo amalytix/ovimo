@@ -138,10 +138,8 @@ class ContentPieceController extends Controller
         } else {
             $availablePosts = \App\Models\Post::query()
                 ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-                ->where('status', 'CREATE_CONTENT')
-                ->whereNotNull('summary')
                 ->orderByDesc('found_at')
-                ->take(100)
+                ->take(200)
                 ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
         }
 
@@ -262,10 +260,8 @@ class ContentPieceController extends Controller
         // Get available posts for sources tab
         $availablePostsForSources = \App\Models\Post::query()
             ->whereHas('source', fn ($q) => $q->where('team_id', $teamId))
-            ->where('status', 'CREATE_CONTENT')
-            ->whereNotNull('summary')
             ->orderByDesc('found_at')
-            ->take(100)
+            ->take(200)
             ->get(['id', 'uri', 'summary', 'external_title', 'internal_title']);
 
         return Inertia::render('ContentPieces/Edit', [

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import PostBulkActions from '@/components/Post/PostBulkActions.vue';
+import NewsBulkActions from '@/components/News/NewsBulkActions.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -76,7 +76,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Posts', href: '/posts' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'News', href: '/news' }];
 
 const selectedPosts = ref<number[]>([]);
 const localFilters = ref({ ...props.filters });
@@ -106,7 +106,7 @@ const togglePostSelection = (postId: number, checked: boolean) => {
 };
 
 const applyFilters = () => {
-    router.get('/posts', localFilters.value, {
+    router.get('/news', localFilters.value, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -171,7 +171,7 @@ onUnmounted(() => {
 
 const toggleHidden = (postId: number) => {
     router.patch(
-        `/posts/${postId}/toggle-hidden`,
+        `/news/${postId}/toggle-hidden`,
         {},
         { preserveScroll: true },
     );
@@ -179,7 +179,7 @@ const toggleHidden = (postId: number) => {
 
 const updateStatus = (postId: number, status: string) => {
     router.patch(
-        `/posts/${postId}/status`,
+        `/news/${postId}/status`,
         { status },
         { preserveScroll: true },
     );
@@ -188,7 +188,7 @@ const updateStatus = (postId: number, status: string) => {
 const bulkHide = () => {
     if (selectedPosts.value.length === 0) return;
     router.post(
-        '/posts/bulk-hide',
+        '/news/bulk-hide',
         { post_ids: selectedPosts.value },
         { preserveScroll: true, onSuccess: () => (selectedPosts.value = []) },
     );
@@ -203,7 +203,7 @@ const bulkDelete = () => {
     )
         return;
     router.post(
-        '/posts/bulk-delete',
+        '/news/bulk-delete',
         { post_ids: selectedPosts.value },
         { preserveScroll: true, onSuccess: () => (selectedPosts.value = []) },
     );
@@ -216,7 +216,7 @@ const hideNotRelevant = () => {
         )
     )
         return;
-    router.post('/posts/hide-not-relevant', {}, { preserveScroll: true });
+    router.post('/news/hide-not-relevant', {}, { preserveScroll: true });
 };
 
 const createContentPiece = () => {
@@ -245,12 +245,12 @@ watch(
 </script>
 
 <template>
-    <Head title="Posts" />
+    <Head title="News" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="p-6">
             <div class="mb-6 flex items-center justify-between">
-                <h1 class="text-2xl font-semibold">Posts</h1>
+                <h1 class="text-2xl font-semibold">News</h1>
             </div>
 
             <!-- Filters -->
@@ -532,7 +532,7 @@ watch(
                                 colspan="8"
                                 class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
                             >
-                                No posts found. Posts will appear here when
+                                No news found. News will appear here when
                                 sources are monitored.
                             </td>
                         </tr>
@@ -549,7 +549,7 @@ watch(
         </div>
     </AppLayout>
 
-    <PostBulkActions
+    <NewsBulkActions
         :count="selectedPosts.length"
         @create-content="createContentPiece"
         @hide="bulkHide"

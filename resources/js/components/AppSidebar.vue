@@ -47,7 +47,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'News',
-        href: '/posts',
+        href: '/news',
         icon: FileText,
     },
     {
